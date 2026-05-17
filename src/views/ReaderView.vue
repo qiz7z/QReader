@@ -41,7 +41,7 @@
       <div v-if="showTocPanel" class="resize-bar" @mousedown="startResize"></div>
 
       <!-- 主阅读区 -->
-      <main class="reader-main" ref="mainRef">
+      <main class="reader-main" ref="mainRef" :class="{ 'page-mode': readerStore.readerMode === 'page' }">
         <PdfReader
           ref="pdfReaderRef"
           v-if="book && bookFormat === 'pdf'"
@@ -60,9 +60,6 @@
               <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
             </svg>
           </button>
-          <div class="annot-tool-divider"></div>
-          <span class="pdf-page-indicator">{{ book?.toc?.[currentChapter]?.title || `第 ${currentChapter + 1} 章` }}</span>
-          <div class="annot-tool-divider"></div>
           <button class="zoom-btn" @click="pdfScale = Math.max(0.5, +(pdfScale - 0.25).toFixed(2))">−</button>
           <input type="range" class="zoom-slider" min="0.5" max="4" step="0.1" v-model.number="pdfScale" />
           <button class="zoom-btn" @click="pdfScale = Math.min(4, +(pdfScale + 0.25).toFixed(2))">+</button>
@@ -94,14 +91,53 @@
             <button class="annot-tool-btn" @click="handleClearAllAnnot" title="清除全部标注">✕</button>
           </template>
         </div>
-        <div v-else-if="book" class="reader-content" :style="contentStyle" @mouseup="handleTextSelection">
-          <p 
-            v-for="(paragraph, idx) in highlightedSentences" 
-            :key="idx"
-            :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
-            :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
-            v-html="paragraph"
-          />
+        <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode-wrap': readerStore.readerMode === 'page' }">
+          <!-- 滚动模式：所有章节连续显示 -->
+          <div
+            v-if="readerStore.readerMode === 'scroll'"
+            class="reader-content"
+            :style="contentStyle"
+            @mouseup="handleTextSelection"
+          >
+            <p
+              v-for="(paragraph, idx) in highlightedSentences"
+              :key="idx"
+              :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
+              :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
+              v-html="paragraph"
+            />
+          </div>
+
+          <!-- 翻页模式：transform 平移翻页 -->
+          <div
+            v-else
+            class="reader-content-page"
+            ref="pageContentRef"
+          >
+            <div
+              class="page-content-inner"
+              ref="pageContentInnerRef"
+              :style="{ ...contentStyle, transform: `translateY(${-currentPage * pageHeight}px)` }"
+              @mouseup="handleTextSelection"
+            >
+              <p
+                v-for="(paragraph, idx) in highlightedSentences"
+                :key="idx"
+                :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
+                :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
+                v-html="paragraph"
+              />
+            </div>
+
+            <!-- 翻页点击区域 -->
+            <div class="page-turn-area left" @click="prevPageContent"></div>
+            <div class="page-turn-area right" @click="nextPageContent"></div>
+
+            <!-- 页码指示 -->
+            <div class="page-indicator">
+              {{ currentPage + 1 }} / {{ totalPages }}
+            </div>
+          </div>
         </div>
         <div v-else class="loading">加载中...</div>
 
@@ -251,18 +287,44 @@
                     <button @click="readerStore.setFontSize(Math.min(5, readerStore.fontSize + 1))">+</button>
                   </div>
                 </div>
-                <div class="setting-group">
-                  <label class="group-label">字体粗细</label>
-                  <div class="size-control">
-                    <button @click="readerStore.setFontWeight(Math.max(1, readerStore.fontWeight - 1))">−</button>
-                    <div class="size-dots">
-                      <span v-for="i in 3" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span>
-                    </div>
-                    <button @click="readerStore.setFontWeight(Math.min(3, readerStore.fontWeight + 1))">+</button>
+              <div class="setting-group">
+                <label class="group-label">字体粗细</label>
+                <div class="size-control">
+                  <button @click="readerStore.setFontWeight(Math.max(1, readerStore.fontWeight - 1))">−</button>
+                  <div class="size-dots">
+                    <span v-for="i in 3" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span>
                   </div>
+                  <button @click="readerStore.setFontWeight(Math.min(3, readerStore.fontWeight + 1))">+</button>
                 </div>
+              </div>
                 <div class="setting-group">
-                  <label class="group-label">阅读主题</label>
+                <label class="group-label">行间距</label>
+                <div class="size-control">
+                  <button @click="readerStore.setLineHeight(Math.max(1, readerStore.lineHeight - 1))">−</button>
+                  <div class="size-dots">
+                    <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.lineHeight }"></span>
+                  </div>
+                  <button @click="readerStore.setLineHeight(Math.min(5, readerStore.lineHeight + 1))">+</button>
+                  <span class="size-label">{{ lineHeightLabels[readerStore.lineHeight - 1] }}</span>
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="group-label">阅读方式</label>
+                <div class="mode-switch">
+                  <button
+                    class="mode-btn"
+                    :class="{ active: readerStore.readerMode === 'scroll' }"
+                    @click="readerStore.setReaderMode('scroll')"
+                  >滚动</button>
+                  <button
+                    class="mode-btn"
+                    :class="{ active: readerStore.readerMode === 'page' }"
+                    @click="readerStore.setReaderMode('page')"
+                  >翻页</button>
+                </div>
+              </div>
+              <div class="setting-group">
+                <label class="group-label">阅读主题</label>
                   <div class="theme-grid">
                     <button v-for="t in themes" :key="t.v" class="theme-btn" :class="{ active: readerStore.theme === t.v }" @click="readerStore.setTheme(t.v)">{{ t.l }}</button>
                   </div>
@@ -382,6 +444,7 @@ const book = ref<ParsedBook | null>(null)
 const rawFile = ref<ArrayBuffer | null>(null)
 const bookFormat = ref('')
 const currentChapter = ref(0)
+const pageTransition = ref('page-forward')
 const isFullscreen = ref(false)
 const pdfScale = ref(2.0)
 const annotationMode = ref(false)
@@ -399,6 +462,13 @@ const showTocPanel = ref(true)
 const sidebarWidth = ref(200)
 const minW = 120
 const maxW = 400
+
+// 翻页模式相关状态
+const currentPage = ref(0)
+const totalPages = ref(1)
+const pageHeight = ref(0)
+const pageContentRef = ref<HTMLElement | null>(null)
+const pageContentInnerRef = ref<HTMLElement | null>(null)
 
 const rightPanel = ref('')
 const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | null }>>([])
@@ -471,10 +541,13 @@ function setSentenceRef(el: HTMLElement | Element | null, idx: number) {
   }
 }
 
+const lineHeightLabels = ['紧凑', '适中', '标准', '宽松', '超宽']
+
 const contentStyle = computed(() => ({
   fontSize: `${14 + readerStore.fontSize * 2}px`,
   fontWeight: [0, 300, 400, 700][readerStore.fontWeight] || 400,
   fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css,
+  lineHeight: readerStore.getLineHeight(),
 }))
 
 async function loadBook(id: string) {
@@ -518,11 +591,92 @@ function startResize() {
 function scrollToChapterStart() {
   if (mainRef.value) mainRef.value.scrollTop = 0
 }
-function prevPage() {
-  if (currentChapter.value > 0) { currentChapter.value--; scrollToChapterStart() }
+
+// 翻页模式：重新计算每页高度和总页数
+async function recalcPage() {
+  if (readerStore.readerMode !== 'page') return
+  await nextTick()
+  const container = pageContentRef.value
+  const content = pageContentInnerRef.value
+  if (!container || !content) return
+
+  pageHeight.value = container.clientHeight
+  totalPages.value = Math.max(1, Math.ceil(content.scrollHeight / pageHeight.value))
+  if (currentPage.value >= totalPages.value) {
+    currentPage.value = Math.max(0, totalPages.value - 1)
+  }
 }
+
+// 监听影响分页的配置变化
+watch(
+  () => [currentChapter.value, readerStore.fontSize, readerStore.lineHeight, readerStore.fontWeight, readerStore.fontFamily],
+  () => {
+    if (readerStore.readerMode === 'page') {
+      currentPage.value = 0
+      recalcPage()
+    }
+  }
+)
+
+// 翻页模式下的翻页逻辑
+function prevPageContent() {
+  if (currentPage.value > 0) {
+    currentPage.value--
+  } else if (currentChapter.value > 0) {
+    // 如果已经是第一页，则跳到上一章的最后一页
+    currentChapter.value--
+    nextTick(() => {
+      currentPage.value = totalPages.value - 1
+    })
+  }
+}
+
+function nextPageContent() {
+  if (currentPage.value < totalPages.value - 1) {
+    currentPage.value++
+  } else if (book.value && currentChapter.value < book.value.content.length - 1) {
+    // 如果已经是最后一页，则跳到下一章的第一页
+    currentChapter.value++
+    currentPage.value = 0
+  }
+}
+
+function prevPage() {
+  if (readerStore.readerMode === 'page') {
+    prevPageContent()
+  } else {
+    if (currentChapter.value > 0) {
+      pageTransition.value = 'page-back'
+      currentChapter.value--
+      scrollToChapterStart()
+    }
+  }
+}
+
 function nextPage() {
-  if (book.value && currentChapter.value < book.value.content.length - 1) { currentChapter.value++; scrollToChapterStart() }
+  if (readerStore.readerMode === 'page') {
+    nextPageContent()
+  } else {
+    if (book.value && currentChapter.value < book.value.content.length - 1) {
+      pageTransition.value = 'page-forward'
+      currentChapter.value++
+      scrollToChapterStart()
+    }
+  }
+}
+
+// 键盘翻页
+function handleKeydown(e: KeyboardEvent) {
+  if (readerStore.readerMode !== 'page') return
+  if (rightPanel.value) return // 如果右侧面板打开，不处理键盘事件
+
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault()
+    prevPageContent()
+  } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+    e.preventDefault()
+    nextPageContent()
+  }
 }
 
 async function loadShelf() {
@@ -658,6 +812,14 @@ const highlightedSentences = computed(() => {
     return result
   })
 })
+
+// 翻页模式：内容变化时重新计算页数
+watch(() => [highlightedSentences.value.length, readerStore.readerMode], () => {
+  if (readerStore.readerMode === 'page') {
+    currentPage.value = 0
+    recalcPage()
+  }
+}, { immediate: true })
 
 const allHighlights = computed(() => highlights.value)
 
@@ -984,6 +1146,7 @@ function onFs() { isFullscreen.value = !!document.fullscreenElement }
 
 onMounted(async () => {
   document.addEventListener('click', onDocClick)
+  document.addEventListener('keydown', handleKeydown)
   try { const s = localStorage.getItem('reader-sidebar-width'); if (s) { const n = parseInt(s, 10); if (!Number.isNaN(n)) sidebarWidth.value = Math.max(minW, Math.min(maxW, n)) } } catch {}
   
   // 加载语音设置
@@ -1026,6 +1189,7 @@ function onTocClick(idx: number) {
 
 onBeforeUnmount(() => { 
   document.removeEventListener('click', onDocClick)
+  document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('fullscreenchange', onFs)
   stopReadAloud()
 })
@@ -1130,12 +1294,95 @@ onBeforeUnmount(() => {
 
 /* 主阅读区 */
 .reader-main { flex: 1; overflow-y: auto; position: relative; min-width: 0; background: #fff; transition: background 0.3s, color 0.3s; }
+.reader-main.page-mode { overflow: hidden; }
+.reader-content-wrap { flex: 1; overflow-y: auto; }
+.reader-content-wrap.page-mode-wrap {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 .reader-content { max-width: 720px; margin: 0 auto; padding: 16px 20px 100px; }
+.reader-content-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 20px 100px;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.page-content-inner {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  flex-shrink: 0;
+}
+.page-turn-area {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.2s;
+}
+.page-turn-area.left {
+  left: 0;
+}
+.page-turn-area.right {
+  right: 0;
+}
+.page-turn-area:hover {
+  background: rgba(24, 144, 255, 0.05);
+}
+.page-turn-area.left:hover {
+  background: linear-gradient(to right, rgba(24, 144, 255, 0.1), transparent);
+}
+.page-turn-area.right:hover {
+  background: linear-gradient(to left, rgba(24, 144, 255, 0.1), transparent);
+}
+.page-indicator {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  z-index: 30;
+  pointer-events: none;
+}
 .reader-content :deep(img) {
   max-width: 100%; height: auto; display: block;
   margin: 1em auto; border-radius: 4px;
 }
 .loading { text-align: center; padding: 40px; color: #999; }
+
+/* 翻页过渡动画 */
+.page-forward-enter-active,
+.page-forward-leave-active,
+.page-back-enter-active,
+.page-back-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.page-forward-enter-from {
+  opacity: 0;
+  transform: translateX(40px);
+}
+.page-forward-leave-to {
+  opacity: 0;
+  transform: translateX(-40px);
+}
+.page-back-enter-from {
+  opacity: 0;
+  transform: translateX(-40px);
+}
+.page-back-leave-to {
+  opacity: 0;
+  transform: translateX(40px);
+}
 
 /* 右下角章节按钮 */
 .reader-nav-cr { position: fixed; right: 76px; bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 30; }
@@ -1203,11 +1450,6 @@ onBeforeUnmount(() => {
   accent-color: #1890ff;
   -webkit-appearance: none; appearance: none;
   background: rgba(0,0,0,0.12); border-radius: 2px; outline: none;
-}
-.pdf-page-indicator {
-  font-size: 13px; color: #666;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 .zoom-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
@@ -1279,7 +1521,7 @@ onBeforeUnmount(() => {
 .annot-width-line { display: block; background: #555; border-radius: 2px; flex-shrink: 0; }
 .annot-pen-group { position: relative; display: inline-flex; }
 .annot-pen-dropdown {
-  position: absolute; top: 100%; left: 0; margin-top: 4px;
+  position: absolute; bottom: 100%; left: 0; margin-bottom: 4px;
   background: #fff; border: 1px solid #ddd; border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;
   overflow: hidden; display: flex; gap: 2px; padding: 4px;
@@ -1573,6 +1815,35 @@ onBeforeUnmount(() => {
 .size-dots { flex: 1; display: flex; gap: 6px; justify-content: center; }
 .dot { width: 12px; height: 12px; border-radius: 3px; background: #e8e8e8; transition: background 0.2s; }
 .dot.active { background: #1890ff; }
+.size-label { font-size: 12px; color: #1890ff; font-weight: 500; min-width: 32px; text-align: center; flex-shrink: 0; }
+.mode-switch {
+  display: flex;
+  gap: 0;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+}
+.mode-btn {
+  padding: 6px 18px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+  transition: all 0.2s;
+}
+.mode-btn.active {
+  background: #fff;
+  color: #1890ff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  font-weight: 600;
+}
+.mode-btn:hover:not(.active) {
+  color: #555;
+}
 .weight-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .weight-btn {
   padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px;
@@ -1753,6 +2024,10 @@ onBeforeUnmount(() => {
 .theme-dark .size-control button { background: #3a3a3a; border-color: #555; color: #ccc; }
 .theme-dark .dot { background: #555; }
 .theme-dark .dot.active { background: #1890ff; }
+.theme-dark .size-label { color: #40a9ff; }
+.theme-dark .mode-switch { background: #2a2a2a; }
+.theme-dark .mode-btn { color: #aaa; }
+.theme-dark .mode-btn.active { background: #3a3a3a; color: #40a9ff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
 .theme-dark .font-btn { background: transparent; color: #888; }
 .theme-dark .font-btn.active { color: #fff; border-bottom-color: #1890ff; }
 .theme-dark .danger-btn { background: #3a3a3a; border-color: #ff4d4f; color: #ff4d4f; }
@@ -1802,6 +2077,12 @@ onBeforeUnmount(() => {
 .theme-green .size-control button { background: #f0f7eb; border-color: #c8dba0; }
 .theme-green .font-btn { background: transparent; color: #8aaa80; }
 .theme-green .font-btn.active { color: #2d4a2d; border-bottom-color: #5a9e42; }
+.theme-green .dot { background: #c8dba0; }
+.theme-green .dot.active { background: #5a9e42; }
+.theme-green .size-label { color: #5a9e42; }
+.theme-green .mode-switch { background: #d8e8d0; }
+.theme-green .mode-btn { color: #6a8a6a; }
+.theme-green .mode-btn.active { background: #f0f7eb; color: #5a9e42; box-shadow: 0 1px 4px rgba(90,158,66,0.1); }
 .theme-green .resize-bar:hover { background: rgba(46,74,46,0.1); }
 .theme-green .nav-btn { background: #fff; color: #3a5a3a; border-color: #c8e0c0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-weight: 600; }
 .theme-green .nav-btn:hover:not(:disabled) { background: #f4f9f0; color: #1e3a1e; border-color: #a8c8a0; }
@@ -1874,6 +2155,10 @@ onBeforeUnmount(() => {
 .theme-parchment .size-control button { background: #f0e6d0; border-color: #c9b894; color: #3d2a00; }
 .theme-parchment .dot { background: #c9b894; }
 .theme-parchment .dot.active { background: #8b6914; }
+.theme-parchment .size-label { color: #8b6914; }
+.theme-parchment .mode-switch { background: #e0d0b0; }
+.theme-parchment .mode-btn { color: #7a6a4a; }
+.theme-parchment .mode-btn.active { background: #f0e6d0; color: #8b6914; box-shadow: 0 1px 4px rgba(139,105,20,0.1); }
 .theme-parchment .font-btn { background: transparent; color: #8a7a5a; }
 .theme-parchment .font-btn.active { color: #3d2a00; border-bottom-color: #8b6914; }
 .theme-parchment .close-btn { background: #d4c5a9; color: #3d2a00; }

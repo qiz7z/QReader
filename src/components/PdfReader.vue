@@ -2,25 +2,27 @@
   <div class="pdf-reader">
     <div v-if="loading" class="loading">正在加载 PDF...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
-    <div v-else class="pdf-pages">
-      <div v-if="annotSaveStatus" class="annot-save-status">{{ annotSaveStatus }}</div>
-      <div v-for="pageNum in totalPages" :key="pageNum" class="pdf-page-wrapper">
-        <canvas :ref="(el) => setCanvasRef(pageNum, el)" class="pdf-page"></canvas>
-        <canvas
-          :ref="(el) => setAnnotRef(pageNum, el)"
-          class="pdf-annot-layer"
-          :class="['pdf-annot-layer', { 'annot-active': annotationMode, 'annot-eraser': annotationTool.startsWith('eraser-') }]"
-          @mousedown.prevent="onAnnotDown(pageNum, $event)"
-          @mousemove.prevent="onAnnotMove($event)"
-          @mouseup.prevent="onAnnotUp"
-          @mouseleave.prevent="onAnnotUp"
-        ></canvas>
-        <div
-          v-if="annotationTextInput.page === pageNum"
-          class="pdf-annot-text-input"
-          :style="{ left: annotationTextInput.x + 'px', top: annotationTextInput.y + 'px' }"
-        >
-          <textarea ref="textInputRef" v-model="annotationTextInput.text" class="annot-textarea" rows="2" @keydown.enter.prevent="confirmTextAnnotation" @blur="confirmTextAnnotation"></textarea>
+    <div v-else class="pdf-pages-wrapper">
+      <div class="pdf-pages" :style="pdfPagesStyle">
+        <div v-if="annotSaveStatus" class="annot-save-status">{{ annotSaveStatus }}</div>
+        <div v-for="pageNum in totalPages" :key="pageNum" class="pdf-page-wrapper">
+          <canvas :ref="(el) => setCanvasRef(pageNum, el)" class="pdf-page"></canvas>
+          <canvas
+            :ref="(el) => setAnnotRef(pageNum, el)"
+            class="pdf-annot-layer"
+            :class="['pdf-annot-layer', { 'annot-active': annotationMode, 'annot-eraser': annotationTool.startsWith('eraser-') }]"
+            @mousedown.prevent="onAnnotDown(pageNum, $event)"
+            @mousemove.prevent="onAnnotMove($event)"
+            @mouseup.prevent="onAnnotUp"
+            @mouseleave.prevent="onAnnotUp"
+          ></canvas>
+          <div
+            v-if="annotationTextInput.page === pageNum"
+            class="pdf-annot-text-input"
+            :style="{ left: annotationTextInput.x + 'px', top: annotationTextInput.y + 'px' }"
+          >
+            <textarea ref="textInputRef" v-model="annotationTextInput.text" class="annot-textarea" rows="2" @keydown.enter.prevent="confirmTextAnnotation" @blur="confirmTextAnnotation"></textarea>
+          </div>
         </div>
       </div>
     </div>
@@ -28,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import { StorageService } from '@/services/StorageService'
 import type { PdfAnnotation } from '@/types'
@@ -43,7 +45,7 @@ const props = defineProps<{
   annotationTool: string
   annotColor: string
   annotWidth: number
-  currentPage?: number // 当前页码（从 0 开始）
+  currentPage?: number
 }>()
 
 const loading = ref(true)
@@ -63,10 +65,23 @@ const annotationTextInput = ref({ page: 0, x: 0, y: 0, text: '' })
 const textInputRef = ref<HTMLTextAreaElement | null>(null)
 const annotSaveStatus = ref('')
 
+// ====== 缩放核心状态 ======
+let renderedScale = 2.0
+const previewZoom = ref(1)
+
+// 响应式 style — 使用 transform: scale()（标准属性，所有浏览器兼容）
+const pdfPagesStyle = computed(() => {
+  if (Math.abs(previewZoom.value - 1) < 0.005) return undefined
+  return {
+    transform: `scale(${previewZoom.value})`,
+    transformOrigin: 'top center',
+  }
+})
+
 function setCanvasRef(pageNum: number, el: any) {
   if (el instanceof HTMLCanvasElement) {
     canvasRefs.set(pageNum, el)
-    if (pdfDoc) renderPage(pageNum)
+    if (pdfDoc) renderPage(pageNum, renderedScale)
   } else {
     canvasRefs.delete(pageNum)
     renderedPages.delete(pageNum)
@@ -179,12 +194,23 @@ function getBookId(): string | null {
   return m ? m[1] : null
 }
 
-async function eraseNearestLine(pageNum: number) {
-  if (currentPoints.value.length === 0) return
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1, dy = y2 - y1
+  const len2 = dx * dx + dy * dy
+  if (len2 === 0) return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2)
+  let t = ((px - x1) * dx + (py - y1) * dy) / len2
+  t = Math.max(0, Math.min(1, t))
+  const projX = x1 + t * dx
+  const projY = y1 + t * dy
+  return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2)
+}
+
+function findAndRemoveNearestLine(pageNum: number): boolean {
+  if (currentPoints.value.length === 0) return false
   const pos = currentPoints.value[currentPoints.value.length - 1]
   const pageAnnots = allAnnotations.value.filter(a => a.pageNum === pageNum)
   let nearest: PdfAnnotation | null = null
-  let minDist = 15 / props.scale
+  let minDist = 18
 
   for (const a of pageAnnots) {
     const sf = props.scale / (a.scale || props.scale)
@@ -201,10 +227,14 @@ async function eraseNearestLine(pageNum: number) {
       continue
     }
 
-    for (const p of a.points) {
-      const dx = p.x * sf - pos.x
-      const dy = p.y * sf - pos.y
-      const d = Math.sqrt(dx * dx + dy * dy)
+    if (a.type === 'text' || a.points.length < 2) continue
+
+    for (let i = 1; i < a.points.length; i++) {
+      const d = distToSegment(
+        pos.x, pos.y,
+        a.points[i - 1].x * sf, a.points[i - 1].y * sf,
+        a.points[i].x * sf, a.points[i].y * sf
+      )
       if (d < minDist) {
         minDist = d
         nearest = a
@@ -212,12 +242,10 @@ async function eraseNearestLine(pageNum: number) {
     }
   }
 
-  if (!nearest) return
+  if (!nearest) return false
   allAnnotations.value = allAnnotations.value.filter(a => a !== nearest)
-  if (nearest.id) await StorageService.deleteAnnotation(nearest.id)
-  renderPageAnnotations(pageNum)
-  annotSaveStatus.value = '线条已擦除'
-  setTimeout(() => { annotSaveStatus.value = '' }, 1500)
+  if (nearest.id) StorageService.deleteAnnotation(nearest.id).catch(() => {})
+  return true
 }
 
 function onAnnotDown(pageNum: number, e: MouseEvent) {
@@ -231,7 +259,7 @@ function onAnnotDown(pageNum: number, e: MouseEvent) {
     isDrawing.value = true
     drawingPage.value = pageNum
     currentPoints.value = [getAnnotPos(e, pageNum)]
-    eraseNearestLine(pageNum)
+    findAndRemoveNearestLine(pageNum)
     renderPageAnnotations(pageNum)
     return
   }
@@ -243,7 +271,11 @@ function onAnnotDown(pageNum: number, e: MouseEvent) {
 function onAnnotMove(e: MouseEvent) {
   if (!isDrawing.value || !drawingPage.value) return
   const pos = getAnnotPos(e, drawingPage.value)
-  currentPoints.value.push(pos)
+  if (props.annotationTool === 'eraser-line') {
+    currentPoints.value = [pos]
+  } else {
+    currentPoints.value.push(pos)
+  }
 
   const annotCanvas = annotRefs.get(drawingPage.value)
   if (!annotCanvas) return
@@ -256,7 +288,7 @@ function onAnnotMove(e: MouseEvent) {
   ctx.scale(dpr, dpr)
 
   if (props.annotationTool === 'eraser-line') {
-    eraseNearestLine(drawingPage.value)
+    findAndRemoveNearestLine(drawingPage.value)
     drawAllAnnotations(ctx, drawingPage.value)
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     return
@@ -428,7 +460,17 @@ async function loadPdf() {
     }
     pdfDoc = await pdfjsLib.getDocument(pdfOptions).promise
     totalPages.value = pdfDoc.numPages
-    await renderAllPages()
+    renderedScale = props.scale
+    const sizes = await renderAllPagesAtScale(props.scale)
+    for (const [pageNum, size] of sizes) {
+      const pdfCanvas = canvasRefs.get(pageNum)
+      if (pdfCanvas) {
+        pdfCanvas.style.display = 'block'
+        pdfCanvas.style.width = size.w + 'px'
+        pdfCanvas.style.height = size.h + 'px'
+      }
+    }
+    renderAllAnnotations()
     await loadAnnotations()
   } catch (e: any) {
     error.value = 'PDF 加载失败：' + (e.message || '未知错误')
@@ -437,63 +479,152 @@ async function loadPdf() {
   }
 }
 
-async function renderPage(pageNum: number) {
-  if (renderedPages.has(pageNum) || renderingPages.has(pageNum)) return
+// ====== 渲染核心 ======
+const activeRenderTasks = new Map<number, { task: any; cancelled: boolean }>()
+const pendingPageSizes = new Map<number, { w: number; h: number }>()
+
+async function renderPage(pageNum: number, scale: number): Promise<boolean> {
   const canvas = canvasRefs.get(pageNum)
-  if (!canvas || !pdfDoc) return
+  if (!canvas || !pdfDoc) return false
+
+  const prev = activeRenderTasks.get(pageNum)
+  if (prev) {
+    prev.cancelled = true
+    try { prev.task.cancel() } catch {}
+    activeRenderTasks.delete(pageNum)
+  }
+
   renderingPages.add(pageNum)
+  const entry = { task: null as any, cancelled: false }
+  activeRenderTasks.set(pageNum, entry)
+
   try {
     const page = await pdfDoc.getPage(pageNum)
-    const visualScale = props.scale
+    if (entry.cancelled) return false
+
     const dpr = window.devicePixelRatio || 1
-    const scale = visualScale * dpr
-    const viewport = page.getViewport({ scale })
-    canvas.width = Math.ceil(viewport.width)
-    canvas.height = Math.ceil(viewport.height)
-    canvas.style.display = 'block'
-    canvas.style.width = `${Math.round(viewport.width / dpr)}px`
-    canvas.style.height = `${Math.round(viewport.height / dpr)}px`
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = 'high'
-    const renderTask = page.render({ canvasContext: ctx, viewport })
+    const pixelScale = scale * dpr
+    const viewport = page.getViewport({ scale: pixelScale })
+    const cssW = Math.round(viewport.width / dpr)
+    const cssH = Math.round(viewport.height / dpr)
+
+    // 离屏渲染避免白屏
+    const offscreen = document.createElement('canvas')
+    offscreen.width = Math.ceil(viewport.width)
+    offscreen.height = Math.ceil(viewport.height)
+    const offCtx = offscreen.getContext('2d')
+    if (!offCtx) return false
+    offCtx.imageSmoothingEnabled = true
+    offCtx.imageSmoothingQuality = 'high'
+
+    const renderTask = page.render({ canvasContext: offCtx, viewport })
+    entry.task = renderTask
     await renderTask.promise
+    if (entry.cancelled) return false
+
+    canvas.width = offscreen.width
+    canvas.height = offscreen.height
+    const ctx = canvas.getContext('2d')
+    if (ctx) ctx.drawImage(offscreen, 0, 0)
+
+    const zooming = Math.abs(previewZoom.value - 1) >= 0.005
+    if (zooming) {
+      pendingPageSizes.set(pageNum, { w: cssW, h: cssH })
+    } else {
+      canvas.style.display = 'block'
+      canvas.style.width = cssW + 'px'
+      canvas.style.height = cssH + 'px'
+    }
+
     renderedPages.add(pageNum)
-    matchAnnotCanvasSize(pageNum)
-    renderPageAnnotations(pageNum)
-  } catch (e) {
-    console.warn(`Failed to render page ${pageNum}:`, e)
+    if (!zooming) {
+      matchAnnotCanvasSize(pageNum)
+      renderPageAnnotations(pageNum)
+    }
+    return true
+  } catch (e: any) {
+    if (e?.name !== 'RenderingCancelledException') {
+      console.warn(`Failed to render page ${pageNum}:`, e)
+    }
+    return false
   } finally {
     renderingPages.delete(pageNum)
+    activeRenderTasks.delete(pageNum)
   }
 }
 
-async function renderAllPages() {
-  const promises: Promise<void>[] = []
-  for (let i = 1; i <= totalPages.value; i++) {
-    promises.push(renderPage(i))
+// 渲染所有页面，返回 pendingPageSizes 供调用方决定是否应用
+function renderAllPagesAtScale(scale: number): Promise<Map<number, { w: number; h: number }>> {
+  renderedPages.clear()
+  pendingPageSizes.clear()
+
+  const allPages = Array.from({ length: totalPages.value }, (_, i) => i + 1)
+  const promises: Promise<boolean>[] = []
+  for (const p of allPages) {
+    promises.push(renderPage(p, scale))
   }
-  // 同时渲染前几页，后续依次
-  for (let i = 0; i < promises.length; i++) {
-    await promises[i]
-  }
+
+  return Promise.all(promises).then(() => {
+    return new Map(pendingPageSizes)
+  })
 }
 
 watch(() => props.rawFile, loadPdf, { immediate: true })
 
-watch(() => props.scale, () => {
-  if (pdfDoc) {
-    renderedPages.clear()
-    renderingPages.clear()
-    renderAllPages()
+let scaleDebounceTimer: ReturnType<typeof setTimeout> | null = null
+let renderGeneration = 0
+let lastScaleChangeTime = 0
+
+watch(() => props.scale, (newScale) => {
+  if (!pdfDoc) return
+
+  const now = Date.now()
+  const isDiscrete = (now - lastScaleChangeTime) > 400
+  lastScaleChangeTime = now
+
+  // 即时预览：同时写 zoom + transform，兼容所有浏览器
+  const newZoom = newScale / renderedScale
+  previewZoom.value = newZoom
+
+  if (scaleDebounceTimer) clearTimeout(scaleDebounceTimer)
+  const gen = ++renderGeneration
+
+  const doRender = () => {
+    const targetScale = props.scale
+    renderAllPagesAtScale(targetScale).then((sizes) => {
+      if (gen !== renderGeneration) return
+
+      // 原子化：先更新 zoom，再应用 CSS 尺寸
+      renderedScale = targetScale
+      previewZoom.value = props.scale / renderedScale
+      // Vue 响应式会更新 :style，无需直接操作 DOM
+
+      for (const [pageNum, size] of sizes) {
+        const pdfCanvas = canvasRefs.get(pageNum)
+        if (pdfCanvas) {
+          pdfCanvas.style.display = 'block'
+          pdfCanvas.style.width = size.w + 'px'
+          pdfCanvas.style.height = size.h + 'px'
+        }
+      }
+      renderAllAnnotations()
+    })
+  }
+
+  if (isDiscrete) {
+    doRender()
+  } else {
+    scaleDebounceTimer = setTimeout(() => {
+      scaleDebounceTimer = null
+      if (gen !== renderGeneration) return
+      doRender()
+    }, 300)
   }
 })
 
-// 监听 currentPage 变化，滚动到指定页面
 watch(() => props.currentPage, (newPage) => {
   if (newPage !== undefined && newPage >= 0) {
-    scrollToPage(newPage + 1) // 转为从 1 开始的页码
+    scrollToPage(newPage + 1)
   }
 })
 
@@ -508,7 +639,6 @@ defineExpose({ loadAnnotations, undoLastAnnotation, undoLastGlobal, clearPageAnn
 
 watch(() => props.annotationMode, (v) => {
   if (v) {
-    // 打开标注模式时直接使用内存中的数据重绘，不从 Dexie 重载
     nextTick(() => renderAllAnnotations())
   }
 })
@@ -527,6 +657,13 @@ watch(() => props.annotColor, () => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: auto;
+}
+.pdf-pages-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 .pdf-pages {
   display: flex;

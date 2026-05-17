@@ -1,8 +1,29 @@
 <template>
-  <div v-if="books.length === 0" class="empty-library">
-    <p>书架是空的，点击上方"导入书籍"开始阅读</p>
-  </div>
-  <div v-else class="book-grid">
+  <div class="book-grid">
+    <div
+      v-for="book in importingBooks"
+      :key="book.id"
+      class="book-card importing-card"
+    >
+      <div class="book-cover importing-cover">
+        <div class="import-overlay">
+          <svg class="import-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="import-progress-track">
+          <div class="import-progress-fill" :style="{ width: (animatedProgress[book.id] ?? 0) + '%' }">
+            <div class="import-progress-shimmer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="book-info">
+        <h3 class="book-title" :title="book.fileName">{{ book.fileName }}</h3>
+        <p class="book-meta">{{ book.format.toUpperCase() }}</p>
+        <p class="book-time">导入中 {{ Math.round(animatedProgress[book.id] ?? 0) }}%</p>
+      </div>
+    </div>
     <div
       v-for="book in books"
       :key="book.id"
@@ -26,16 +47,60 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, reactive, watch } from 'vue'
 import type { BookRecord } from '@/types'
+import type { ImportingBook } from '@/stores/library'
 
 const props = defineProps<{
   books: BookRecord[]
+  importingBooks?: ImportingBook[]
 }>()
 
 const emit = defineEmits<{
   (e: 'bookClick', bookId: string): void
   (e: 'bookDelete', bookId: string): void
 }>()
+
+// 平滑进度动画
+const animatedProgress = reactive<Record<string, number>>({})
+const rafIds = new Map<string, number>()
+
+function animateToTarget(bookId: string, target: number) {
+  if (rafIds.has(bookId)) {
+    cancelAnimationFrame(rafIds.get(bookId)!)
+  }
+  const current = animatedProgress[bookId] ?? 0
+  if (current === target) return
+
+  const startTime = performance.now()
+  const duration = Math.min(Math.abs(target - current) * 12, 600)
+
+  function step(now: number) {
+    const elapsed = now - startTime
+    const t = Math.min(elapsed / duration, 1)
+    const eased = 1 - Math.pow(1 - t, 3)
+    animatedProgress[bookId] = current + (target - current) * eased
+    if (t < 1) {
+      rafIds.set(bookId, requestAnimationFrame(step))
+    } else {
+      animatedProgress[bookId] = target
+      rafIds.delete(bookId)
+    }
+  }
+  rafIds.set(bookId, requestAnimationFrame(step))
+}
+
+watch(
+  () => props.importingBooks?.map(b => ({ id: b.id, progress: b.progress })),
+  (books) => {
+    books?.forEach(b => animateToTarget(b.id, b.progress))
+  },
+  { deep: true }
+)
+
+onBeforeUnmount(() => {
+  rafIds.forEach(id => cancelAnimationFrame(id))
+})
 
 const coverUrls = new Map<string, string>()
 
@@ -170,13 +235,6 @@ function confirmDelete(bookId: string) {
 </script>
 
 <style scoped>
-.empty-library {
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
-  font-size: 16px;
-}
-
 .book-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -279,5 +337,76 @@ function confirmDelete(bookId: string) {
 
 .book-card:hover .delete-btn {
   opacity: 1;
+}
+
+.importing-card {
+  cursor: default;
+}
+
+.importing-card:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.importing-cover {
+  position: relative;
+  background: linear-gradient(135deg, #f5f0eb 0%, #e8e0d0 100%);
+  flex-direction: column;
+  gap: 8px;
+}
+
+.import-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #8b7355;
+}
+
+.import-icon {
+  width: 36px;
+  height: 36px;
+  opacity: 0.5;
+}
+
+.import-progress-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(139, 115, 85, 0.12);
+}
+
+.import-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #bf953f, #fcf6ba, #aa771c);
+  border-radius: 0 2px 2px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.import-progress-shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.importing-card .book-time {
+  color: #bf953f;
 }
 </style>

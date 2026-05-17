@@ -25,6 +25,14 @@ export class StorageService {
     return await db.books.orderBy('updatedAt').reverse().toArray()
   }
 
+  static async getBooksCount(): Promise<number> {
+    return await db.books.count()
+  }
+
+  static async getBooksBatch(offset: number, limit: number): Promise<BookRecord[]> {
+    return await db.books.orderBy('updatedAt').reverse().offset(offset).limit(limit).toArray()
+  }
+
   static async deleteBook(id: string): Promise<void> {
     await db.transaction('rw', [db.books, db.parsedBooks, db.bookmarks, db.notes, db.progress], async () => {
       await db.books.delete(id)
@@ -125,7 +133,33 @@ export class StorageService {
   // 数据管理
 
   static async deleteAllData(): Promise<void> {
-    await db.tables.forEach((table) => table.clear())
+    await Promise.all(db.tables.map((table) => table.clear()))
+  }
+
+  static async clearBooks(): Promise<void> {
+    await db.transaction('rw', [db.books, db.parsedBooks, db.bookmarks, db.notes, db.progress], async () => {
+      await db.books.clear()
+      await db.parsedBooks.clear()
+      await db.bookmarks.clear()
+      await db.notes.clear()
+      await db.progress.clear()
+    })
+  }
+
+  static async clearBookmarks(): Promise<void> {
+    await db.bookmarks.clear()
+  }
+
+  static async clearNotes(): Promise<void> {
+    await db.notes.clear()
+  }
+
+  static async clearProgress(): Promise<void> {
+    await db.progress.clear()
+  }
+
+  static async clearSettings(): Promise<void> {
+    await db.settings.clear()
   }
 
   // PDF 标注

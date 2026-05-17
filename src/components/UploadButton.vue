@@ -22,7 +22,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
+import { useLibraryStore } from '@/stores/library'
 import { FormatParserService } from '@/services/FormatParserService'
 import { StorageService } from '@/services/StorageService'
 import type { BookRecord } from '@/types'
@@ -52,24 +53,39 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
+const libraryStore = useLibraryStore()
+
 async function importFiles(files: File[]) {
-  console.log('[Upload] Importing files:', files.map(f => f.name))
-  
   for (const file of files) {
     const format = FormatParserService.getFormat(file.name)
-    console.log('[Upload] File format:', format)
 
     if (!FormatParserService.supportsFormat(format)) {
       alert(`不支持的文件格式：${file.name}`)
       continue
     }
 
-    try {
-      console.log('[Upload] Starting to parse:', file.name)
-      const parsedBook = await FormatParserService.parse(file)
-      console.log('[Upload] Parsed book:', parsedBook.title, parsedBook.content?.length, 'chapters')
+    // 立即创建占位书卡
+    const importId = libraryStore.addImportingBook(file.name)
+    await nextTick()
 
+    try {
+      libraryStore.updateImportProgress(importId, 5)
+
+      // 读取文件（模拟渐进进度）
       const arrayBuffer = await file.arrayBuffer()
+      libraryStore.updateImportProgress(importId, 30)
+      await nextTick()
+
+      // 解析文件
+      const parsedBook = await FormatParserService.parse(file)
+      libraryStore.updateImportProgress(importId, 65)
+      await nextTick()
+
+      // 模拟解析完成后的过渡
+      libraryStore.updateImportProgress(importId, 80)
+      await nextTick()
+
+      // 保存数据
       const bookRecord: BookRecord = {
         id: parsedBook.id,
         title: parsedBook.title,
@@ -82,13 +98,16 @@ async function importFiles(files: File[]) {
         updatedAt: Date.now(),
       }
 
-      console.log('[Upload] Saving book to storage...')
       await StorageService.saveBook(bookRecord)
       await StorageService.saveParsedBook(parsedBook.id, parsedBook)
-      console.log('[Upload] Book saved successfully!')
+      libraryStore.updateImportProgress(importId, 95)
+      await nextTick()
 
-      emit('book-imported', bookRecord)
+      // 完成：移除导入中卡片，添加正式卡片
+      libraryStore.removeImportingBook(importId)
+      libraryStore.addBook(bookRecord)
     } catch (error) {
+      libraryStore.removeImportingBook(importId)
       console.error('[Upload] Error importing file:', error)
       alert(`解析文件失败：${file.name}\n${(error as Error).message}`)
     }

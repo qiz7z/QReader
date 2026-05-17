@@ -1,11 +1,15 @@
 import { defineStore } from 'pinia'
 
+const LINE_HEIGHTS = [1.2, 1.4, 1.6, 1.8, 2.0]
+
 export const useReaderStore = defineStore('reader', {
   state: () => ({
     fontSize: 3,
     theme: 'light' as 'light' | 'dark' | 'green' | 'parchment',
     fontWeight: 2,
     fontFamily: 0,
+    lineHeight: 3, // index into LINE_HEIGHTS (1‑based, stored as 1‑5)
+    readerMode: 'scroll' as 'scroll' | 'page',
   }),
   actions: {
     setFontSize(v: number) {
@@ -23,6 +27,18 @@ export const useReaderStore = defineStore('reader', {
     setFontFamily(v: number) {
       this.fontFamily = v
       try { localStorage.setItem('reader-fontFamily', String(v)) } catch {}
+    },
+    setLineHeight(v: number) {
+      this.lineHeight = v
+      try { localStorage.setItem('reader-lineHeight', String(v)) } catch {}
+    },
+    getLineHeight(): number {
+      const idx = Math.max(0, Math.min(LINE_HEIGHTS.length - 1, (this.lineHeight || 3) - 1))
+      return LINE_HEIGHTS[idx]
+    },
+    setReaderMode(v: 'scroll' | 'page') {
+      this.readerMode = v
+      try { localStorage.setItem('reader-readerMode', v) } catch {}
     },
     initFromStorage() {
       try {
@@ -43,6 +59,14 @@ export const useReaderStore = defineStore('reader', {
           const n = parseInt(ff, 10)
           if (!Number.isNaN(n)) this.fontFamily = n
         }
+      } catch {}
+      try {
+        const lh = localStorage.getItem('reader-lineHeight')
+        if (lh) { const n = parseInt(lh, 10); if (!Number.isNaN(n)) this.lineHeight = Math.max(1, Math.min(5, n)) }
+      } catch {}
+      try {
+        const rm = localStorage.getItem('reader-readerMode')
+        if (rm === 'scroll' || rm === 'page') this.readerMode = rm
       } catch {}
     }
   }
