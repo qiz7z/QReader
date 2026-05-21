@@ -1,0 +1,96 @@
+<!DOCTYPE html><html><body><script>
+var ipc = window.__bridgeIpc
+var TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
+var WIN_EPOCH = 11644473600
+
+function secMsGec() {
+  var t = Math.floor(Date.now()/1000) + WIN_EPOCH
+  t -= t%300
+  t = Math.floor(t*10000000)
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(t.toFixed(0)+TOKEN))
+    .then(function(b) {
+      return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,"0")}).join("").toUpperCase()
+    })
+}
+
+async function synth(id, text, voice, rate) {
+  try {
+    var gec = await secMsGec()
+    var cid = crypto.randomUUID().replace(/-/g,"")
+    var url = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?" +
+      "TrustedClientToken="+TOKEN+"&ConnectionId="+cid+"&Sec-MS-GEC="+gec+"&Sec-MS-GEC-Version=1-143.0.3650.75"
+    var ws = new WebSocket(url)
+    ws.binaryType = "arraybuffer"
+    var chunks = [], started = false, done = false, opened = false
+    var timer = setTimeout(function(){
+      if(!done){
+        done = true
+        try { ws.close() } catch (_) {}
+        ipc.send("edge:result", id, { err: opened ? "response timeout" : "handshake timeout" })
+      }
+    }, 45000)
+
+    function header(path, body) {
+      var now = new Date().toString()
+      var ct = path==="ssml" ? "application/ssml+xml" : "application/json; charset=utf-8"
+      return "X-RequestId:"+cid+"\r\nContent-Type:"+ct+"\r\nX-Timestamp:"+now+"\r\nPath:"+path+"\r\n\r\n"+body
+    }
+
+    ws.onopen = function() {
+      opened = true
+      var cfg = JSON.stringify({"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":false,"wordBoundaryEnabled":true},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}})
+      ws.send(header("speech.config", cfg))
+      var pct = Math.round((rate-1)*100)
+      var rstr = (pct>=0?"+"+pct:pct)+"%"
+      var esc = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;")
+      var ssml = "<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"zh-CN\"><voice name=\""+voice+"\"><prosody pitch=\"+0Hz\" rate=\""+rstr+"\" volume=\"+0%\">"+esc+"</prosody></voice></speak>"
+      ws.send(header("ssml", ssml))
+    }
+
+    ws.onmessage = function(e) {
+      var b = new Uint8Array(e.data), sep = -1
+      for(var i=0;i<b.length-3;i++) if(b[i]==13&&b[i+1]==10&&b[i+2]==13&&b[i+3]==10){sep=i;break}
+      if(sep===-1) return
+      var h = new TextDecoder().decode(b.slice(0,sep))
+      var p = (h.match(/Path:([^\\r\\n]+)/)||[])[1]||""
+      var payload = b.slice(sep+4)
+      if(p==="turn.start"){started=true;return}
+      if(p==="audio"&&payload.length>0){chunks.push(payload);return}
+      if(p!=="turn.end") return
+      if(done) return
+      done = true
+      clearTimeout(timer)
+      ws.close()
+      if(chunks.length===0){ipc.send("edge:result", id, { err: "empty" });return}
+      var total=0; for(var j=0;j<chunks.length;j++) total+=chunks[j].length
+      var merge=new Uint8Array(total), off=0
+      for(var k=0;k<chunks.length;k++){merge.set(chunks[k],off);off+=chunks[k].length}
+      ipc.send("edge:result", id, { data: Array.from(merge) })
+    }
+
+    ws.onerror = function() {
+      if(!done){done=true;clearTimeout(timer);ipc.send("edge:result", id, { err: opened ? "ws error" : "ws handshake error" })}
+    }
+    ws.onclose = function(ev) {
+      if(done) return
+      done=true; clearTimeout(timer)
+      if(started&&chunks.length>0){
+        var total=0; for(var j=0;j<chunks.length;j++) total+=chunks[j].length
+        var merge=new Uint8Array(total), off=0
+        for(var k=0;k<chunks.length;k++){merge.set(chunks[k],off);off+=chunks[k].length}
+        ipc.send("edge:result", id, { data: Array.from(merge) })
+      } else {
+        var reason = ev && ev.reason ? (" "+ev.reason) : ""
+        ipc.send("edge:result", id, { err: "closed "+ev.code+reason })
+      }
+    }
+  } catch (e) {
+    ipc.send("edge:result", id, { err: e.message })
+  }
+}
+
+ipc.on("edge:req", function(e, id, text, voice, rate) {
+  synth(id, text, voice, rate)
+})
+ipc.send("edge:ready")
+</script></body></html>

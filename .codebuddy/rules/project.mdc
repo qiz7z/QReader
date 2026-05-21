@@ -1,0 +1,9 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-05-20T06:05:30.229Z
+provider: 
+---
+
+QReader 是一个基于 Electron + Vue 3 + TypeScript 的桌面阅读器应用。它使用 Vite 构建，包含 PDF/EPUB/MOBI/TXT/DOCX/Markdown 等格式解析功能。项目根目录为 c:\Users\liuqi\Desktop\QReader - 副本。
