@@ -1,388 +1,303 @@
 <template>
-  <div class="home-view" :class="`theme-${theme}`">
-    <!-- 背景光效 -->
-    <div class="ambient-glow">
-      <div class="glow-circle glow-1"></div>
-      <div class="glow-circle glow-2"></div>
-      <div class="glow-circle glow-3"></div>
-    </div>
-
-    <!-- 装饰性书页 -->
-    <div class="floating-books">
-      <div class="floating-book book-1">
-        <div class="book-page"></div>
-      </div>
-      <div class="floating-book book-2">
-        <div class="book-page"></div>
-      </div>
-      <div class="floating-book book-3">
-        <div class="book-page"></div>
-      </div>
-    </div>
-
-    <!-- 主容器 -->
-    <div class="home-container">
-      <!-- 品牌标识 -->
-      <header class="home-header">
-        <div class="logo-container">
-          <svg class="logo-icon" viewBox="0 0 80 80" fill="none">
-            <!-- 书本左侧 -->
-            <path d="M32 18 C28 18, 24 22, 24 28 L24 44 C24 50, 28 54, 32 54" 
-                  stroke="var(--brand-primary)" 
-                  stroke-width="3" 
-                  stroke-linecap="round"
-                  fill="none"/>
-            <!-- 书本右侧 -->
-            <path d="M48 18 C52 18, 56 22, 56 28 L56 44 C56 50, 52 54, 48 54" 
-                  stroke="var(--brand-secondary)" 
-                  stroke-width="3" 
-                  stroke-linecap="round"
-                  fill="none"/>
-            <!-- 中心装订线 -->
-            <line x1="40" y1="18" x2="40" y2="54" 
-                  stroke="var(--brand-accent)" 
-                  stroke-width="2" 
-                  stroke-dasharray="3 2"/>
-            <!-- 书页线条 -->
-            <path d="M27 26 L53 26" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-            <path d="M27 32 L53 32" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-            <path d="M27 38 L53 38" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-            <path d="M27 44 L53 44" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-            <!-- 科技光环 -->
-            <circle cx="40" cy="36" r="26" 
-                    stroke="var(--brand-gradient)" 
-                    stroke-width="1.5" 
-                    fill="none"
-                    opacity="0.3"/>
-          </svg>
+  <div class="home-view">
+    <!-- 主横幅区域 -->
+    <main class="hero-section">
+      <div class="hero-content">
+        <!-- 品牌标识 -->
+        <div class="brand-section">
+          <div class="logo-wrapper">
+            <div class="logo-book">
+              <svg class="logo-svg" viewBox="0 0 120 120" fill="none" aria-labelledby="logoTitle logoDesc">
+                <title id="logoTitle">QReader Logo</title>
+                <desc id="logoDesc">一本打开的书，象征阅读与知识</desc>
+                <!-- 左书页 -->
+                <path d="M48 28 C42 28, 36 34, 36 42 L36 66 C36 74, 42 80, 48 80" 
+                      class="logo-left" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <!-- 右书页 -->
+                <path d="M72 28 C78 28, 84 34, 84 42 L84 66 C84 74, 78 80, 72 80" 
+                      class="logo-right" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <!-- 中缝 -->
+                <line x1="60" y1="28" x2="60" y2="80" class="logo-center" stroke-width="2.5" stroke-dasharray="4 3"/>
+                <!-- 书页线条 -->
+                <g class="logo-lines" opacity="0.6">
+                  <path d="M39 38 L81 38" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M39 48 L81 48" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M39 58 L81 58" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M39 68 L81 68" stroke-width="2" stroke-linecap="round"/>
+                </g>
+                <!-- 装饰圆环 -->
+                <ellipse cx="60" cy="54" rx="38" ry="36" class="logo-ring" stroke-width="1.5" fill="none"/>
+              </svg>
+            </div>
+          </div>
         </div>
-      </header>
 
-      <!-- 主标语区域 -->
-      <main class="home-content">
-        <div class="hero-section">
-          <!-- 主标题 -->
-          <h1 class="hero-title">
-            <span class="title-cn">QReader</span>
-            <span class="title-en">Quantum Reader</span>
+        <!-- 主标题区 -->
+        <div class="title-section">
+          <h1 class="main-title">
+            <span class="title-primary">QReader</span>
           </h1>
-          
-          <!-- 副标题 -->
-          <p class="hero-subtitle">
-            <span class="subtitle-line1">融合传统书卷气</span>
-            <span class="subtitle-line2">与未来科技感的</span>
-            <span class="subtitle-line3 highlight">沉浸式阅读空间</span>
+          <p class="subtitle">
+            <span class="subtitle-cn">融合传统书卷气</span>
+            <span class="subtitle-separator">·</span>
+            <span class="subtitle-cn">现代科技感</span>
           </p>
+        </div>
 
-          <!-- 分隔线 -->
-          <div class="hero-divider">
-            <span class="divider-line"></span>
-            <span class="divider-dot">◆</span>
-            <span class="divider-line"></span>
+        <!-- 特性展示 -->
+        <div class="features-grid" role="list">
+          <div class="feature-card" role="listitem">
+            <div class="feature-icon-wrapper">
+              <svg class="feature-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M7 7h10v10H7z" fill="currentColor" opacity="0.3"/>
+                <path d="M7 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">多格式支持</h3>
+            <p class="feature-desc">TXT、EPUB、PDF、MOBI、DOCX、Markdown</p>
           </div>
 
-          <!-- 特性展示 -->
-          <div class="feature-list">
-            <div class="feature-item">
-              <svg class="feature-icon" viewBox="0 0 24 24" fill="none">
-                <path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <div class="feature-card" role="listitem">
+            <div class="feature-icon-wrapper">
+              <svg class="feature-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
-              <span>多格式支持</span>
             </div>
-            <div class="feature-item">
-              <svg class="feature-icon" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <span>完全离线</span>
-            </div>
-            <div class="feature-item">
-              <svg class="feature-icon" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2l3 6 6 .9-4.5 4.3 1.1 6.1L12 17l-5.6 2.3 1.1-6.1L3 8.9l6-.9 3-6z" 
+            <h3 class="feature-title">完全离线</h3>
+            <p class="feature-desc">数据本地存储，保护隐私安全</p>
+          </div>
+
+          <div class="feature-card" role="listitem">
+            <div class="feature-icon-wrapper">
+              <svg class="feature-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3L14 9L20 9L15 14L17 20L12 16L7 20L9 14L4 9L10 9L12 3Z" 
                       stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span>书签笔记</span>
             </div>
-          </div>
-
-          <!-- 主按钮 -->
-          <div class="cta-section">
-            <button class="cta-button" @click="enterLibrary">
-              <span class="button-text">
-                <svg class="button-icon-left" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 4v16h16V4H4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M8 4v16M12 4v16M16 4v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                  <path d="M4 4l8 8 8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                进入我的书架
-                <svg class="button-icon-right" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </span>
-            </button>
-            <p class="cta-hint">支持 TXT、EPUB、PDF、MOBI、DOCX、Markdown</p>
+            <h3 class="feature-title">书签笔记</h3>
+            <p class="feature-desc">标注、高亮、进度管理</p>
           </div>
         </div>
 
-        <!-- 装饰分隔 -->
-        <div class="bottom-ornament">
-          <svg width="200" height="6" viewBox="0 0 200 6" fill="none">
-            <line x1="0" y1="3" x2="70" y2="3" stroke="var(--border-light)" stroke-width="1"/>
-            <circle cx="100" cy="3" r="2.5" fill="var(--brand-primary)"/>
-            <circle cx="100" cy="3" r="1.5" fill="var(--bg-primary)"/>
-            <line x1="130" y1="3" x2="200" y2="3" stroke="var(--border-light)" stroke-width="1"/>
-          </svg>
+        <!-- 主操作按钮 -->
+        <div class="cta-section">
+          <button 
+            class="cta-button" 
+            @click="enterLibrary"
+            type="button"
+            aria-label="进入我的书架"
+          >
+            <span class="button-inner">
+              <svg class="button-icon-left" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 4v16M12 4v16M16 4v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <span class="button-text">进入我的书架</span>
+              <svg class="button-icon-right" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="button-loading" aria-hidden="true"></span>
+          </button>
+          <p class="cta-hint">
+            <svg class="hint-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0 .33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" 
+                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            支持本地电子书导入，无需联网
+          </p>
         </div>
-      </main>
 
-      <!-- Footer -->
-      <footer class="home-footer">
-        <p class="footer-text">
-          <span>© 2025 QReader</span>
-          <span class="footer-dot">•</span>
-          <span>为阅读而生</span>
-        </p>
-      </footer>
-    </div>
+        <!-- 装饰分割线 -->
+        <div class="decorative-line" aria-hidden="true">
+          <div class="line-segment"></div>
+          <div class="line-dot"></div>
+          <div class="line-segment"></div>
+        </div>
 
-    <!-- 入场动画 -->
-    <div class="entry-animation" :class="{ 'animate-out': animationComplete }">
-      <div class="animation-content">
-        <svg class="animation-logo" viewBox="0 0 80 80" fill="none">
-          <path d="M32 18 C28 18, 24 22, 24 28 L24 44 C24 50, 28 54, 32 54" 
-                stroke="#1890ff" stroke-width="3" stroke-linecap="round" fill="none"/>
-          <path d="M48 18 C52 18, 56 22, 56 28 L56 44 C56 50, 52 54, 48 54" 
-                stroke="#722ed1" stroke-width="3" stroke-linecap="round" fill="none"/>
-          <line x1="40" y1="18" x2="40" y2="54" stroke="#096dd9" stroke-width="2" stroke-dasharray="3 2"/>
-        </svg>
-        <p class="animation-text">Reading the Future</p>
+        <!-- Footer -->
+        <footer class="page-footer">
+          <p class="footer-text">
+            <span>© 2025 QReader</span>
+            <span class="footer-bullet">•</span>
+            <span>为阅读而生</span>
+          </p>
+        </footer>
       </div>
+    </main>
+
+    <!-- 装饰背景 -->
+    <div class="background-decoration" aria-hidden="true">
+      <div class="bg-gradient"></div>
+      <div class="bg-grid"></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useReaderStore } from '@/stores/reader'
 
 const router = useRouter()
-const readerStore = useReaderStore()
-const animationComplete = ref(false)
-const theme = computed(() => readerStore.theme)
 
 const enterLibrary = () => {
   router.push('/library')
 }
-
-onMounted(() => {
-  // 入场动画持续时间后移除
-  setTimeout(() => {
-    animationComplete.value = true
-  }, 1800)
-})
 </script>
 
 <style scoped>
+/* ============================================
+   CSS 变量系统 - 支持四种主题
+   ============================================ */
+.home-view {
+  /* 默认亮色主题 */
+  --color-bg: #fafafa;
+  --color-bg-card: #ffffff;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #595959;
+  --color-text-tertiary: #8c8c8c;
+  --color-border: #e8e8e8;
+  --color-brand: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+  --color-brand-solid: #2563eb;
+  --color-accent: #7c3aed;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-button: 0 2px 8px rgba(37, 99, 235, 0.2);
+  --shadow-button-hover: 0 4px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* 暗色主题 */
+.home-view.theme-dark {
+  --color-bg: #0a0a0a;
+  --color-bg-card: #1a1a1a;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #d4d4d4;
+  --color-text-tertiary: #a0a0a0;
+  --color-border: #2a2a2a;
+  --color-brand: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+  --color-brand-solid: #3b82f6;
+  --color-accent: #8b5cf6;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-button: 0 2px 8px rgba(59, 130, 246, 0.3);
+  --shadow-button-hover: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+/* 护眼绿主题 */
+.home-view.theme-green {
+  --color-bg: #f6ffed;
+  --color-bg-card: #ffffff;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #52533d;
+  --color-text-tertiary: #87994a;
+  --color-border: #d9f7be;
+  --color-brand: linear-gradient(90deg, #52c41a 0%, #389e0d 100%);
+  --color-brand-solid: #52c41a;
+  --color-accent: #389e0d;
+  --shadow-card: 0 1px 3px rgba(82, 196, 26, 0.08), 0 4px 12px rgba(82, 196, 26, 0.1);
+  --shadow-hover: 0 4px 12px rgba(82, 196, 26, 0.12), 0 8px 24px rgba(82, 196, 26, 0.12);
+  --shadow-button: 0 2px 8px rgba(82, 196, 26, 0.2);
+  --shadow-button-hover: 0 4px 16px rgba(82, 196, 26, 0.3);
+}
+
+/* 羊皮纸主题 */
+.home-view.theme-parchment {
+  --color-bg: #f5e6d3;
+  --color-bg-card: #faf6f0;
+  --color-text-primary: #3d2b1f;
+  --color-text-secondary: #5c4a3d;
+  --color-text-tertiary: #8b7355;
+  --color-border: #d4c4a8;
+  --color-brand: linear-gradient(90deg, #b8860b 0%, #cd853f 100%);
+  --color-brand-solid: #b8860b;
+  --color-accent: #cd853f;
+  --shadow-card: 0 1px 3px rgba(184, 134, 11, 0.08), 0 4px 12px rgba(184, 134, 11, 0.1);
+  --shadow-hover: 0 4px 12px rgba(184, 134, 11, 0.12), 0 8px 24px rgba(184, 134, 11, 0.12);
+  --shadow-button: 0 2px 8px rgba(184, 134, 11, 0.2);
+  --shadow-button-hover: 0 4px 16px rgba(184, 134, 11, 0.3);
+}
+
+/* ============================================
+   基础布局
+   ============================================ */
 .home-view {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 24px;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  transition: background-color 0.3s ease;
 }
 
-/* CSS 变量 */
-.theme-light {
-  --bg-primary: #fafafa;
-  --text-primary: #262626;
-  --text-secondary: #595959;
-  --text-tertiary: #8c8c8c;
-  --border-light: #d9d9d9;
-  --brand-primary: #1890ff;
-  --brand-secondary: #722ed1;
-  --brand-accent: #096dd9;
-  --brand-gradient: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
-  --button-bg: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  --button-hover: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
-  --glow-color: rgba(24, 144, 255, 0.08);
-}
-
-.theme-dark {
-  --bg-primary: #141414;
-  --text-primary: #fafafa;
-  --text-secondary: #bfbfbf;
-  --text-tertiary: #8c8c8c;
-  --border-light: #434343;
-  --brand-primary: #40a9ff;
-  --brand-secondary: #9254de;
-  --brand-accent: #177ddc;
-  --brand-gradient: linear-gradient(135deg, #40a9ff 0%, #9254de 100%);
-  --button-bg: linear-gradient(135deg, #177ddc 0%, #096dd9 100%);
-  --button-hover: linear-gradient(135deg, #40a9ff 0%, #177ddc 100%);
-  --glow-color: rgba(64, 169, 255, 0.12);
-}
-
-.theme-green {
-  --bg-primary: #f6ffed;
-  --text-primary: #262626;
-  --text-secondary: #595959;
-  --text-tertiary: #8c8c8c;
-  --border-light: #d9d9d9;
-  --brand-primary: #52c41a;
-  --brand-secondary: #389e0d;
-  --brand-accent: #73d13d;
-  --brand-gradient: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-  --button-bg: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-  --button-hover: linear-gradient(135deg, #73d13d 0%, #52c41a 100%);
-  --glow-color: rgba(82, 196, 26, 0.08);
-}
-
-.theme-parchment {
-  --bg-primary: #f5e6d3;
-  --text-primary: #3d2b1f;
-  --text-secondary: #5c4a3d;
-  --text-tertiary: #8b7355;
-  --border-light: #d4c4a8;
-  --brand-primary: #b8860b;
-  --brand-secondary: #cd853f;
-  --brand-accent: #daa520;
-  --brand-gradient: linear-gradient(135deg, #b8860b 0%, #cd853f 100%);
-  --button-bg: linear-gradient(135deg, #b8860b 0%, #cd853f 100%);
-  --button-hover: linear-gradient(135deg, #daa520 0%, #b8860b 100%);
-  --glow-color: rgba(184, 134, 11, 0.1);
-}
-
-/* 背景光效 */
-.ambient-glow {
+/* ============================================
+   背景装饰 - 使用 CSS Grid 图案，性能更优
+   ============================================ */
+.background-decoration {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   pointer-events: none;
   z-index: 0;
 }
 
-.glow-circle {
+.bg-gradient {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: float 20s ease-in-out infinite;
+  top: -50%;
+  right: -20%;
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle at center, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+  animation: gradientFloat 20s ease-in-out infinite;
 }
 
-.glow-1 {
-  width: 400px;
-  height: 400px;
-  background: var(--glow-color);
-  top: -200px;
-  right: -100px;
-  animation-delay: -5s;
-}
-
-.glow-2 {
-  width: 300px;
-  height: 300px;
-  background: rgba(114, 46, 209, 0.06);
-  bottom: -150px;
-  left: -100px;
-  animation-delay: -10s;
-}
-
-.glow-3 {
-  width: 250px;
-  height: 250px;
-  background: rgba(24, 144, 255, 0.05);
-  top: 50%;
-  left: 50%;
-  animation-delay: -15s;
-}
-
-@keyframes float {
+@keyframes gradientFloat {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
+  33% { transform: translate(-30px, -30px) scale(1.05); }
+  66% { transform: translate(20px, 20px) scale(0.95); }
 }
 
-/* 漂浮书页 */
-.floating-books {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 1;
-  overflow: hidden;
-}
-
-.floating-book {
+.bg-grid {
   position: absolute;
-  opacity: 0.06;
+  inset: 0;
+  background-size: 60px 60px;
+  background-image: 
+    linear-gradient(to right, rgba(37, 99, 235, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
+  opacity: 0.4;
 }
 
-.book-page {
-  width: 80px;
-  height: 100px;
-  background: linear-gradient(135deg, var(--brand-primary) 0%, transparent 100%);
-  border-radius: 4px;
-  transform: rotate(45deg);
+/* ============================================
+   主内容区
+   ============================================ */
+.hero-section {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  width: 100%;
 }
 
-.book-1 {
-  top: 15%;
-  left: 10%;
-  animation: floatBook 18s ease-in-out infinite;
-}
-
-.book-2 {
-  top: 60%;
-  right: 15%;
-  animation: floatBook 22s ease-in-out infinite;
-  animation-delay: -8s;
-}
-
-.book-3 {
-  bottom: 20%;
-  left: 20%;
-  animation: floatBook 20s ease-in-out infinite;
-  animation-delay: -12s;
-}
-
-@keyframes floatBook {
-  0%, 100% { transform: translateY(0) rotate(45deg); }
-  50% { transform: translateY(-20px) rotate(50deg); }
-}
-
-/* 主容器 */
-.home-container {
-  flex: 1;
+.hero-content {
   display: flex;
   flex-direction: column;
-  position: relative;
-  z-index: 2;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-/* 品牌标识 */
-.home-header {
+  align-items: center;
   text-align: center;
-  padding: 20px 0 40px;
 }
 
-.logo-container {
+/* ============================================
+   品牌标识
+   ============================================ */
+.brand-section {
+  margin-bottom: 32px;
+}
+
+.logo-wrapper {
   display: inline-block;
   animation: logoFloat 4s ease-in-out infinite;
-}
-
-.logo-icon {
-  width: 80px;
-  height: 80px;
 }
 
 @keyframes logoFloat {
@@ -390,363 +305,409 @@ onMounted(() => {
   50% { transform: translateY(-8px); }
 }
 
-/* 主内容区 */
-.home-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 0;
+.logo-book {
+  width: 120px;
+  height: 120px;
 }
 
-.hero-section {
-  text-align: center;
-  animation: fadeInUp 1s ease-out;
+.logo-svg {
+  width: 100%;
+  height: 100%;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.logo-left,
+.logo-right {
+  stroke: url(#logoGradient);
 }
 
-.hero-title {
-  margin: 0 0 32px;
+.logo-center {
+  stroke: var(--color-accent);
 }
 
-.title-cn {
-  display: block;
-  font-size: 80px;
-  font-weight: 200;
-  font-family: 'Noto Serif SC', 'Source Han Serif SC', '思源宋体', serif;
-  background: var(--brand-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: 8px;
+.logo-lines path {
+  stroke: var(--color-brand-solid);
+}
+
+.logo-ring {
+  stroke: var(--color-accent);
+  opacity: 0.3;
+}
+
+/* ============================================
+   标题区域
+   ============================================ */
+.title-section {
+  margin-bottom: 40px;
+}
+
+.main-title {
+  margin: 0 0 16px;
+  font-size: 64px;
+  font-weight: 700;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
+  letter-spacing: -1.5px;
   line-height: 1.1;
 }
 
-.title-en {
-  display: block;
-  font-size: 14px;
+.title-primary {
+  background: var(--color-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 0;
+  font-size: 18px;
   font-weight: 400;
-  font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif;
-  color: var(--text-tertiary);
-  letter-spacing: 6px;
-  margin-top: 16px;
-  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  letter-spacing: 2px;
 }
 
-/* 副标题 */
-.hero-subtitle {
-  display: block;
-  margin: 0 0 40px;
-  line-height: 2.2;
-}
-
-.subtitle-line1,
-.subtitle-line2 {
-  display: block;
-  font-size: 22px;
-  font-weight: 300;
-  color: var(--text-primary);
-  letter-spacing: 1.5px;
-}
-
-.subtitle-line3 {
-  display: block;
-  font-size: 22px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-}
-
-@supports (-webkit-background-clip: text) {
-  .subtitle-line3.highlight {
-    background: var(--brand-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-}
-
-/* 分隔线 */
-.hero-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 48px 0;
-  opacity: 0.6;
-}
-
-.divider-line {
+.subtitle-cn {
   display: inline-block;
-  width: 60px;
-  height: 1px;
-  background: var(--border-light);
 }
 
-.divider-dot {
-  display: inline-block;
-  margin: 0 16px;
-  font-size: 12px;
-  color: var(--text-tertiary);
+.subtitle-separator {
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
 }
 
-/* 特性列表 */
-.feature-list {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  margin-bottom: 64px;
+/* ============================================
+   特性网格 - Bento Grid 布局
+   ============================================ */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 48px;
+  width: 100%;
 }
 
-.feature-item {
+.feature-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  padding: 24px 20px;
+  background: var(--color-bg-card);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.feature-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+  color: var(--color-brand-solid);
 }
 
 .feature-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--brand-primary);
+  width: 28px;
+  height: 28px;
 }
 
-.feature-item span {
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--text-tertiary);
-  letter-spacing: 3px;
+.feature-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 1px;
 }
 
-/* CTA 区域 */
+.feature-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+}
+
+/* ============================================
+   CTA 按钮区域
+   ============================================ */
 .cta-section {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  margin-bottom: 48px;
 }
 
 .cta-button {
-  padding: 0;
-  border: none;
-  border-radius: 48px;
-  background: var(--button-bg);
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 24px rgba(24, 144, 255, 0.3);
   position: relative;
+  padding: 18px 48px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-brand);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-button);
+  letter-spacing: 3px;
 }
 
 .cta-button:hover {
-  background: var(--button-hover);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 32px rgba(24, 144, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-button-hover);
+  filter: brightness(1.1);
 }
 
 .cta-button:active {
-  transform: translateY(-1px);
+  transform: translateY(0);
 }
 
-.cta-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
+.cta-button:focus {
+  outline: 3px solid rgba(37, 99, 235, 0.3);
+  outline-offset: 2px;
 }
 
-.cta-button:hover::before {
-  width: 400px;
-  height: 400px;
-}
-
-.button-text {
+.button-inner {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 40px;
-  font-size: 18px;
-  font-weight: 500;
-  font-family: 'Noto Serif SC', 'Source Han Serif SC', '思源宋体', serif;
-  letter-spacing: 6px;
   position: relative;
   z-index: 1;
 }
 
-.button-icon-left {
+.button-icon-left,
+.button-icon-right {
   width: 24px;
   height: 24px;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .button-icon-right {
-  width: 20px;
-  height: 20px;
-  opacity: 0.7;
+  transition: transform 0.3s ease;
+}
+
+.cta-button:hover .button-icon-right {
+  transform: translateX(4px);
+}
+
+.button-loading {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
 }
 
 .cta-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font-size: 13px;
-  color: var(--text-tertiary);
-  letter-spacing: 2px;
+  font-size: 14px;
+  color: var(--color-text-tertiary);
 }
 
-/* 底部装饰 */
-.bottom-ornament {
-  margin-top: 60px;
-  padding-top: 20px;
-  opacity: 0.6;
+.hint-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
 }
 
-/* Footer */
-.home-footer {
-  padding: 24px 0;
-  text-align: center;
+/* ============================================
+   装饰分割线
+   ============================================ */
+.decorative-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.line-segment {
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-border), transparent);
+}
+
+.line-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brand-solid);
+  position: relative;
+}
+
+.line-dot::before,
+.line-dot::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.5;
+}
+
+.line-dot::before {
+  top: -6px;
+}
+
+.line-dot::after {
+  bottom: -6px;
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+.page-footer {
+  margin-top: 16px;
 }
 
 .footer-text {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  letter-spacing: 1px;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
 }
 
-.footer-dot {
+.footer-bullet {
   opacity: 0.5;
 }
 
-/* 入场动画 */
-.entry-animation {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--bg-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-  transition-delay: 0.6s;
-}
-
-.entry-animation.animate-out {
-  opacity: 0;
-  transform: scale(1.1);
-  pointer-events: none;
-}
-
-.animation-content {
-  text-align: center;
-  animation: breathe 2s ease-in-out infinite;
-}
-
-.animation-logo {
-  width: 120px;
-  height: 120px;
-  margin-bottom: 24px;
-}
-
-.animation-text {
-  font-size: 18px;
-  font-weight: 300;
-  color: var(--text-primary);
-  letter-spacing: 4px;
-  opacity: 0.7;
-}
-
-@keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.03); opacity: 1; }
-}
-
-/* 响应式设计 */
+/* ============================================
+   响应式设计
+   遵循移动优先原则
+   ============================================ */
 @media (max-width: 768px) {
-  .title-cn {
-    font-size: 56px;
-    letter-spacing: 4px;
+  .home-view {
+    padding: 32px 20px;
   }
 
-  .subtitle-line1,
-  .subtitle-line2,
-  .subtitle-line3 {
-    font-size: 18px;
+  .main-title {
+    font-size: 42px;
+    letter-spacing: -0.5px;
   }
 
-  .feature-list {
-    gap: 24px;
+  .subtitle {
+    font-size: 15px;
   }
 
-  .feature-icon {
-    width: 40px;
-    height: 40px;
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  .feature-item span {
-    font-size: 12px;
+  .feature-card {
+    padding: 20px 16px;
+  }
+
+  .cta-button {
+    padding: 16px 36px;
+    font-size: 16px;
     letter-spacing: 2px;
   }
 
-  .button-text {
-    padding: 16px 32px;
-    font-size: 16px;
-    letter-spacing: 4px;
-    gap: 10px;
-  }
-
-  .button-icon-left {
-    width: 20px;
-    height: 20px;
-  }
-
-  .button-icon-right {
-    width: 18px;
-    height: 18px;
+  .line-segment {
+    width: 60px;
   }
 }
 
 @media (max-width: 480px) {
-  .title-cn {
-    font-size: 42px;
+  .main-title {
+    font-size: 36px;
   }
 
-  .subtitle-line1,
-  .subtitle-line2,
-  .subtitle-line3 {
-    font-size: 16px;
+  .subtitle {
+    font-size: 14px;
+    gap: 12px;
   }
 
-  .feature-list {
-    flex-direction: column;
-    gap: 20px;
+  .feature-icon-wrapper {
+    width: 48px;
+    height: 48px;
   }
 
-  .button-text {
+  .feature-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .feature-title {
+    font-size: 15px;
+  }
+
+  .feature-desc {
+    font-size: 12px;
+  }
+
+  .cta-button {
     padding: 14px 28px;
     font-size: 15px;
-    letter-spacing: 3px;
+    letter-spacing: 1.5px;
+  }
+
+  .button-inner {
+    gap: 8px;
+  }
+
+  .button-icon-left,
+  .button-icon-right {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* ============================================
+   动画性能优化
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .logo-wrapper,
+  .bg-gradient,
+  .feature-card:hover,
+  .cta-button:hover,
+  .button-icon-right,
+  .button-loading {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ============================================
+   打印样式
+   ============================================ */
+@media print {
+  .background-decoration,
+  .cta-button,
+  .cta-hint {
+    display: none;
   }
 }
 </style>
