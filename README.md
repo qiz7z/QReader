@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![QReader Logo](./public/qreader-icon.png)
+<img src="./public/qreader-icon.png" width="120" alt="QReader Logo">
 
 一款基于 Web 的单机版电子书阅读器，支持多种格式的电子书导入、管理和阅读。
 
