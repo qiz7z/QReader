@@ -2,6 +2,12 @@
   <div class="reader-view" :class="themeClass">
     <!-- 顶部工具栏 -->
     <header class="reader-toolbar">
+      <button class="home-btn" @click="goHome" title="返回首页">
+        <svg class="home-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <span>{{ book?.title || '加载中...' }}</span>
     </header>
 
@@ -438,6 +444,11 @@ import type { NoteRecord, BookmarkRecord, ParsedBook } from '@/types'
 const route = useRoute()
 const router = useRouter()
 const readerStore = useReaderStore()
+
+const goHome = () => {
+  router.push('/')
+}
+
 const bookId = computed(() => route.params.id as string)
 
 const book = ref<ParsedBook | null>(null)
@@ -1202,9 +1213,53 @@ onBeforeUnmount(() => {
 .reader-toolbar {
   height: 44px; padding: 0 16px; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; font-size: 15px; font-weight: 500; z-index: 20; color: #333;
+  flex-shrink: 0; font-size: 15px; font-weight: 500; z-index: 20; color: #333; gap: 16px; position: relative;
 }
 .theme-dark .reader-toolbar { background: rgba(26,26,26,0.85); border-color: rgba(255,255,255,0.06); color: #e0e0e0; }
+
+/* 首页按钮 */
+.home-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(139, 90, 43, 0.3);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(245, 230, 200, 0.6) 0%, rgba(230, 215, 185, 0.5) 100%);
+  color: #8b5a2b;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(8px);
+  position: absolute;
+  left: 16px;
+}
+
+.home-icon {
+  width: 16px;
+  height: 16px;
+  transition: all 0.25s;
+}
+
+.home-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.7) 0%, rgba(245, 230, 200, 0.6) 100%);
+  border-color: rgba(139, 90, 43, 0.5);
+  color: #6b4423;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 90, 43, 0.12);
+}
+
+.home-btn:hover .home-icon {
+  transform: scale(1.05);
+}
+
+.home-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(139, 90, 43, 0.08);
+}
 
 /* 布局容器 */
 .reader-body { flex: 1; display: flex; overflow: hidden; position: relative; transition: padding-left 0.15s; }

@@ -5,7 +5,7 @@ const LINE_HEIGHTS = [1.2, 1.4, 1.6, 1.8, 2.0]
 export const useReaderStore = defineStore('reader', {
   state: () => ({
     fontSize: 3,
-    theme: 'light' as 'light' | 'dark' | 'green' | 'parchment',
+    theme: 'parchment' as 'light' | 'dark' | 'green' | 'parchment',
     fontWeight: 2,
     fontFamily: 0,
     lineHeight: 3, // index into LINE_HEIGHTS (1‑based, stored as 1‑5)

@@ -7,10 +7,12 @@
     </div>
     <header class="library-header">
       <div class="header-left">
-        <button class="back-btn" @click="goHome" title="返回首页">
-          <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-            <path d="M19 12H5m0 0l7 7m-7-7l7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <button class="home-btn" @click="goHome" title="返回首页">
+          <svg class="home-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
+          <span class="home-text">首页</span>
         </button>
         <div class="brand">
           <svg class="logo-icon" viewBox="0 0 40 40" fill="none">
@@ -244,6 +246,7 @@ onMounted(() => {
   padding-bottom: 20px;
   border-bottom: 1px solid;
   border-image: linear-gradient(90deg, transparent, #1890ff, #40a9ff, #1890ff, transparent) 1;
+  background: transparent;
 }
 
 .header-left {
@@ -252,57 +255,45 @@ onMounted(() => {
   gap: 16px;
 }
 
-.back-btn {
+.home-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(24, 144, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(24, 144, 255, 0.08);
-  color: #1890ff;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid rgba(139, 90, 43, 0.3);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(245, 230, 200, 0.6) 0%, rgba(230, 215, 185, 0.5) 100%);
+  color: #8b5a2b;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(8px);
 }
 
-.back-btn:hover {
-  background: rgba(24, 144, 255, 0.15);
-  border-color: rgba(24, 144, 255, 0.5);
-  color: #096dd9;
-  transform: translateX(-2px);
+.home-icon {
+  width: 18px;
+  height: 18px;
+  transition: all 0.25s;
 }
 
-.back-btn:active {
-  transform: translateX(0);
+.home-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.7) 0%, rgba(245, 230, 200, 0.6) 100%);
+  border-color: rgba(139, 90, 43, 0.5);
+  color: #6b4423;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 90, 43, 0.12);
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.home-btn:hover .home-icon {
+  transform: scale(1.05);
 }
 
-.clear-all-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(139, 115, 85, 0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
-  color: #b8a47c;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.clear-all-btn:hover {
-  background: rgba(191, 149, 63, 0.12);
-  border-color: rgba(191, 149, 63, 0.35);
-  color: #8b7355;
+.home-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(139, 90, 43, 0.08);
 }
 
 .brand {
@@ -324,6 +315,40 @@ onMounted(() => {
   letter-spacing: 1px;
   color: #1890ff;
   text-shadow: 0 1px 2px rgba(24,144,255,0.25), 0 2px 4px rgba(0,0,0,0.06);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.clear-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(139, 90, 43, 0.3);
+  border-radius: 8px;
+  background: rgba(139, 90, 43, 0.08);
+  color: #8b5a2b;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.clear-all-btn:hover {
+  background: rgba(139, 90, 43, 0.15);
+  border-color: rgba(139, 90, 43, 0.5);
+  color: #6b4423;
+  transform: scale(1.05);
+}
+
+.clear-all-btn:active {
+  transform: scale(0.98);
 }
 
 .library-content {
