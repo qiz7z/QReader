@@ -1,12 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type {
-  BookRecord,
-  BookmarkRecord,
-  NoteRecord,
-  ProgressRecord,
-  SettingsRecord,
-  PdfAnnotation,
-} from '@/types'
+import type { BookRecord, BookmarkRecord, NoteRecord, ProgressRecord, SettingsRecord, PdfAnnotation } from '@/types'
 
 interface ParsedBookRecord {
   bookId: string
@@ -46,6 +39,10 @@ class EbookReaderDB extends Dexie {
       settings: 'key',
       pdfAnnotations: '++id, bookId, pageNum, createdAt',
     })
+  }
+
+  async deleteAllData(): Promise<void> {
+    await Promise.all(this.tables.map((table) => table.clear()))
   }
 }
 

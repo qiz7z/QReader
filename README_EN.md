@@ -17,7 +17,7 @@ A web-based single-page ebook reader supporting multiple formats including TXT, 
 
 ## 📖 Introduction
 
-Ebook Reader is a pure frontend single-page application that supports multiple ebook formats. All data is stored locally in browser IndexedDB - no backend required, ensuring privacy. Can be packaged as a desktop app via Electron.
+Ebook Reader is a pure frontend single-page application that supports multiple ebook formats. All data is stored locally in browser OPFS (Origin Private File System), with automatic fallback to IndexedDB for unsupported browsers. No backend required, ensuring privacy. Can be packaged as a desktop app via Electron.
 
 ### Core Advantages
 
@@ -83,7 +83,8 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 | **Router** | Vue Router | 5.x |
 | **State Management** | Pinia | 3.x |
 | **UI Components** | Element Plus | 2.14 |
-| **Data Storage** | Dexie.js (IndexedDB) | 4.4.2 |
+| **Data Storage** | OPFS (IndexedDB Fallback) | Native API |
+| **Database Library** | Dexie.js (Fallback) | 4.4.2 |
 
 ### Format Parsing Libraries
 
@@ -299,7 +300,33 @@ sequenceDiagram
 
 ## 💾 Data Storage
 
-### IndexedDB Schema
+### Storage Solution
+
+**Primary**: OPFS (Origin Private File System) - Browser native File System API
+
+**Fallback**: IndexedDB (Dexie.js) - Automatic fallback when OPFS is unsupported
+
+### OPFS Storage Structure
+
+```
+OPFS Root/
+├── books/              # Book files
+│   ├── {bookId}.json   # Book metadata
+│   ├── {bookId}_raw    # Raw file (ArrayBuffer)
+│   ├── {bookId}_cover  # Cover image (ArrayBuffer)
+│   └── {bookId}_parsed.json  # Parsed content
+├── bookmarks/          # Bookmarks
+│   └── {bookId}.json
+├── notes/              # Notes
+│   └── {bookId}.json
+├── progress/           # Reading progress
+│   └── {bookId}.json
+├── pdf-annotations/    # PDF annotations
+│   └── {bookId}.json
+└── settings.json       # Global settings
+```
+
+### IndexedDB Schema (Fallback)
 
 Database name: `EbookReaderDB`
 
@@ -311,6 +338,27 @@ Database name: `EbookReaderDB`
   notes: '++id, bookId, chapterId',             // Notes
   progress: 'bookId',                           // Reading progress
   settings: 'key'                               // User settings
+}
+```
+
+### Data Export/Import
+
+**Export**: Settings page → Export Data → Download JSON backup
+
+**Import**: Settings page → Import Data → Select JSON file → Restore
+
+**Backup File Format**:
+```json
+{
+  "version": 1,
+  "exportDate": "2026-05-23T...",
+  "books": { ... },
+  "parsedBooks": { ... },
+  "bookmarks": { ... },
+  "notes": { ... },
+  "progress": { ... },
+  "settings": { ... },
+  "pdfAnnotations": { ... }
 }
 ```
 
@@ -442,23 +490,41 @@ Output: `.exe` (Windows), `.dmg` (macOS), `.AppImage` (Linux)
 
 ### Q: Will my data be lost?
 
-A: Data is stored in browser IndexedDB. Clearing browser cache will cause data loss. Consider exporting important books regularly (feature planned for future version).
+A: Data is stored in browser OPFS, which supports atomic writes and is more reliable than IndexedDB. However, clearing browser site data will still delete OPFS data. Consider using the **Export** feature to backup important books regularly.
 
 ### Q: What's the max file size supported?
 
-A: Theoretically limited by browser IndexedDB quota, typically supports 50-100MB files.
+A: OPFS typically supports 2GB+ storage space. Theoretically supports 50-100MB single files, subject to browser quota.
 
 ### Q: Can I use it on mobile?
 
-A: Yes, the app uses responsive design and supports mobile browsers.
+A: Yes, the app uses responsive design and supports mobile browsers. Note that OPFS may not be supported in some mobile browsers and will automatically fallback to IndexedDB.
 
 ### Q: How to backup data?
 
-A: Future version will support export/import feature. Currently you can export IndexedDB data via browser DevTools.
+A: Settings page → Click "Export Data" button → Download JSON backup file. To restore, click "Import Data" and select the backup file.
+
+### Q: Does my browser support OPFS?
+
+A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can check the current storage method in the Settings page. Falls back to IndexedDB automatically if OPFS is unsupported.
 
 ---
 
 ## 📝 Changelog
+
+### v0.2.0 (2026-05-23)
+
+#### New Features
+- **OPFS Storage**: Use Origin Private File System as primary storage, more reliable and secure
+- **Data Export**: Export all data to JSON backup file
+- **Data Import**: Restore data from JSON backup file
+- **Storage Fallback**: Automatic fallback to IndexedDB for browsers without OPFS support
+- **Storage Status**: Display current storage method in Settings page
+
+#### Improvements
+- **Data Migration**: Auto-migrate data from IndexedDB to OPFS on first use
+- **Hybrid Storage Architecture**: StorageService supports both OPFS and IndexedDB modes
+- **File-based Management**: Data stored as files, easier to backup and restore
 
 ### v0.1.0 (2026-05-16)
 

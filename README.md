@@ -17,7 +17,7 @@
 
 ## 📖 项目简介
 
-电子书阅读器是一款纯前端单机版阅读应用，支持 **TXT、PDF、EPUB、MOBI、DOCX、Markdown** 等多种格式的电子书。所有数据存储在浏览器 IndexedDB 中，无需后端服务，保护用户隐私。后续可通过 Electron 打包为桌面应用。
+电子书阅读器是一款纯前端单机版阅读应用，支持 **TXT、PDF、EPUB、MOBI、DOCX、Markdown** 等多种格式的电子书。所有数据存储在浏览器 OPFS (Origin Private File System) 中，不支持 OPFS 的浏览器自动降级到 IndexedDB。无需后端服务，保护用户隐私。后续可通过 Electron 打包为桌面应用。
 
 ### 核心优势
 
@@ -76,7 +76,8 @@
 | **路由** | Vue Router | 5.x |
 | **状态管理** | Pinia | 3.x |
 | **UI 组件** | Element Plus | 2.14 |
-| **数据存储** | Dexie.js (IndexedDB) | 4.4.2 |
+| **数据存储** | OPFS (IndexedDB 降级) | 原生 API |
+| **数据库库** | Dexie.js (可选降级) | 4.4.2 |
 
 ### 格式解析库
 
@@ -292,7 +293,33 @@ sequenceDiagram
 
 ## 💾 数据存储
 
-### IndexedDB 结构
+### 存储方案
+
+**主存储**: OPFS (Origin Private File System) - 浏览器原生文件系统 API
+
+**降级方案**: IndexedDB (Dexie.js) - 当浏览器不支持 OPFS 时自动切换
+
+### OPFS 存储结构
+
+```
+OPFS 根目录/
+├── books/              # 书籍文件
+│   ├── {bookId}.json   # 书籍元数据
+│   ├── {bookId}_raw    # 原始文件 (ArrayBuffer)
+│   ├── {bookId}_cover  # 封面图片 (ArrayBuffer)
+│   └── {bookId}_parsed.json  # 解析后的内容
+├── bookmarks/          # 书签
+│   └── {bookId}.json
+├── notes/              # 笔记
+│   └── {bookId}.json
+├── progress/           # 阅读进度
+│   └── {bookId}.json
+├── pdf-annotations/    # PDF 标注
+│   └── {bookId}.json
+└── settings.json       # 全局设置
+```
+
+### IndexedDB 结构（降级时使用）
 
 数据库名：`EbookReaderDB`
 
@@ -304,6 +331,27 @@ sequenceDiagram
   notes: '++id, bookId, chapterId',             // 笔记记录
   progress: 'bookId',                           // 阅读进度
   settings: 'key'                               // 用户设置
+}
+```
+
+### 数据导出/导入
+
+**导出**: 设置页面 → 导出数据 → 下载 JSON 备份文件
+
+**导入**: 设置页面 → 导入数据 → 选择 JSON 文件 → 恢复数据
+
+**备份文件格式**:
+```json
+{
+  "version": 1,
+  "exportDate": "2026-05-23T...",
+  "books": { ... },
+  "parsedBooks": { ... },
+  "bookmarks": { ... },
+  "notes": { ... },
+  "progress": { ... },
+  "settings": { ... },
+  "pdfAnnotations": { ... }
 }
 ```
 
@@ -435,23 +483,41 @@ electron-builder
 
 ### Q: 数据会丢失吗？
 
-A: 数据存储在浏览器 IndexedDB 中，清除浏览器缓存会导致数据丢失。建议定期导出重要书籍。
+A: 数据存储在浏览器 OPFS 中，支持原子写入，比 IndexedDB 更可靠。但清除浏览器网站数据仍会删除 OPFS 数据。建议定期使用**导出功能**备份重要书籍。
 
 ### Q: 支持多大的文件？
 
-A: 理论上受浏览器 IndexedDB 配额限制，通常可支持 50-100MB 的文件。
+A: OPFS 通常支持 2GB+ 存储空间，理论上可支持 50-100MB 的单个文件，受浏览器配额限制。
 
 ### Q: 可以在手机上使用吗？
 
-A: 可以，应用采用响应式设计，支持移动设备浏览器。
+A: 可以，应用采用响应式设计，支持移动设备浏览器。但 OPFS 在部分移动浏览器可能不支持，此时会自动降级到 IndexedDB。
 
 ### Q: 如何备份数据？
 
-A: 后续版本将支持导出/导入功能，目前可通过浏览器开发者工具导出 IndexedDB 数据。
+A: 设置页面 → 点击"导出数据"按钮 → 下载 JSON 备份文件。恢复时点击"导入数据"选择备份文件即可。
+
+### Q: 我的浏览器支持 OPFS 吗？
+
+A: OPFS 支持 Chrome 102+、Edge 102+、Firefox 111+、Safari 17.4+。可以在设置页面查看当前使用的存储方式。不支持 OPFS 时会自动降级到 IndexedDB。
 
 ---
 
 ## 📝 更新日志
+
+### v0.2.0 (2026-05-23)
+
+#### 新增功能
+- **OPFS 存储**: 使用 Origin Private File System 作为主存储，更可靠、更安全
+- **数据导出**: 支持将所有数据导出为 JSON 备份文件
+- **数据导入**: 支持从 JSON 备份文件恢复数据
+- **存储降级**: 不支持 OPFS 的浏览器自动降级到 IndexedDB
+- **存储状态显示**: 设置页面显示当前使用的存储方式
+
+#### 优化改进
+- **数据迁移**: 首次使用时自动从 IndexedDB 迁移数据到 OPFS
+- **混合存储架构**: StorageService 支持 OPFS 和 IndexedDB 双模式
+- **文件式管理**: 数据以文件形式存储，更易于备份和恢复
 
 ### v0.1.0 (2026-05-16)
 

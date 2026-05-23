@@ -41,7 +41,37 @@
       </section>
       <section class="settings-section">
         <h2>数据管理</h2>
-        <p class="setting-desc">清除所有书籍、书签、笔记和阅读进度</p>
+        <div class="setting-item-vertical">
+          <label>导出所有数据</label>
+          <p class="setting-desc">将所有书籍、书签、笔记和进度导出为 JSON 文件</p>
+          <button class="primary-btn" @click="handleExportData">
+            导出数据
+          </button>
+        </div>
+        <div class="setting-item-vertical">
+          <label>导入数据</label>
+          <p class="setting-desc">从 JSON 文件导入数据（将合并现有数据）</p>
+          <input
+            type="file"
+            ref="fileInputRef"
+            accept=".json,application/json"
+            @change="handleImportData"
+            style="display: none"
+          />
+          <button class="secondary-btn" @click="triggerFileInput">
+            导入数据
+          </button>
+        </div>
+        <div class="setting-item-vertical">
+          <label>存储方式</label>
+          <p class="setting-desc">
+            {{ isOPFS ? 'OPFS (Origin Private File System) - 更可靠、更安全' : 'IndexedDB - 浏览器兼容模式' }}
+          </p>
+          <span class="storage-status">{{ isOPFS ? '✓ OPFS' : '✓ IndexedDB' }}</span>
+        </div>
+        <p class="setting-desc" style="margin-top: 20px; color: #ff4d4f;">
+          ⚠️ 危险操作：清除所有数据
+        </p>
         <button class="danger-btn" @click="handleClearAllData">
           清除所有数据
         </button>
@@ -57,14 +87,55 @@ import { DEFAULT_SETTINGS } from '@/utils/settings'
 import type { ReaderSettings } from '@/types'
 
 const settings = ref<ReaderSettings>({ ...DEFAULT_SETTINGS })
+const isOPFS = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const triggerFileInput = () => {
+  fileInputRef.value?.click()
+}
 
 const saveSettings = async () => {
   await StorageService.saveSettings(settings.value)
 }
 
+const handleExportData = async () => {
+  try {
+    const blob = await StorageService.getAllDataExport()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ebook-reader-backup-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    alert('数据导出成功！')
+  } catch (error) {
+    console.error('Export failed:', error)
+    alert('导出失败：' + (error as Error).message)
+  }
+}
+
+const handleImportData = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  try {
+    const text = await file.text()
+    await StorageService.importAllData(text)
+    alert('数据导入成功！请刷新页面。')
+    window.location.reload()
+  } catch (error) {
+    console.error('Import failed:', error)
+    alert('导入失败：' + (error as Error).message)
+  }
+  target.value = ''
+}
+
 const handleClearAllData = async () => {
   if (confirm('确定要清除所有数据吗？此操作不可撤销。')) {
-    await StorageService.deleteAllData()
+    await StorageService.clearAllData()
     settings.value = { ...DEFAULT_SETTINGS }
     alert('所有数据已清除')
     window.location.reload()
@@ -72,6 +143,7 @@ const handleClearAllData = async () => {
 }
 
 onMounted(async () => {
+  isOPFS.value = StorageService.isOPFS()
   const saved = await StorageService.getSettings()
   if (saved) {
     settings.value = { ...DEFAULT_SETTINGS, ...saved }
@@ -160,5 +232,48 @@ onMounted(async () => {
 
 .danger-btn:hover {
   background-color: #ff7875;
+}
+
+.primary-btn {
+  padding: 10px 20px;
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  margin-top: 10px;
+}
+
+.primary-btn:hover {
+  background-color: #40a9ff;
+}
+
+.secondary-btn {
+  padding: 10px 20px;
+  background-color: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  margin-top: 10px;
+}
+
+.secondary-btn:hover {
+  background-color: #73d13d;
+}
+
+.storage-status {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 8px;
 }
 </style>
