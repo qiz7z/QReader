@@ -6,15 +6,22 @@
       <span class="ornament-line"></span>
     </div>
     <header class="library-header">
-      <div class="brand">
-        <svg class="logo-icon" viewBox="0 0 40 40" fill="none">
-          <path d="M14 4 C22 4, 28 10, 28 18 C28 26, 22 30, 14 30 C10 30, 8 28, 8 24" stroke="#1890ff" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="14" y1="15" x2="22" y2="15" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="14" y1="19" x2="22" y2="19" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="14" y1="23" x2="18" y2="23" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
-          <path d="M24 26 L32 34" stroke="#1890ff" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-        <h1 class="brand-name">QReader</h1>
+      <div class="header-left">
+        <button class="back-btn" @click="goHome" title="返回首页">
+          <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+            <path d="M19 12H5m0 0l7 7m-7-7l7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="brand">
+          <svg class="logo-icon" viewBox="0 0 40 40" fill="none">
+            <path d="M14 4 C22 4, 28 10, 28 18 C28 26, 22 30, 14 30 C10 30, 8 28, 8 24" stroke="#1890ff" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="14" y1="15" x2="22" y2="15" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="14" y1="19" x2="22" y2="19" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="14" y1="23" x2="18" y2="23" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M24 26 L32 34" stroke="#1890ff" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <h1 class="brand-name">我的书架</h1>
+        </div>
       </div>
       <div class="header-actions">
         <SearchBar v-model="searchQuery" @update:modelValue="handleSearch" />
@@ -110,12 +117,14 @@ const readerStore = useReaderStore()
 
 const filteredBooks = computed(() => libraryStore.filteredBooks)
 const importingBooks = computed(() => libraryStore.importingBooks)
-const isLoading = computed(() => libraryStore.isLoading)
-const hasBooks = computed(() => filteredBooks.value.length > 0 || importingBooks.value.length > 0)
-const searchQuery = computed({
-  get: () => libraryStore.searchQuery,
-  set: (val: string) => libraryStore.setSearchQuery(val),
-})
+const hasBooks = computed(() => libraryStore.books.length > 0)
+const isLoading = ref(true)
+
+const goHome = () => {
+  router.push('/')
+}
+
+const searchQuery = ref('')
 
 const handleBookImported = (book: BookRecord) => {
   libraryStore.addBook(book)
@@ -235,6 +244,38 @@ onMounted(() => {
   padding-bottom: 20px;
   border-bottom: 1px solid;
   border-image: linear-gradient(90deg, transparent, #1890ff, #40a9ff, #1890ff, transparent) 1;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(24, 144, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(24, 144, 255, 0.08);
+  color: #1890ff;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.back-btn:hover {
+  background: rgba(24, 144, 255, 0.15);
+  border-color: rgba(24, 144, 255, 0.5);
+  color: #096dd9;
+  transform: translateX(-2px);
+}
+
+.back-btn:active {
+  transform: translateX(0);
 }
 
 .header-actions {
