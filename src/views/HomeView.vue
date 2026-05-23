@@ -8,6 +8,12 @@
           <div class="logo-wrapper">
             <div class="logo-book">
               <svg class="logo-svg" viewBox="0 0 120 120" fill="none" aria-labelledby="logoTitle logoDesc">
+                <defs>
+                  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#b8860b"/>
+                    <stop offset="100%" style="stop-color:#cd853f"/>
+                  </linearGradient>
+                </defs>
                 <title id="logoTitle">QReader Logo</title>
                 <desc id="logoDesc">一本打开的书，象征阅读与知识</desc>
                 <!-- 左书页 -->
@@ -149,61 +155,9 @@ const enterLibrary = () => {
 
 <style scoped>
 /* ============================================
-   CSS 变量系统 - 支持四种主题
+   CSS 变量系统 - 统一羊皮纸主题
    ============================================ */
 .home-view {
-  /* 默认亮色主题 */
-  --color-bg: #fafafa;
-  --color-bg-card: #ffffff;
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #595959;
-  --color-text-tertiary: #8c8c8c;
-  --color-border: #e8e8e8;
-  --color-brand: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
-  --color-brand-solid: #2563eb;
-  --color-accent: #7c3aed;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-button: 0 2px 8px rgba(37, 99, 235, 0.2);
-  --shadow-button-hover: 0 4px 16px rgba(37, 99, 235, 0.3);
-}
-
-/* 暗色主题 */
-.home-view.theme-dark {
-  --color-bg: #0a0a0a;
-  --color-bg-card: #1a1a1a;
-  --color-text-primary: #fafafa;
-  --color-text-secondary: #d4d4d4;
-  --color-text-tertiary: #a0a0a0;
-  --color-border: #2a2a2a;
-  --color-brand: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
-  --color-brand-solid: #3b82f6;
-  --color-accent: #8b5cf6;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-button: 0 2px 8px rgba(59, 130, 246, 0.3);
-  --shadow-button-hover: 0 4px 16px rgba(59, 130, 246, 0.4);
-}
-
-/* 护眼绿主题 */
-.home-view.theme-green {
-  --color-bg: #f6ffed;
-  --color-bg-card: #ffffff;
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #52533d;
-  --color-text-tertiary: #87994a;
-  --color-border: #d9f7be;
-  --color-brand: linear-gradient(90deg, #52c41a 0%, #389e0d 100%);
-  --color-brand-solid: #52c41a;
-  --color-accent: #389e0d;
-  --shadow-card: 0 1px 3px rgba(82, 196, 26, 0.08), 0 4px 12px rgba(82, 196, 26, 0.1);
-  --shadow-hover: 0 4px 12px rgba(82, 196, 26, 0.12), 0 8px 24px rgba(82, 196, 26, 0.12);
-  --shadow-button: 0 2px 8px rgba(82, 196, 26, 0.2);
-  --shadow-button-hover: 0 4px 16px rgba(82, 196, 26, 0.3);
-}
-
-/* 羊皮纸主题 */
-.home-view.theme-parchment {
   --color-bg: #f5e6d3;
   --color-bg-card: #faf6f0;
   --color-text-primary: #3d2b1f;
@@ -213,6 +167,7 @@ const enterLibrary = () => {
   --color-brand: linear-gradient(90deg, #b8860b 0%, #cd853f 100%);
   --color-brand-solid: #b8860b;
   --color-accent: #cd853f;
+  --color-gold: #c9a84c;
   --shadow-card: 0 1px 3px rgba(184, 134, 11, 0.08), 0 4px 12px rgba(184, 134, 11, 0.1);
   --shadow-hover: 0 4px 12px rgba(184, 134, 11, 0.12), 0 8px 24px rgba(184, 134, 11, 0.12);
   --shadow-button: 0 2px 8px rgba(184, 134, 11, 0.2);
@@ -228,15 +183,26 @@ const enterLibrary = () => {
   justify-content: center;
   align-items: center;
   padding: 40px 24px;
-  background-color: var(--color-bg);
+  background: 
+    linear-gradient(rgba(245, 230, 200, 0.6), rgba(240, 230, 208, 0.7)),
+    linear-gradient(135deg, #f5e6d3 0%, #f0e6d0 50%, #e8d4c0 100%);
   color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
-  transition: background-color 0.3s ease;
+  animation: pageBgDrift 20s ease-in-out infinite;
+}
+
+@keyframes pageBgDrift {
+  0%, 100% { 
+    background-position: 0% 50%;
+  }
+  50% { 
+    background-position: 100% 50%;
+  }
 }
 
 /* ============================================
-   背景装饰 - 使用 CSS Grid 图案，性能更优
+   背景装饰 - 羊皮纸 + 动态光效
    ============================================ */
 .background-decoration {
   position: fixed;
@@ -245,30 +211,88 @@ const enterLibrary = () => {
   z-index: 0;
 }
 
-.bg-gradient {
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 800px;
-  height: 800px;
-  background: radial-gradient(circle at center, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
-  animation: gradientFloat 20s ease-in-out infinite;
-}
-
-@keyframes gradientFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-30px, -30px) scale(1.05); }
-  66% { transform: translate(20px, 20px) scale(0.95); }
-}
-
-.bg-grid {
+/* 主背景 - 羊皮纸渐变 */
+.bg-primary {
   position: absolute;
   inset: 0;
-  background-size: 60px 60px;
+  background: 
+    linear-gradient(rgba(245, 230, 200, 0.6), rgba(240, 230, 208, 0.7)),
+    linear-gradient(135deg, #f5e6d3 0%, #f0e6d0 50%, #e8d4c0 100%);
+  animation: bgDrift 15s ease-in-out infinite;
+}
+
+@keyframes bgDrift {
+  0%, 100% { 
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  50% { 
+    background-position: 100% 50%;
+    filter: brightness(1.05);
+  }
+}
+
+/* 浮动光斑 */
+.bg-glow {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 168, 76, 0.15) 0%, transparent 70%);
+  filter: blur(40px);
+  animation: glowFloat 20s ease-in-out infinite;
+}
+
+.glow-1 {
+  top: -150px;
+  right: -100px;
+  animation-delay: -5s;
+}
+
+.glow-2 {
+  bottom: -150px;
+  left: -100px;
+  background: radial-gradient(circle, rgba(184, 134, 11, 0.12) 0%, transparent 70%);
+  animation-delay: -10s;
+}
+
+.glow-3 {
+  top: 50%;
+  left: 50%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(205, 133, 63, 0.1) 0%, transparent 70%);
+  animation-delay: -15s;
+}
+
+@keyframes glowFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -40px) scale(1.1); }
+  66% { transform: translate(-30px, 30px) scale(0.9); }
+}
+
+/* 装饰光晕 */
+.bg-ornament {
+  position: absolute;
+  inset: 0;
   background-image: 
-    linear-gradient(to right, rgba(37, 99, 235, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
-  opacity: 0.4;
+    radial-gradient(ellipse at 20% 30%, rgba(201, 168, 76, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(184, 134, 11, 0.08) 0%, transparent 50%);
+  animation: ornamentPulse 12s ease-in-out infinite;
+}
+
+@keyframes ornamentPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+/* 细微纹理 */
+.bg-texture {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  pointer-events: none;
 }
 
 /* ============================================
@@ -321,7 +345,7 @@ const enterLibrary = () => {
 }
 
 .logo-center {
-  stroke: var(--color-accent);
+  stroke: var(--color-gold);
 }
 
 .logo-lines path {
@@ -329,7 +353,7 @@ const enterLibrary = () => {
 }
 
 .logo-ring {
-  stroke: var(--color-accent);
+  stroke: var(--color-gold);
   opacity: 0.3;
 }
 
@@ -413,7 +437,7 @@ const enterLibrary = () => {
   height: 56px;
   margin-bottom: 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(184, 134, 11, 0.12) 0%, rgba(205, 133, 63, 0.12) 100%);
   color: var(--color-brand-solid);
 }
 
