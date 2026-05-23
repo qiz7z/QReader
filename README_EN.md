@@ -1,4 +1,6 @@
-# Ebook Reader
+<div align="center">
+  <img src="./public/qreader-icon.png" width="120" alt="QReader Logo">
+</div>
 
 <div align="center">
 
