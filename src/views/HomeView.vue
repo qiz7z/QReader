@@ -6,35 +6,7 @@
         <!-- 品牌标识 -->
         <div class="brand-section">
           <div class="logo-wrapper">
-            <div class="logo-book">
-              <svg class="logo-svg" viewBox="0 0 120 120" fill="none" aria-labelledby="logoTitle logoDesc">
-                <defs>
-                  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#b8860b"/>
-                    <stop offset="100%" style="stop-color:#cd853f"/>
-                  </linearGradient>
-                </defs>
-                <title id="logoTitle">QReader Logo</title>
-                <desc id="logoDesc">一本打开的书，象征阅读与知识</desc>
-                <!-- 左书页 -->
-                <path d="M48 28 C42 28, 36 34, 36 42 L36 66 C36 74, 42 80, 48 80" 
-                      class="logo-left" stroke-width="3" stroke-linecap="round" fill="none"/>
-                <!-- 右书页 -->
-                <path d="M72 28 C78 28, 84 34, 84 42 L84 66 C84 74, 78 80, 72 80" 
-                      class="logo-right" stroke-width="3" stroke-linecap="round" fill="none"/>
-                <!-- 中缝 -->
-                <line x1="60" y1="28" x2="60" y2="80" class="logo-center" stroke-width="2.5" stroke-dasharray="4 3"/>
-                <!-- 书页线条 -->
-                <g class="logo-lines" opacity="0.6">
-                  <path d="M39 38 L81 38" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M39 48 L81 48" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M39 58 L81 58" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M39 68 L81 68" stroke-width="2" stroke-linecap="round"/>
-                </g>
-                <!-- 装饰圆环 -->
-                <ellipse cx="60" cy="54" rx="38" ry="36" class="logo-ring" stroke-width="1.5" fill="none"/>
-              </svg>
-            </div>
+            <img src="/qreader-icon.png" alt="QReader Logo" class="app-logo" />
           </div>
         </div>
 
@@ -327,6 +299,19 @@ const enterLibrary = () => {
 @keyframes logoFloat {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
+}
+
+.app-logo {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 24px rgba(30, 136, 229, 0.3));
+  transition: all 0.3s ease;
+}
+
+.app-logo:hover {
+  filter: drop-shadow(0 12px 32px rgba(30, 136, 229, 0.4));
+  transform: scale(1.05);
 }
 
 .logo-book {
