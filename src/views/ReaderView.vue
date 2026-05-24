@@ -229,13 +229,13 @@
               <div v-if="rightPanel === 'readAloud'" class="read-aloud-panel">
                 <div class="read-aloud-header">
                   <div class="read-aloud-title">朗读</div>
-                  <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying }">
-                    {{ isReadAloudPlaying ? '正在朗读...' : '已停止' }}
+                  <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying, error: isSpeechError }">
+                    {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : synth ? '准备就绪' : '不支持' }}
                   </div>
                 </div>
                 
                 <div class="read-aloud-controls">
-                  <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'">
+                  <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="!synth || voiceCache.length === 0">
                     <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
                       <rect x="6" y="4" width="4" height="16"></rect>
                       <rect x="14" y="4" width="4" height="16"></rect>
@@ -249,8 +249,8 @@
                 <div class="read-aloud-settings">
                   <div class="setting-row voice-row">
                     <label>音色</label>
-                    <select v-model="selectedVoiceName" @change="onVoiceChange">
-                      <option v-for="voice in availableVoices" :key="voice.name" :value="voice.name">
+                    <select v-model="selectedVoiceName" @change="onVoiceChange" :disabled="voiceCache.length === 0">
+                      <option v-for="voice in voiceCache" :key="voice.name" :value="voice.name">
                         {{ voice.label }}
                       </option>
                     </select>
@@ -505,7 +505,6 @@ const bookmarks = ref<BookmarkRecord[]>([])
 const isReadAloudPlaying = ref(false)
 const speechRate = ref(1)
 const selectedVoiceName = ref('')
-const availableVoices = ref<Array<{ name: string; label: string }>>([])
 let synth: SpeechSynthesis | null = null
 let currentSentenceIndex = ref(0)
 let isAutoAdvancingChapter = false // 朗读自动跳章标记
@@ -834,61 +833,166 @@ watch(() => [highlightedSentences.value.length, readerStore.readerMode], () => {
 
 const allHighlights = computed(() => highlights.value)
 
-// 朗读功能
+// 朗读功能 - 增强稳定性
+let synth: SpeechSynthesis | null = null
+let speechQueue: SpeechSynthesisUtterance[] = []
+let isSpeechError = ref(false)
+let retryCount = ref(0)
+const MAX_RETRY = 3
+
+// 语音缓存
+const voiceCache = ref<Array<{ name: string; label: string }>>([])
+const isVoicesLoaded = ref(false)
+
 function initSpeechSynthesis() {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    synth = window.speechSynthesis
-    
-    // 加载可用语音
-    const loadVoices = () => {
-      const voices = synth!.getVoices()
-      // 筛选中文语音，并创建音色列表
-      const zhVoices = voices.filter(v => v.lang.startsWith('zh'))
-      
-      availableVoices.value = zhVoices.map((v) => ({
-        name: v.name,
-        label: v.name.replace(/ - .*$/, '').trim() || v.name
-      }))
-      
-      // 如果没有中文语音，使用所有语音
-      if (availableVoices.value.length === 0) {
-        availableVoices.value = voices.map((v) => ({
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    console.warn('[TTS] Speech Synthesis not supported')
+    return
+  }
+  
+  synth = window.speechSynthesis
+  
+  // 防止重复加载
+  if (isVoicesLoaded.value) return
+  
+  const loadVoices = () => {
+    // 添加延迟确保语音加载完成
+    setTimeout(() => {
+      try {
+        const voices = synth!.getVoices()
+        if (!voices || voices.length === 0) {
+          // 语音未就绪，稍后重试
+          if (retryCount.value < MAX_RETRY) {
+            retryCount.value++
+            loadVoices()
+            return
+          }
+          console.warn('[TTS] No voices available after retries')
+          return
+        }
+        
+        retryCount.value = 0
+        isVoicesLoaded.value = true
+        
+        // 筛选中文语音
+        const zhVoices = voices.filter(v => v.lang.startsWith('zh'))
+        
+        voiceCache.value = (zhVoices.length > 0 ? zhVoices : voices).map(v => ({
           name: v.name,
           label: v.name.replace(/ - .*$/, '').trim() || v.name
         }))
+        
+        // 从缓存加载默认语音
+        const saved = localStorage.getItem('reader-voice')
+        if (saved && voiceCache.value.find(v => v.name === saved)) {
+          selectedVoiceName.value = saved
+        } else if (voiceCache.value.length > 0) {
+          selectedVoiceName.value = voiceCache.value[0].name
+        }
+      } catch (err) {
+        console.error('[TTS] Error loading voices:', err)
+        if (retryCount.value < MAX_RETRY) {
+          retryCount.value++
+          setTimeout(loadVoices, 500 * retryCount.value)
+        }
       }
-      
-      // 默认选择第一个语音，或从 localStorage 加载
-      const saved = localStorage.getItem('reader-voice')
-      if (saved && availableVoices.value.find(v => v.name === saved)) {
-        selectedVoiceName.value = saved
-      } else if (availableVoices.value.length > 0) {
-        selectedVoiceName.value = availableVoices.value[0].name
+    }, 100 + (retryCount.value * 100))
+  }
+  
+  // 首次加载
+  loadVoices()
+  
+  // 监听语音变化
+  if (synth.onvoiceschanged !== undefined) {
+    synth.onvoiceschanged = () => {
+      if (!isVoicesLoaded.value) {
+        loadVoices()
       }
-    }
-    
-    loadVoices()
-    
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = loadVoices
     }
   }
 }
 
-// 从指定段落开始朗读
+// 从指定段落开始朗读 - 增强错误处理
 function readFromSentence(startIndex: number) {
   if (!synth || sentences.value.length === 0) return
   
   currentSentenceIndex.value = startIndex
-  
   const text = sentences.value[startIndex].replace(/<[^>]*>/g, ' ').trim()
+  
   if (!text) {
-    // 当前段落为空，跳到下一段
     if (startIndex < sentences.value.length - 1) {
       readFromSentence(startIndex + 1)
     } else {
       stopReadAloud()
     }
+    return
+  }
+  
+  // 检查语音是否可用
+  if (!isVoicesLoaded.value || voiceCache.value.length === 0) {
+    console.warn('[TTS] Voices not loaded yet, waiting...')
+    setTimeout(() => readFromSentence(startIndex), 200)
+    return
+  }
+  
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.rate = speechRate.value
+  utterance.pitch = 1.0
+  utterance.volume = 1.0
+  
+  // 设置语音
+  const voices = synth.getVoices()
+  const selectedVoice = voices.find(v => v.name === selectedVoiceName.value)
+  if (selectedVoice) {
+    utterance.voice = selectedVoice
+  }
+  
+  // 错误处理
+  utterance.onerror = (event) => {
+    console.error('[TTS] Error:', event)
+    isSpeechError.value = true
+    
+    // 尝试恢复
+    if (retryCount.value < MAX_RETRY) {
+      retryCount.value++
+      console.log(`[TTS] Retrying ${retryCount.value}/${MAX_RETRY}...`)
+      setTimeout(() => {
+        isSpeechError.value = false
+        readFromSentence(startIndex)
+      }, 500 * retryCount.value)
+    } else {
+      console.error('[TTS] Max retries reached, stopping')
+      stopReadAloud()
+    }
+  }
+  
+  utterance.onstart = () => {
+    isSpeechError.value = false
+    retryCount.value = 0
+    isReadAloudPlaying.value = true
+    scrollToSentence(startIndex)
+  }
+  
+  utterance.onend = () => {
+    if (isSpeechError.value) return
+    
+    if (startIndex < sentences.value.length - 1) {
+      readFromSentence(startIndex + 1)
+    } else if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
+      // 下一章
+      currentChapter.value++
+      loadChapter(currentChapter.value)
+      setTimeout(() => readFromSentence(0), 300)
+    } else {
+      stopReadAloud()
+    }
+  }
+  
+  // 停止之前的朗读
+  synth.cancel()
+  speechQueue.push(utterance)
+  synth.speak(utterance)
+}
     return
   }
   
@@ -947,26 +1051,36 @@ function scrollToSentence(idx: number) {
 }
 
 function toggleReadAloud() {
-  if (!synth) return
+  if (!synth) {
+    console.warn('[TTS] Speech synthesis not initialized')
+    return
+  }
+  
+  // 检查语音是否已加载
+  if (!isVoicesLoaded.value || voiceCache.value.length === 0) {
+    console.warn('[TTS] Voices not ready, initializing...')
+    initSpeechSynthesis()
+    setTimeout(() => toggleReadAloud(), 300)
+    return
+  }
   
   if (isReadAloudPlaying.value) {
     // 暂停
     if (synth.speaking && !synth.paused) {
-      synth.pause()
-      isReadAloudPlaying.value = false
+      pauseReadAloud()
     } else if (synth.paused) {
       // 恢复
-      synth.resume()
-      isReadAloudPlaying.value = true
+      resumeReadAloud()
     }
   } else {
-    // 如果已经读完了，从头开始
+    // 开始或恢复
     if (synth.speaking) {
-      synth.resume()
-      isReadAloudPlaying.value = true
+      resumeReadAloud()
     } else {
       // 从头或当前段落开始
-      readFromSentence(currentSentenceIndex.value)
+      retryCount.value = 0
+      isSpeechError.value = false
+      readFromSentence(currentSentenceIndex.value || 0)
     }
   }
 }
@@ -974,9 +1088,26 @@ function toggleReadAloud() {
 function stopReadAloud() {
   if (synth) {
     synth.cancel()
+    speechQueue = []
   }
   isReadAloudPlaying.value = false
+  isSpeechError.value = false
+  retryCount.value = 0
   currentSentenceIndex.value = 0
+}
+
+function pauseReadAloud() {
+  if (synth && isReadAloudPlaying.value) {
+    synth.pause()
+    isReadAloudPlaying.value = false
+  }
+}
+
+function resumeReadAloud() {
+  if (synth && !isReadAloudPlaying.value) {
+    synth.resume()
+    isReadAloudPlaying.value = true
+  }
 }
 
 function onVoiceChange() {
