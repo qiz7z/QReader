@@ -7,12 +7,6 @@
         <div class="brand-section">
           <div class="logo-wrapper">
             <img src="/qreader-icon.png" alt="QReader Logo" class="app-logo" />
-            <button class="library-btn" @click="goToLibrary" title="进入我的书架" aria-label="进入我的书架">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              </svg>
-            </button>
           </div>
         </div>
 
@@ -115,8 +109,47 @@
 
     <!-- 装饰背景 -->
     <div class="background-decoration" aria-hidden="true">
-      <div class="bg-gradient"></div>
-      <div class="bg-grid"></div>
+      <svg class="bg-mountains" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice">
+        <path class="mtn-1" d="M0 600 L120 380 L240 450 L360 300 L480 400 L600 250 L720 350 L840 200 L960 340 L1080 280 L1200 380 L1320 320 L1440 450 L1440 600Z" fill="rgba(180,200,170,0.08)"/>
+        <path class="mtn-2" d="M0 600 L180 420 L300 480 L420 350 L540 440 L660 300 L780 400 L900 260 L1020 370 L1140 310 L1260 410 L1380 360 L1440 480 L1440 600Z" fill="rgba(160,190,150,0.06)"/>
+        <path class="mtn-3" d="M0 600 L100 500 L220 540 L340 460 L460 520 L580 420 L700 500 L820 380 L940 480 L1060 440 L1180 520 L1300 460 L1440 530 L1440 600Z" fill="rgba(140,175,130,0.05)"/>
+      </svg>
+      <svg class="bg-moon" viewBox="0 0 200 200" fill="none">
+        <circle cx="100" cy="100" r="80" fill="rgba(210,190,160,0.08)"/>
+        <circle cx="100" cy="100" r="60" fill="rgba(210,190,160,0.06)"/>
+        <circle cx="100" cy="100" r="40" fill="rgba(210,190,160,0.04)"/>
+      </svg>
+      <div class="bg-clouds">
+        <svg class="cloud cloud-1" viewBox="0 0 300 80" fill="rgba(255,255,255,0.04)">
+          <ellipse cx="60" cy="50" rx="60" ry="30"/>
+          <ellipse cx="130" cy="30" rx="60" ry="25"/>
+          <ellipse cx="200" cy="45" rx="70" ry="28"/>
+          <ellipse cx="250" cy="55" rx="50" ry="22"/>
+        </svg>
+        <svg class="cloud cloud-2" viewBox="0 0 250 70" fill="rgba(255,255,255,0.035)">
+          <ellipse cx="50" cy="45" rx="50" ry="25"/>
+          <ellipse cx="110" cy="25" rx="55" ry="22"/>
+          <ellipse cx="170" cy="40" rx="60" ry="25"/>
+          <ellipse cx="210" cy="48" rx="40" ry="18"/>
+        </svg>
+        <svg class="cloud cloud-3" viewBox="0 0 200 60" fill="rgba(255,255,255,0.03)">
+          <ellipse cx="40" cy="35" rx="40" ry="20"/>
+          <ellipse cx="90" cy="20" rx="45" ry="18"/>
+          <ellipse cx="140" cy="32" rx="50" ry="20"/>
+          <ellipse cx="170" cy="40" rx="30" ry="14"/>
+        </svg>
+      </div>
+      <div class="bg-birds">
+        <svg class="bird bird-1" viewBox="0 0 40 20" fill="none">
+          <path d="M2 10 Q10 2 20 10 Q30 2 38 10" stroke="rgba(100,120,100,0.12)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <svg class="bird bird-2" viewBox="0 0 40 20" fill="none">
+          <path d="M2 10 Q10 2 20 10 Q30 2 38 10" stroke="rgba(100,120,100,0.1)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <svg class="bird bird-3" viewBox="0 0 30 15" fill="none">
+          <path d="M2 8 Q8 2 15 8 Q22 2 28 8" stroke="rgba(100,120,100,0.08)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
     </div>
   </div>
 </template>
@@ -127,10 +160,6 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const enterLibrary = () => {
-  router.push('/library')
-}
-
-const goToLibrary = () => {
   router.push('/library')
 }
 </script>
@@ -187,7 +216,7 @@ const goToLibrary = () => {
    背景装饰 - 羊皮纸 + 动态光效
    ============================================ */
 .background-decoration {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
@@ -278,6 +307,126 @@ const goToLibrary = () => {
 }
 
 /* ============================================
+   水墨场景装饰
+   ============================================ */
+.bg-mountains {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 45%;
+  z-index: 0;
+  opacity: 0;
+  animation: fadeInScene 3s ease forwards 0.3s;
+}
+
+.mtn-1 { animation: mountainDrift 40s ease-in-out infinite; transform-origin: bottom center; }
+.mtn-2 { animation: mountainDrift 50s ease-in-out infinite -10s; transform-origin: bottom center; }
+.mtn-3 { animation: mountainDrift 60s ease-in-out infinite -20s; transform-origin: bottom center; }
+
+@keyframes mountainDrift {
+  0%, 100% { transform: scaleX(1) translateX(0); }
+  50% { transform: scaleX(1.02) translateX(10px); }
+}
+
+.bg-moon {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: 260px;
+  height: 260px;
+  transform: translateX(-50%);
+  z-index: 0;
+  opacity: 0;
+  animation: moonGlow 6s ease-in-out infinite, fadeInScene 3s ease forwards 0.5s;
+}
+
+@keyframes moonGlow {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+  50% { transform: translateX(-50%) scale(1.03); opacity: 1; }
+}
+
+.bg-clouds {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.cloud {
+  position: absolute;
+  opacity: 0;
+}
+
+.cloud-1 {
+  top: 15%;
+  width: 50%;
+  animation: cloudFloat 35s linear infinite, fadeInScene 3s ease forwards 0.8s;
+}
+
+.cloud-2 {
+  top: 28%;
+  width: 40%;
+  animation: cloudFloat 45s linear infinite -10s, fadeInScene 3s ease forwards 1.2s;
+}
+
+.cloud-3 {
+  top: 10%;
+  width: 35%;
+  animation: cloudFloat 40s linear infinite -20s, fadeInScene 3s ease forwards 1.6s;
+}
+
+@keyframes cloudFloat {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120vw); }
+}
+
+.bg-birds {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bird {
+  position: absolute;
+  opacity: 0;
+}
+
+.bird-1 {
+  top: 18%;
+  left: 55%;
+  width: 32px;
+  animation: birdFly 12s ease-in-out infinite, fadeInScene 3s ease forwards 0.6s;
+}
+
+.bird-2 {
+  top: 22%;
+  left: 58%;
+  width: 28px;
+  animation: birdFly 14s ease-in-out infinite -3s, fadeInScene 3s ease forwards 1s;
+}
+
+.bird-3 {
+  top: 26%;
+  left: 56%;
+  width: 22px;
+  animation: birdFly 16s ease-in-out infinite -6s, fadeInScene 3s ease forwards 1.4s;
+}
+
+@keyframes birdFly {
+  0%, 100% { transform: translate(0, 0) scaleX(1); }
+  25% { transform: translate(30px, -8px) scaleX(1); }
+  50% { transform: translate(60px, 2px) scaleX(0.85); }
+  75% { transform: translate(90px, -5px) scaleX(1); }
+}
+
+@keyframes fadeInScene {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ============================================
    主内容区
    ============================================ */
 .hero-section {
@@ -302,9 +451,7 @@ const goToLibrary = () => {
 }
 
 .logo-wrapper {
-  display: inline-flex;
-  align-items: center;
-  gap: 16px;
+  display: inline-block;
   animation: logoFloat 4s ease-in-out infinite;
 }
 
@@ -324,37 +471,6 @@ const goToLibrary = () => {
 .app-logo:hover {
   filter: drop-shadow(0 12px 32px rgba(30, 136, 229, 0.4));
   transform: scale(1.05);
-}
-
-/* 书架按钮 */
-.library-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  margin-left: 16px;
-  border: 2px solid rgba(184, 134, 11, 0.3);
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(245, 230, 200, 0.8) 0%, rgba(240, 230, 208, 0.7) 100%);
-  color: var(--color-brand-solid);
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  vertical-align: middle;
-  box-shadow: 0 2px 8px rgba(184, 134, 11, 0.15);
-}
-
-.library-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 250, 240, 0.9) 0%, rgba(245, 230, 200, 0.8) 100%);
-  border-color: rgba(184, 134, 11, 0.6);
-  color: var(--color-accent);
-  box-shadow: 0 4px 16px rgba(184, 134, 11, 0.25);
-  transform: translateY(-2px) scale(1.05);
-}
-
-.library-btn:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.15);
 }
 
 .logo-book {
@@ -742,7 +858,10 @@ const goToLibrary = () => {
    ============================================ */
 @media (prefers-reduced-motion: reduce) {
   .logo-wrapper,
-  .bg-gradient,
+  .bg-mountains,
+  .bg-moon,
+  .cloud,
+  .bird,
   .feature-card:hover,
   .cta-button:hover,
   .button-icon-right,

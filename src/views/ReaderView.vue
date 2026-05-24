@@ -16,7 +16,7 @@
           </svg>
         </button>
       </div>
-      <span>{{ book?.title || '加载中...' }}</span>
+      <span class="toolbar-title">{{ book?.title || '加载中...' }}</span>
     </header>
 
     <div class="reader-body" ref="bodyRef" :style="{ paddingLeft: (showTocPanel ? sidebarWidth : 60) + 'px' }">
@@ -74,9 +74,9 @@
               <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
             </svg>
           </button>
-          <button class="zoom-btn" @click="pdfScale = Math.max(0.5, +(pdfScale - 0.25).toFixed(2))">−</button>
-          <input type="range" class="zoom-slider" min="0.5" max="4" step="0.1" v-model.number="pdfScale" />
-          <button class="zoom-btn" @click="pdfScale = Math.min(4, +(pdfScale + 0.25).toFixed(2))">+</button>
+          <button class="zoom-btn" @click="adjustZoom(-0.25)">−</button>
+          <input type="range" class="zoom-slider" min="0.5" max="2.7" step="0.05" v-model.number="pdfScale" />
+          <button class="zoom-btn" @click="adjustZoom(0.25)">+</button>
           <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
           <template v-if="annotationMode">
             <div class="annot-tool-divider"></div>
@@ -471,6 +471,10 @@ const pageTransition = ref('page-forward')
 const isFullscreen = ref(false)
 const pdfScale = ref(2.0)
 const annotationMode = ref(false)
+
+function adjustZoom(delta: number) {
+  pdfScale.value = Math.max(0.5, Math.min(2.7, +(pdfScale.value + delta).toFixed(2)))
+}
 const annotationTool = ref('pen')
 const annotColor = ref('#ffeb3b')
 const annotColors = ['#ffeb3b', '#4caf50', '#42a5f5', '#ef5350', '#e040fb', '#ff9800', '#000000']
@@ -1294,6 +1298,12 @@ onBeforeUnmount(() => {
 }
 .theme-dark .reader-toolbar { background: rgba(26,26,26,0.85); border-color: rgba(255,255,255,0.06); color: #e0e0e0; }
 
+.toolbar-title {
+  font-family: "Times New Roman", Times, KaiTi, STKaiti, "楷体", serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
 .toolbar-left {
   display: flex;
   align-items: center;
@@ -1306,33 +1316,33 @@ onBeforeUnmount(() => {
 .home-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid rgba(139, 90, 43, 0.3);
+  justify-content: center;
+  padding: 8px;
+  border: 1.5px solid rgba(120, 170, 230, 0.5);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(245, 230, 200, 0.6) 0%, rgba(230, 215, 185, 0.5) 100%);
-  color: #8b5a2b;
+  background: linear-gradient(135deg, rgba(220, 235, 255, 0.7) 0%, rgba(200, 220, 245, 0.5) 100%);
+  color: #4a7fc7;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
   backdrop-filter: blur(8px);
+  width: 38px;
+  height: 38px;
 }
 
 .home-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
   transition: all 0.25s;
 }
 
 .home-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 250, 240, 0.7) 0%, rgba(245, 230, 200, 0.6) 100%);
-  border-color: rgba(139, 90, 43, 0.5);
-  color: #6b4423;
+  background: linear-gradient(135deg, rgba(240, 248, 255, 0.8) 0%, rgba(220, 235, 255, 0.6) 100%);
+  border-color: rgba(120, 170, 230, 0.7);
+  color: #3a6faf;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 90, 43, 0.12);
+  box-shadow: 0 4px 12px rgba(100, 150, 220, 0.15);
 }
 
 .home-btn:hover .home-icon {
@@ -1341,7 +1351,7 @@ onBeforeUnmount(() => {
 
 .home-btn:active {
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 6px rgba(139, 90, 43, 0.08);
+  box-shadow: 0 2px 6px rgba(100, 150, 220, 0.1);
 }
 
 /* 书架按钮 */
@@ -1349,29 +1359,32 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 12px;
-  border: 1px solid rgba(139, 90, 43, 0.3);
+  padding: 8px;
+  border: 1.5px solid rgba(120, 170, 230, 0.5);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(245, 230, 200, 0.6) 0%, rgba(230, 215, 185, 0.5) 100%);
-  color: #8b5a2b;
+  background: linear-gradient(135deg, rgba(220, 235, 255, 0.7) 0%, rgba(200, 220, 245, 0.5) 100%);
+  color: #4a7fc7;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   backdrop-filter: blur(8px);
+  width: 38px;
+  height: 38px;
 }
 
 .library-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
   transition: all 0.25s;
 }
 
 .library-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 250, 240, 0.7) 0%, rgba(245, 230, 200, 0.6) 100%);
-  border-color: rgba(139, 90, 43, 0.5);
-  color: #6b4423;
+  background: linear-gradient(135deg, rgba(240, 248, 255, 0.8) 0%, rgba(220, 235, 255, 0.6) 100%);
+  border-color: rgba(120, 170, 230, 0.7);
+  color: #3a6faf;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 90, 43, 0.12);
+  box-shadow: 0 4px 12px rgba(100, 150, 220, 0.15);
 }
 
 .library-btn:hover .library-icon {
@@ -1380,7 +1393,7 @@ onBeforeUnmount(() => {
 
 .library-btn:active {
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 6px rgba(139, 90, 43, 0.08);
+  box-shadow: 0 2px 6px rgba(100, 150, 220, 0.1);
 }
 
 /* 布局容器 */
@@ -1603,27 +1616,27 @@ onBeforeUnmount(() => {
 
 /* PDF 缩放控件 */
 .pdf-zoom-controls {
-  display: flex; align-items: center; gap: 6px;
-  position: fixed; bottom: 12px; left: 50%;
+  display: flex; align-items: center; gap: 4px;
+  position: fixed; bottom: 16px; left: 50%;
   transform: translateX(-50%);
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.95);
   backdrop-filter: blur(4px);
   border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 10px;
-  padding: 6px 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border-radius: 20px;
+  padding: 8px 12px;
+  box-shadow: 0 3px 16px rgba(0,0,0,0.12);
   z-index: 50;
 }
 .zoom-btn {
-  width: 28px; height: 28px; border: none;
-  background: rgba(0,0,0,0.06); border-radius: 6px;
-  cursor: pointer; font-size: 16px; color: #555;
+  width: 32px; height: 32px; border: none;
+  background: rgba(0,0,0,0.06); border-radius: 50%;
+  cursor: pointer; font-size: 18px; color: #555;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s; flex-shrink: 0;
 }
-.zoom-btn:hover { background: rgba(24,144,255,0.1); color: #1890ff; }
+.zoom-btn:hover { background: rgba(24,144,255,0.15); color: #1890ff; }
 .zoom-slider {
-  width: 120px; height: 4px; cursor: pointer;
+  width: 80px; height: 4px; cursor: pointer;
   accent-color: #1890ff;
   -webkit-appearance: none; appearance: none;
   background: rgba(0,0,0,0.12); border-radius: 2px; outline: none;
@@ -1645,41 +1658,41 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .zoom-label {
-  font-size: 13px; font-weight: 500; color: #555;
-  min-width: 44px; text-align: center;
+  font-size: 12px; font-weight: 500; color: #555;
+  min-width: 38px; text-align: center;
   font-variant-numeric: tabular-nums; flex-shrink: 0;
+  margin-left: 4px;
 }
 
 /* PDF 标注工具栏 */
 .pdf-annotation-tools {
-  display: flex; align-items: center; gap: 6px;
-  position: fixed; bottom: 56px; left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255,255,255,0.9);
+  display: flex; align-items: center; gap: 4px;
+  position: fixed; bottom: 64px; right: 16px;
+  background: rgba(255,255,255,0.95);
   backdrop-filter: blur(4px);
   border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 10px;
-  padding: 4px 10px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border-radius: 20px;
+  padding: 6px 10px;
+  box-shadow: 0 3px 16px rgba(0,0,0,0.12);
   z-index: 51;
 }
 .annot-mode-btn {
   width: 32px; height: 32px; border: none;
-  background: transparent; border-radius: 6px;
+  background: transparent; border-radius: 50%;
   cursor: pointer; color: #555; transition: all 0.15s;
   display: flex; align-items: center; justify-content: center;
 }
-.annot-mode-btn:hover { background: rgba(0,0,0,0.06); }
+.annot-mode-btn:hover { background: rgba(0,0,0,0.08); }
 .annot-mode-btn.active { background: #1890ff; color: #fff; }
 .annot-tool-divider { width: 1px; height: 20px; background: rgba(0,0,0,0.1); flex-shrink: 0; }
 .annot-tool-btn {
   width: 32px; height: 32px; border: none;
-  background: transparent; border-radius: 6px;
+  background: transparent; border-radius: 50%;
   cursor: pointer; color: #555; font-size: 14px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
 }
-.annot-tool-btn:hover { background: rgba(0,0,0,0.06); }
+.annot-tool-btn:hover { background: rgba(0,0,0,0.08); }
 .annot-tool-btn.active { background: rgba(24,144,255,0.12); color: #1890ff; }
 .annot-color-picker { display: flex; gap: 4px; align-items: center; }
 .annot-color-btn {
@@ -1689,7 +1702,7 @@ onBeforeUnmount(() => {
 .annot-color-btn:hover { transform: scale(1.15); }
 .annot-color-btn.active { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
 .annot-width-btn {
-  width: 28px; height: 28px; border: 2px solid transparent; border-radius: 6px;
+  width: 24px; height: 24px; border: 2px solid transparent; border-radius: 50%;
   background: transparent; cursor: pointer; padding: 0;
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
@@ -1698,13 +1711,13 @@ onBeforeUnmount(() => {
 .annot-width-line { display: block; background: #555; border-radius: 2px; flex-shrink: 0; }
 .annot-pen-group { position: relative; display: inline-flex; }
 .annot-pen-dropdown {
-  position: absolute; bottom: 100%; left: 0; margin-bottom: 4px;
-  background: #fff; border: 1px solid #ddd; border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;
-  overflow: hidden; display: flex; gap: 2px; padding: 4px;
+  position: absolute; bottom: 100%; right: 0; margin-bottom: 6px;
+  background: #fff; border: 1px solid #ddd; border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 100;
+  overflow: hidden; display: flex; gap: 3px; padding: 6px;
 }
 .annot-pen-dropdown button {
-  width: 28px; height: 28px; border: 2px solid transparent; border-radius: 6px;
+  width: 32px; height: 32px; border: 2px solid transparent; border-radius: 50%;
   background: transparent; cursor: pointer; padding: 0;
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
