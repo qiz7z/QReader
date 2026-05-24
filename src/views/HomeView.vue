@@ -7,6 +7,12 @@
         <div class="brand-section">
           <div class="logo-wrapper">
             <img src="/qreader-icon.png" alt="QReader Logo" class="app-logo" />
+            <button class="library-btn" @click="goToLibrary" title="进入我的书架" aria-label="进入我的书架">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -121,6 +127,10 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const enterLibrary = () => {
+  router.push('/library')
+}
+
+const goToLibrary = () => {
   router.push('/library')
 }
 </script>
@@ -292,7 +302,9 @@ const enterLibrary = () => {
 }
 
 .logo-wrapper {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
   animation: logoFloat 4s ease-in-out infinite;
 }
 
@@ -312,6 +324,37 @@ const enterLibrary = () => {
 .app-logo:hover {
   filter: drop-shadow(0 12px 32px rgba(30, 136, 229, 0.4));
   transform: scale(1.05);
+}
+
+/* 书架按钮 */
+.library-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-left: 16px;
+  border: 2px solid rgba(184, 134, 11, 0.3);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 230, 200, 0.8) 0%, rgba(240, 230, 208, 0.7) 100%);
+  color: var(--color-brand-solid);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  vertical-align: middle;
+  box-shadow: 0 2px 8px rgba(184, 134, 11, 0.15);
+}
+
+.library-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.9) 0%, rgba(245, 230, 200, 0.8) 100%);
+  border-color: rgba(184, 134, 11, 0.6);
+  color: var(--color-accent);
+  box-shadow: 0 4px 16px rgba(184, 134, 11, 0.25);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.library-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.15);
 }
 
 .logo-book {
