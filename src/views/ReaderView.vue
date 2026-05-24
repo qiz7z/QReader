@@ -563,10 +563,21 @@ const contentStyle = computed(() => ({
 async function loadBook(id: string) {
   book.value = null
   currentChapter.value = 0
+  
   const rec = await StorageService.getBook(id)
   if (rec) { bookFormat.value = rec.format; rawFile.value = rec.rawFile }
   const loaded = await StorageService.getParsedBook(id)
   if (loaded) book.value = loaded
+  
+  // 加载上次阅读进度 - 从 chapterId 转换为 chapterIndex
+  const progress = await StorageService.getProgress(id)
+  if (progress && progress.chapterId && book.value?.content) {
+    const idx = book.value.content.findIndex(ch => ch.id === progress.chapterId)
+    if (idx >= 0) {
+      currentChapter.value = idx
+    }
+  }
+  
   await loadHighlights()
   await loadBookmarks()
 }
@@ -834,7 +845,6 @@ watch(() => [highlightedSentences.value.length, readerStore.readerMode], () => {
 const allHighlights = computed(() => highlights.value)
 
 // 朗读功能 - 增强稳定性
-let synth: SpeechSynthesis | null = null
 let speechQueue: SpeechSynthesisUtterance[] = []
 let isSpeechError = ref(false)
 let retryCount = ref(0)
@@ -992,97 +1002,6 @@ function readFromSentence(startIndex: number) {
   synth.cancel()
   speechQueue.push(utterance)
   synth.speak(utterance)
-}
-    return
-  }
-  
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.rate = speechRate.value
-  
-  // 设置语音
-  const selectedVoice = synth.getVoices().find(v => v.name === selectedVoiceName.value)
-  if (selectedVoice) {
-    utterance.voice = selectedVoice
-  }
-  
-  utterance.onstart = () => {
-    isReadAloudPlaying.value = true
-    // 滚动到当前段落
-    scrollToSentence(startIndex)
-  }
-  
-  utterance.onend = () => {
-    if (startIndex < sentences.value.length - 1) {
-      // 继续下一段
-      readFromSentence(startIndex + 1)
-    } else if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
-      // 当前章读完，自动跳到下一章继续朗读
-      isAutoAdvancingChapter = true
-      currentChapter.value++
-      nextTick(() => {
-        isAutoAdvancingChapter = false
-        readFromSentence(0)
-      })
-    } else {
-      // 全书读完
-      stopReadAloud()
-    }
-  }
-  
-  utterance.onerror = () => {
-    isReadAloudPlaying.value = false
-  }
-  
-  synth.speak(utterance)
-}
-
-function scrollToSentence(idx: number) {
-  const el = sentenceRefs.value[idx] as HTMLElement | undefined
-  if (el && mainRef.value && mainRef.value instanceof HTMLElement) {
-    const containerTop = mainRef.value.getBoundingClientRect().top
-    const elementTop = el.getBoundingClientRect().top
-    const offset = elementTop - containerTop - 100 // 距离顶部 100px
-    
-    mainRef.value.scrollBy({
-      top: offset - mainRef.value.scrollTop * 0.5,
-      behavior: 'smooth'
-    })
-  }
-}
-
-function toggleReadAloud() {
-  if (!synth) {
-    console.warn('[TTS] Speech synthesis not initialized')
-    return
-  }
-  
-  // 检查语音是否已加载
-  if (!isVoicesLoaded.value || voiceCache.value.length === 0) {
-    console.warn('[TTS] Voices not ready, initializing...')
-    initSpeechSynthesis()
-    setTimeout(() => toggleReadAloud(), 300)
-    return
-  }
-  
-  if (isReadAloudPlaying.value) {
-    // 暂停
-    if (synth.speaking && !synth.paused) {
-      pauseReadAloud()
-    } else if (synth.paused) {
-      // 恢复
-      resumeReadAloud()
-    }
-  } else {
-    // 开始或恢复
-    if (synth.speaking) {
-      resumeReadAloud()
-    } else {
-      // 从头或当前段落开始
-      retryCount.value = 0
-      isSpeechError.value = false
-      readFromSentence(currentSentenceIndex.value || 0)
-    }
-  }
 }
 
 function stopReadAloud() {
@@ -1304,9 +1223,24 @@ onMounted(async () => {
 })
 
 // 章节变化时重置段落索引并加载划线
-watch(currentChapter, () => {
+watch(currentChapter, async () => {
   currentSentenceIndex.value = 0
   sentenceRefs.value = []
+  
+  // 保存阅读进度
+  if (bookId.value && book.value) {
+    const chapter = book.value.content[currentChapter.value]
+    await StorageService.saveProgress({
+      bookId: bookId.value,
+      chapterId: chapter?.id || String(currentChapter.value),
+      position: 0,
+      percentage: book.value.content.length > 0 
+        ? (currentChapter.value / book.value.content.length) * 100 
+        : 0,
+      updatedAt: Date.now()
+    })
+  }
+  
   // 自动跳章时不停止朗读（由 utterance.onend 继续下一章）
   if (!isAutoAdvancingChapter && isReadAloudPlaying.value) {
     stopReadAloud()
