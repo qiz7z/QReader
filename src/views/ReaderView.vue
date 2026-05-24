@@ -2,12 +2,20 @@
   <div class="reader-view" :class="themeClass">
     <!-- 顶部工具栏 -->
     <header class="reader-toolbar">
-      <button class="home-btn" @click="goHome" title="返回首页">
-        <svg class="home-icon" viewBox="0 0 24 24" fill="none">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+      <div class="toolbar-left">
+        <button class="home-btn" @click="goHome" title="返回首页">
+          <svg class="home-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="library-btn" @click="goToLibrary" title="返回书架">
+          <svg class="library-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </button>
+      </div>
       <span>{{ book?.title || '加载中...' }}</span>
     </header>
 
@@ -447,6 +455,10 @@ const readerStore = useReaderStore()
 
 const goHome = () => {
   router.push('/')
+}
+
+const goToLibrary = () => {
+  router.push('/library')
 }
 
 const bookId = computed(() => route.params.id as string)
@@ -1282,6 +1294,14 @@ onBeforeUnmount(() => {
 }
 .theme-dark .reader-toolbar { background: rgba(26,26,26,0.85); border-color: rgba(255,255,255,0.06); color: #e0e0e0; }
 
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  left: 16px;
+}
+
 /* 首页按钮 */
 .home-btn {
   display: flex;
@@ -1299,8 +1319,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   letter-spacing: 0.3px;
   backdrop-filter: blur(8px);
-  position: absolute;
-  left: 16px;
 }
 
 .home-icon {
@@ -1322,6 +1340,45 @@ onBeforeUnmount(() => {
 }
 
 .home-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(139, 90, 43, 0.08);
+}
+
+/* 书架按钮 */
+.library-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: 1px solid rgba(139, 90, 43, 0.3);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(245, 230, 200, 0.6) 0%, rgba(230, 215, 185, 0.5) 100%);
+  color: #8b5a2b;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+}
+
+.library-icon {
+  width: 18px;
+  height: 18px;
+  transition: all 0.25s;
+}
+
+.library-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.7) 0%, rgba(245, 230, 200, 0.6) 100%);
+  border-color: rgba(139, 90, 43, 0.5);
+  color: #6b4423;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 90, 43, 0.12);
+}
+
+.library-btn:hover .library-icon {
+  transform: scale(1.05);
+}
+
+.library-btn:active {
   transform: translateY(0) scale(0.98);
   box-shadow: 0 2px 6px rgba(139, 90, 43, 0.08);
 }
