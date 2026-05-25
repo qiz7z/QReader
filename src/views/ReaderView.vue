@@ -1160,7 +1160,6 @@ function toggleFullscreen() {
 function onFs() { isFullscreen.value = !!document.fullscreenElement }
 
 onMounted(async () => {
-  document.addEventListener('click', onDocClick)
   document.addEventListener('keydown', handleKeydown)
   try { const s = localStorage.getItem('reader-sidebar-width'); if (s) { const n = parseInt(s, 10); if (!Number.isNaN(n)) sidebarWidth.value = Math.max(minW, Math.min(maxW, n)) } } catch {}
   
@@ -1218,7 +1217,6 @@ function onTocClick(idx: number) {
 }
 
 onBeforeUnmount(() => { 
-  document.removeEventListener('click', onDocClick)
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('fullscreenchange', onFs)
   stopReadAloud()
