@@ -20,8 +20,6 @@ import * as pdfjsLib from 'pdfjs-dist'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 
-pdfjsLib.VerbosityLevel = 0
-
 const BASE_RENDER_SCALE = 3.0
 
 const props = defineProps<{
