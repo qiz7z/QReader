@@ -62,48 +62,13 @@
           :raw-file="rawFile"
           :theme="readerStore.theme"
           :scale="pdfScale"
-          :annotation-mode="annotationMode"
-          :annotation-tool="annotationTool"
-          :annot-color="annotColor"
-          :annot-width="annotWidth"
           :current-page="currentChapter"
         />
         <div v-if="book && bookFormat === 'pdf'" class="pdf-zoom-controls">
-          <button class="annot-mode-btn" :class="{ active: annotationMode }" @click="annotationMode = !annotationMode" title="标注模式">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-          </button>
           <button class="zoom-btn" @click="adjustZoom(-0.25)">−</button>
           <input type="range" class="zoom-slider" min="0.5" max="2.7" step="0.05" v-model.number="pdfScale" />
           <button class="zoom-btn" @click="adjustZoom(0.25)">+</button>
           <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
-          <template v-if="annotationMode">
-            <div class="annot-tool-divider"></div>
-            <div class="annot-pen-group">
-              <button class="annot-tool-btn" :class="{ active: annotationTool === 'pen' }" @click="annotationTool === 'pen' ? (penDropdownOpen = !penDropdownOpen) : (annotationTool = 'pen')" title="画笔">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
-              </button>
-              <div v-if="penDropdownOpen" class="annot-pen-dropdown">
-                <button v-for="w in annotWidths" :key="w" :class="{ active: annotWidth === w }" @click="annotWidth = w; annotationTool = 'pen'; penDropdownOpen = false">
-                  <span class="annot-width-line" :style="{ width: Math.max(8, w * 3) + 'px', height: Math.max(2, w) + 'px' }"></span>
-                </button>
-              </div>
-            </div>
-            <button class="annot-tool-btn" :class="{ active: annotationTool === 'highlight' }" @click="annotationTool = 'highlight'" title="荧光笔">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4l-3-3-10 10z"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path></svg>
-            </button>
-            <button class="annot-tool-btn" :class="{ active: annotationTool === 'text' }" @click="annotationTool = 'text'" title="文字">T</button>
-            <div class="annot-tool-divider"></div>
-            <button class="annot-tool-btn" :class="{ active: annotationTool === 'eraser-line' }" @click="annotationTool = 'eraser-line'" title="线条擦除">🧹</button>
-            <div class="annot-tool-divider"></div>
-            <div class="annot-color-picker">
-              <button v-for="c in annotColors" :key="c" class="annot-color-btn" :class="{ active: annotColor === c }" :style="{ background: c }" @click="annotColor = c"></button>
-            </div>
-            <div class="annot-tool-divider"></div>
-            <button class="annot-tool-btn" @click="handleUndoAnnot" title="撤销上一笔">↩</button>
-            <button class="annot-tool-btn" @click="handleClearAllAnnot" title="清除全部标注">✕</button>
-          </template>
         </div>
         <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode-wrap': readerStore.readerMode === 'page' }">
           <!-- 滚动模式：所有章节连续显示 -->
@@ -470,17 +435,10 @@ const currentChapter = ref(0)
 const pageTransition = ref('page-forward')
 const isFullscreen = ref(false)
 const pdfScale = ref(2.0)
-const annotationMode = ref(false)
 
 function adjustZoom(delta: number) {
   pdfScale.value = Math.max(0.5, Math.min(2.7, +(pdfScale.value + delta).toFixed(2)))
 }
-const annotationTool = ref('pen')
-const annotColor = ref('#ffeb3b')
-const annotColors = ['#ffeb3b', '#4caf50', '#42a5f5', '#ef5350', '#e040fb', '#ff9800', '#000000']
-const annotWidth = ref(2)
-const annotWidths = [1, 2, 3, 4, 6]
-const penDropdownOpen = ref(false)
 const pdfReaderRef = ref<InstanceType<typeof PdfReader> | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const bodyRef = ref<HTMLElement | null>(null)
@@ -1195,26 +1153,6 @@ async function handleClearAllData() {
 
 // PDF 标注管理
 
-function onDocClick(e: MouseEvent) {
-  if (penDropdownOpen.value) {
-    const target = e.target as HTMLElement
-    if (!target.closest('.annot-pen-group')) {
-      penDropdownOpen.value = false
-    }
-  }
-}
-
-async function handleUndoAnnot() {
-  if (!pdfReaderRef.value) return
-  await pdfReaderRef.value.undoLastGlobal()
-}
-
-async function handleClearAllAnnot() {
-  if (!pdfReaderRef.value) return
-  if (!confirm('确定要清除所有 PDF 标注吗？')) return
-  await pdfReaderRef.value.clearAllAnnotations()
-}
-
 function toggleFullscreen() {
   if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}) ; isFullscreen.value = true }
   else { document.exitFullscreen(); isFullscreen.value = false }
@@ -1676,53 +1614,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 3px 16px rgba(0,0,0,0.12);
   z-index: 51;
 }
-.annot-mode-btn {
-  width: 32px; height: 32px; border: none;
-  background: transparent; border-radius: 50%;
-  cursor: pointer; color: #555; transition: all 0.15s;
-  display: flex; align-items: center; justify-content: center;
-}
-.annot-mode-btn:hover { background: rgba(0,0,0,0.08); }
-.annot-mode-btn.active { background: #1890ff; color: #fff; }
-.annot-tool-divider { width: 1px; height: 20px; background: rgba(0,0,0,0.1); flex-shrink: 0; }
-.annot-tool-btn {
-  width: 32px; height: 32px; border: none;
-  background: transparent; border-radius: 50%;
-  cursor: pointer; color: #555; font-size: 14px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s;
-}
-.annot-tool-btn:hover { background: rgba(0,0,0,0.08); }
-.annot-tool-btn.active { background: rgba(24,144,255,0.12); color: #1890ff; }
-.annot-color-picker { display: flex; gap: 4px; align-items: center; }
-.annot-color-btn {
-  width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent;
-  cursor: pointer; transition: all 0.15s; padding: 0; flex-shrink: 0;
-}
-.annot-color-btn:hover { transform: scale(1.15); }
-.annot-color-btn.active { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
-.annot-width-btn {
-  width: 24px; height: 24px; border: 2px solid transparent; border-radius: 50%;
-  background: transparent; cursor: pointer; padding: 0;
-  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
-}
-.annot-width-btn:hover { background: rgba(0,0,0,0.06); }
-.annot-width-btn.active { border-color: #1890ff; background: rgba(24,144,255,0.08); }
-.annot-width-line { display: block; background: #555; border-radius: 2px; flex-shrink: 0; }
-.annot-pen-group { position: relative; display: inline-flex; }
-.annot-pen-dropdown {
-  position: absolute; bottom: 100%; right: 0; margin-bottom: 6px;
-  background: #fff; border: 1px solid #ddd; border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 100;
-  overflow: hidden; display: flex; gap: 3px; padding: 6px;
-}
-.annot-pen-dropdown button {
-  width: 32px; height: 32px; border: 2px solid transparent; border-radius: 50%;
-  background: transparent; cursor: pointer; padding: 0;
-  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
-}
-.annot-pen-dropdown button:hover { background: rgba(0,0,0,0.06); }
-.annot-pen-dropdown button.active { border-color: #1890ff; background: rgba(24,144,255,0.08); }
 .theme-dark .fullscreen-btn-float {
   background: rgba(45,45,45,0.85);
   border-color: rgba(255,255,255,0.1);
@@ -1734,14 +1625,6 @@ onBeforeUnmount(() => {
 .theme-dark .zoom-slider { background: rgba(255,255,255,0.15); accent-color: #1890ff; }
 .theme-dark .zoom-slider::-webkit-slider-thumb { background: #1890ff; border-color: #444; }
 .theme-dark .zoom-label { color: #ccc; }
-.theme-dark .pdf-annotation-tools { background: rgba(45,45,45,0.9); border-color: rgba(255,255,255,0.1); }
-.theme-dark .annot-mode-btn { color: #ccc; }
-.theme-dark .annot-mode-btn:hover { background: rgba(255,255,255,0.08); }
-.theme-dark .annot-mode-btn.active { background: #1890ff; color: #fff; }
-.theme-dark .annot-tool-divider { background: rgba(255,255,255,0.15); }
-.theme-dark .annot-tool-btn { color: #ccc; }
-.theme-dark .annot-tool-btn:hover { background: rgba(255,255,255,0.08); }
-.theme-dark .annot-tool-btn.active { background: rgba(24,144,255,0.2); color: #1890ff; }
 .fullscreen-btn { padding: 6px; display: flex; align-items: center; justify-content: center; }
 .fullscreen-btn:hover { background: rgba(24,144,255,0.1); border-color: #1890ff; }
 
@@ -2289,14 +2172,6 @@ onBeforeUnmount(() => {
 .theme-green .zoom-slider { background: rgba(46,74,46,0.15); accent-color: #5a9e42; }
 .theme-green .zoom-slider::-webkit-slider-thumb { background: #5a9e42; border-color: #e8f0e3; }
 .theme-green .zoom-label { color: #3a5a3a; }
-.theme-green .pdf-annotation-tools { background: rgba(232,240,227,0.92); border-color: #d4e8c8; }
-.theme-green .annot-mode-btn { color: #3a5a3a; }
-.theme-green .annot-mode-btn:hover { background: rgba(46,74,46,0.08); }
-.theme-green .annot-mode-btn.active { background: #5a9e42; color: #fff; }
-.theme-green .annot-tool-divider { background: rgba(46,74,46,0.12); }
-.theme-green .annot-tool-btn { color: #3a5a3a; }
-.theme-green .annot-tool-btn:hover { background: rgba(46,74,46,0.08); }
-.theme-green .annot-tool-btn.active { background: rgba(90,158,66,0.15); color: #5a9e42; }
 
 .theme-parchment { background: #f5e6c8; color: #3d2a00; }
 .theme-parchment .reader-toolbar { background: rgba(245,230,200,0.9); border-color: #d4c5a9; }
@@ -2362,14 +2237,6 @@ onBeforeUnmount(() => {
 .theme-parchment .zoom-slider { background: rgba(61,42,0,0.15); accent-color: #8b6914; }
 .theme-parchment .zoom-slider::-webkit-slider-thumb { background: #8b6914; border-color: #f5e6c8; }
 .theme-parchment .zoom-label { color: #3d2a00; }
-.theme-parchment .pdf-annotation-tools { background: rgba(245,230,200,0.92); border-color: #d4c5a9; }
-.theme-parchment .annot-mode-btn { color: #3d2a00; }
-.theme-parchment .annot-mode-btn:hover { background: rgba(61,42,0,0.06); }
-.theme-parchment .annot-mode-btn.active { background: #8b6914; color: #fff; }
-.theme-parchment .annot-tool-divider { background: rgba(61,42,0,0.12); }
-.theme-parchment .annot-tool-btn { color: #3d2a00; }
-.theme-parchment .annot-tool-btn:hover { background: rgba(61,42,0,0.06); }
-.theme-parchment .annot-tool-btn.active { background: rgba(139,105,20,0.15); color: #8b6914; }
 
 /* PDF 文本选中浮动工具栏 */
 </style>
