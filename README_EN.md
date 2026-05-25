@@ -61,17 +61,26 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Notes list management
 - Click note to jump to original text
 
+### 🖊️ PDF Annotation
+- Pen tool with 6 colors, 0.5-10mm stroke width
+- Line erase: swipe across annotation strokes to erase
+- Lasso erase: draw a loop to erase all annotations inside
+- Persistent annotation storage (LocalStorage)
+- Annotations remain visible when toolbar is collapsed
+
 ### 💾 Progress Saving
 - Auto-save reading progress
 - Auto-jump to last position on reopen
 - Independent progress per book
 
-### 📄 PDF Features (NEW in v0.1.0)
+### 📄 PDF Features
 - **Chapter Navigation**: Jump to chapter start from PDF outline/table of contents
 - **Page Indicator**: Display current chapter/page number
-- **Pen Width Selection**: 5-level annotation pen width (1/2/3/4/6px)
-- **Annotation Undo**: Undo last annotation or clear all annotations
-- **Eraser Improvement**: Real-time erase feedback with fixed coordinate offset
+- **Pen Tool**: 6 colors, 0.5-10mm stroke width
+- **Line Erase**: Swipe across annotation strokes to erase
+- **Lasso Erase**: Draw a loop to erase all annotations inside
+- **Persistent Storage**: Annotations saved to LocalStorage, survive page refresh
+- **Always Visible**: Annotations remain visible even when toolbar is collapsed
 
 ---
 
@@ -513,6 +522,28 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 ---
 
 ## 📝 Changelog
+
+### v0.3.0 (2026-05-25)
+
+#### New Features
+- **PDF Pen Annotation**: Canvas overlay with 6 colors, 0.5-10mm stroke width
+- **Line Erase**: Swipe across annotation strokes to erase (segment distance detection)
+- **Lasso Erase**: Draw a loop, ray-casting detection to batch erase annotations inside
+- **Persistent Annotations**: Annotations visible even when toolbar is collapsed
+
+#### Improvements
+- **Storage Refactor**: Switched to LocalStorage, isolated by file content hash
+- **Erase Precision**: Segment distance replaces point-to-point distance for better hit detection
+- **Coordinate Fix**: `screenX * canvas.width / rect.width` eliminates CSS zoom bias
+- **Event Separation**: mouseleave only cleans up state for lasso mode, preventing false erases
+- **Icon Redesign**: New icons for line erase, lasso erase, and clear all
+- **Theme Cleanup**: Removed independent `.pdf-zoom-controls` background to avoid green box
+
+#### Bug Fixes
+- Fixed mouseleave triggering lasso erasure of out-of-loop annotations
+- Fixed annotations disappearing when toolbar is collapsed
+- Fixed `setTransform` parameter error
+- Fixed missing `toggleReadAloud` function
 
 ### v0.2.0 (2026-05-23)
 

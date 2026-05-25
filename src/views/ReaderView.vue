@@ -54,23 +54,90 @@
       <!-- 拖拽条 -->
       <div v-if="showTocPanel" class="resize-bar" @mousedown="startResize"></div>
 
-      <!-- 主阅读区 -->
-      <main class="reader-main" ref="mainRef" :class="{ 'page-mode': readerStore.readerMode === 'page' }">
-        <PdfReader
-          ref="pdfReaderRef"
-          v-if="book && bookFormat === 'pdf'"
-          :raw-file="rawFile"
-          :theme="readerStore.theme"
-          :scale="pdfScale"
-          :current-page="currentChapter"
-        />
-        <div v-if="book && bookFormat === 'pdf'" class="pdf-zoom-controls">
-          <button class="zoom-btn" @click="adjustZoom(-0.25)">−</button>
-          <input type="range" class="zoom-slider" min="0.5" max="2.7" step="0.05" v-model.number="pdfScale" />
-          <button class="zoom-btn" @click="adjustZoom(0.25)">+</button>
-          <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
-        </div>
-        <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode-wrap': readerStore.readerMode === 'page' }">
+  <!-- 主阅读区 -->
+  <main class="reader-main" ref="mainRef" :class="{ 'page-mode': readerStore.readerMode === 'page' }">
+    <PdfReader
+      ref="pdfReaderRef"
+      v-if="book && bookFormat === 'pdf'"
+      :raw-file="rawFile"
+      :theme="readerStore.theme"
+      :scale="pdfScale"
+      :current-page="currentChapter"
+      :annotation-mode="annotationMode"
+      :annotations="pdfAnnotations"
+      :pen-color="penColor"
+      :pen-width="penWidth"
+      :eraser-mode="eraserMode"
+      @annotations-change="handlePdfAnnotationsChange"
+      @erase-annotation="handleEraseAnnotation"
+    />
+    <div v-if="book && bookFormat === 'pdf'" class="pdf-controls-bar">
+      <div class="pdf-annotation-toolbar" :class="{ 'annotation-active': annotationMode }">
+        <button class="annotation-toggle-btn" :class="{ active: annotationMode }" @click.stop="toggleAnnotationMode" title="标注模式">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+            <path d="M2 2l7.586 7.586"></path>
+            <circle cx="11" cy="11" r="2"></circle>
+          </svg>
+        </button>
+        
+        <template v-if="annotationMode">
+          <div class="annotation-divider"></div>
+          <div class="annotation-colors">
+            <button 
+              v-for="color in penColors" 
+              :key="color"
+              class="annotation-color-btn"
+              :class="{ active: penColor === color && !eraserMode }"
+              :style="{ background: color }"
+              @click.stop="eraserMode = ''; penColor = color"
+            ></button>
+          </div>
+          <div class="annotation-divider"></div>
+          <div class="annotation-width">
+            <button class="width-btn" @click.stop="adjustPenWidth(-0.5)">−</button>
+            <span class="width-value">{{ penWidth.toFixed(1) }}mm</span>
+            <button class="width-btn" @click.stop="adjustPenWidth(0.5)">+</button>
+          </div>
+          <div class="annotation-divider"></div>
+          <button class="annotation-action-btn" :class="{ active: eraserMode === 'line' }" @click.stop="eraserMode = eraserMode === 'line' ? '' : 'line'" title="线条擦除">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 20H8.5l-5-5a2 2 0 0 1 0-2.83l9-9a2 2 0 0 1 2.83 0l4.5 4.5"/>
+              <path d="M11.5 14.5L16 10"/>
+              <path d="M3 17l3 2.5"/>
+            </svg>
+          </button>
+          <button class="annotation-action-btn" :class="{ active: eraserMode === 'lasso' }" @click.stop="eraserMode = eraserMode === 'lasso' ? '' : 'lasso'" title="圈套擦除">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3a9 9 0 1 1-7 15"/>
+              <path d="M5 18a2 2 0 0 1 2-2"/>
+              <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+          <div class="annotation-divider"></div>
+          <button class="annotation-action-btn" @click.stop="clearAllAnnotations" title="清除全部">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="M19 6v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+              <line x1="10" y1="10" x2="10" y2="17"/>
+              <line x1="14" y1="10" x2="14" y2="17"/>
+            </svg>
+          </button>
+        </template>
+      </div>
+      
+      <div class="annotation-zoom-divider"></div>
+      
+      <div class="pdf-zoom-controls">
+        <button class="zoom-btn" @click="adjustZoom(-0.25)">−</button>
+        <input type="range" class="zoom-slider" min="0.5" max="2.7" step="0.05" v-model.number="pdfScale" />
+        <button class="zoom-btn" @click="adjustZoom(0.25)">+</button>
+        <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
+      </div>
+    </div>
+    <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode-wrap': readerStore.readerMode === 'page' }">
           <!-- 滚动模式：所有章节连续显示 -->
           <div
             v-if="readerStore.readerMode === 'scroll'"
@@ -413,6 +480,14 @@ import { StorageService } from '@/services/StorageService'
 import { useReaderStore } from '@/stores/reader'
 import PdfReader from '@/components/PdfReader.vue'
 import type { NoteRecord, BookmarkRecord, ParsedBook } from '@/types'
+import {
+  getFileIdFromPdf,
+  loadAnnotations,
+  addAnnotation,
+  deleteAnnotation,
+  clearAnnotations,
+  type PdfAnnotation
+} from '@/utils/annotationStorage'
 
 const route = useRoute()
 const router = useRouter()
@@ -435,6 +510,15 @@ const currentChapter = ref(0)
 const pageTransition = ref('page-forward')
 const isFullscreen = ref(false)
 const pdfScale = ref(2.0)
+
+// PDF 标注相关
+const annotationMode = ref(false)
+const eraserMode = ref('') // '' | 'lasso' | 'line'
+const pdfAnnotations = ref<PdfAnnotation[]>([])
+const penColors = ['#ff0000', '#00aa00', '#0066ff', '#ffaa00', '#9933ff', '#000000']
+const penColor = ref(penColors[0])
+const penWidth = ref(2.0)
+const currentFileId = ref('')
 
 function adjustZoom(delta: number) {
   pdfScale.value = Math.max(0.5, Math.min(2.7, +(pdfScale.value + delta).toFixed(2)))
@@ -550,6 +634,12 @@ async function loadBook(id: string) {
     if (idx >= 0) {
       currentChapter.value = idx
     }
+  }
+  
+  // 加载 PDF 标注
+  if (rec?.rawFile) {
+    currentFileId.value = getFileIdFromPdf(rec.rawFile)
+    pdfAnnotations.value = loadAnnotations(currentFileId.value)
   }
   
   await loadHighlights()
@@ -954,7 +1044,7 @@ function readFromSentence(startIndex: number) {
     isSpeechError.value = false
     retryCount.value = 0
     isReadAloudPlaying.value = true
-    scrollToSentence(startIndex)
+    // scrollToSentence(startIndex) - temporarily disabled
   }
   
   utterance.onend = () => {
@@ -965,7 +1055,7 @@ function readFromSentence(startIndex: number) {
     } else if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
       // 下一章
       currentChapter.value++
-      loadChapter(currentChapter.value)
+      // loadChapter(currentChapter.value) - temporarily disabled
       setTimeout(() => readFromSentence(0), 300)
     } else {
       stopReadAloud()
@@ -989,6 +1079,14 @@ function stopReadAloud() {
   currentSentenceIndex.value = 0
 }
 
+function toggleReadAloud() {
+  if (isReadAloudPlaying.value) {
+    pauseReadAloud()
+  } else {
+    readFromSentence(currentSentenceIndex.value)
+  }
+}
+
 function pauseReadAloud() {
   if (synth && isReadAloudPlaying.value) {
     synth.pause()
@@ -996,7 +1094,7 @@ function pauseReadAloud() {
   }
 }
 
-function resumeReadAloud() {
+function _resumeReadAloud() {
   if (synth && !isReadAloudPlaying.value) {
     synth.resume()
     isReadAloudPlaying.value = true
@@ -1152,7 +1250,50 @@ async function handleClearAllData() {
 }
 
 // PDF 标注管理
+function toggleAnnotationMode() {
+  annotationMode.value = !annotationMode.value
+}
 
+function adjustPenWidth(delta: number) {
+  penWidth.value = Math.max(0.5, Math.min(10, penWidth.value + delta))
+}
+
+function handlePdfAnnotationsChange(newAnnotations: PdfAnnotation[]) {
+  if (!currentFileId.value || !book.value) return
+  
+  // 合并新标注
+  newAnnotations.forEach(newAnnot => {
+    const fullAnnot = addAnnotation(
+      currentFileId.value,
+      book.value!.title,
+      {
+        page: newAnnot.page,
+        type: newAnnot.type,
+        color: newAnnot.color,
+        width: newAnnot.width,
+        points: newAnnot.points
+      }
+    )
+    pdfAnnotations.value.push(fullAnnot)
+  })
+  
+  // 触发响应式更新
+  pdfAnnotations.value = [...pdfAnnotations.value]
+}
+
+function handleEraseAnnotation(annotationId: string) {
+  if (!currentFileId.value) return
+  
+  deleteAnnotation(currentFileId.value, annotationId)
+  pdfAnnotations.value = pdfAnnotations.value.filter(a => a.id !== annotationId)
+}
+
+function clearAllAnnotations() {
+  if (!currentFileId.value || !confirm('确定要清除当前 PDF 的所有标注吗？')) return
+  
+  clearAnnotations(currentFileId.value)
+  pdfAnnotations.value = []
+}
 function toggleFullscreen() {
   if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}) ; isFullscreen.value = true }
   else { document.exitFullscreen(); isFullscreen.value = false }
@@ -1550,18 +1691,45 @@ onBeforeUnmount(() => {
   transform: translateY(-1px);
 }
 
-/* PDF 缩放控件 */
-.pdf-zoom-controls {
-  display: flex; align-items: center; gap: 4px;
-  position: fixed; bottom: 16px; left: 50%;
+/* PDF 控件条 - 集成标注和缩放 */
+.pdf-controls-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(4px);
   border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 20px;
-  padding: 8px 12px;
+  border-radius: 24px;
+  padding: 6px;
   box-shadow: 0 3px 16px rgba(0,0,0,0.12);
-  z-index: 50;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+/* PDF 标注工具栏 */
+.pdf-annotation-toolbar {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 6px;
+  border-radius: 18px;
+  transition: background 0.2s;
+}
+.pdf-annotation-toolbar.annotation-active {
+  background: rgba(24,144,255,0.08);
+}
+
+/* 标注和缩放之间的分隔线 */
+.annotation-zoom-divider {
+  width: 1px; height: 28px; background: rgba(0,0,0,0.1);
+}
+
+/* PDF 缩放控件 */
+.pdf-zoom-controls {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 6px;
 }
 .zoom-btn {
   width: 32px; height: 32px; border: none;
@@ -1599,25 +1767,50 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums; flex-shrink: 0;
   margin-left: 4px;
 }
-
-/* PDF 标注工具栏 */
-.pdf-annotation-tools {
-  display: flex; align-items: center; gap: 4px;
-  position: fixed; bottom: 64px; right: 16px;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 20px;
-  padding: 6px 10px;
-  box-shadow: 0 3px 16px rgba(0,0,0,0.12);
-  z-index: 51;
+.annotation-toggle-btn {
+  width: 32px; height: 32px; border: none;
+  background: rgba(0,0,0,0.06); border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0; padding: 0;
+}
+.annotation-toggle-btn:hover, .annotation-action-btn:hover {
+  background: rgba(24,144,255,0.15); color: #1890ff;
+}
+.annotation-toggle-btn.active,
+.annotation-action-btn.active {
+  background: rgba(24,144,255,0.2); color: #1890ff;
+}
+.annotation-divider {
+  width: 1px; height: 24px; background: rgba(0,0,0,0.1); margin: 0 4px;
+}
+.annotation-colors {
+  display: flex; gap: 4px; align-items: center; margin: 0 4px;
+}
+.annotation-color-btn {
+  width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; transition: all 0.15s; padding: 0; flex-shrink: 0;
+}
+.annotation-color-btn:hover { transform: scale(1.15); }
+.annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
+.annotation-width {
+  display: flex; align-items: center; gap: 6px; margin: 0 4px;
+}
+.width-btn {
+  width: 24px; height: 24px; border: none; border-radius: 4px;
+  background: rgba(0,0,0,0.06); cursor: pointer; font-size: 16px; color: #555;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0;
+}
+.width-btn:hover { background: rgba(24,144,255,0.15); color: #1890ff; }
+.width-value {
+  font-size: 11px; font-weight: 500; color: #555;
+  min-width: 40px; text-align: center; font-variant-numeric: tabular-nums;
 }
 .theme-dark .fullscreen-btn-float {
   background: rgba(45,45,45,0.85);
   border-color: rgba(255,255,255,0.1);
   color: #e0e0e0;
 }
-.theme-dark .pdf-zoom-controls { background: rgba(45,45,45,0.9); border-color: rgba(255,255,255,0.1); }
 .theme-dark .zoom-btn { background: rgba(255,255,255,0.1); color: #ccc; }
 .theme-dark .zoom-btn:hover { background: rgba(24,144,255,0.2); color: #1890ff; }
 .theme-dark .zoom-slider { background: rgba(255,255,255,0.15); accent-color: #1890ff; }
@@ -2164,7 +2357,6 @@ onBeforeUnmount(() => {
 
 .theme-dark .reader-main { background: #1a1a1a; color: #d0d0d0; }
 .theme-green .reader-main { background: #e8f0e3; color: #3a3a3a; }
-.theme-green .pdf-zoom-controls { background: rgba(232,240,227,0.92); border-color: #d4e8c8; }
 .theme-green .zoom-btn { background: rgba(46,74,46,0.08); color: #3a5a3a; }
 .theme-green .zoom-btn:hover { background: rgba(90,158,66,0.12); color: #5a9e42; }
 .theme-green .zoom-slider { background: rgba(46,74,46,0.15); accent-color: #5a9e42; }
