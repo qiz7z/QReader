@@ -20,6 +20,7 @@ A web-based single-page ebook reader supporting multiple formats including TXT, 
 ## 📖 Introduction
 
 Ebook Reader is a pure frontend single-page application that supports multiple ebook formats. All data is stored locally in browser OPFS (Origin Private File System), with automatic fallback to IndexedDB for unsupported browsers. No backend required, ensuring privacy. Can be packaged as a desktop app via Electron.
+- Note: Since I am still pursuing a master's degree, I don't have much time, so there may not be much time to package the work, but the code will continue to be updated. If you find it useful, you can just use it directly. (Two versions have been released in the release section, welcome 🤗 to use and provide valuable feedback!)
 
 ### Core Advantages
 
