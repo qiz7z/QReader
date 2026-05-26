@@ -291,27 +291,73 @@ function particleStyle(_index: number) {
 }
 
 .brand-title-text {
+  /* 金属质感渐变 */
   background: linear-gradient(
     135deg,
-    #c9a84c 0%,
-    #bf953f 15%,
-    #c9a84c 30%,
-    #aa771c 50%,
-    #bf953f 70%,
-    #c9a84c 85%,
+    #f4e59c 0%,
+    #c9a84c 15%,
+    #f4e59c 25%,
+    #bf953f 35%,
+    #f4e59c 45%,
+    #aa771c 55%,
+    #f4e59c 65%,
+    #bf953f 75%,
+    #f4e59c 85%,
     #aa771c 100%
   );
-  background-size: 200% auto;
+  background-size: 300% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: goldShimmer 3s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.5));
+  -webkit-text-stroke: 1px rgba(170, 119, 28, 0.8);
+  animation: metalShimmer 4s ease-in-out infinite;
+  /* 立体阴影 */
+  filter: 
+    drop-shadow(0 2px 0px rgba(150, 100, 50, 0.5))
+    drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4))
+    drop-shadow(0 0 15px rgba(191, 149, 63, 0.5));
+  position: relative;
+  z-index: 2;
 }
 
-@keyframes goldShimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+@keyframes metalShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* 装饰花纹 - 左上角 */
+.brand-title::before {
+  content: '✦';
+  position: absolute;
+  top: -20px;
+  left: -30px;
+  font-size: 24px;
+  color: #c9a84c;
+  text-shadow: 0 0 10px rgba(191, 149, 63, 0.8);
+  animation: starFloat 3s ease-in-out infinite;
+}
+
+/* 装饰花纹 - 右下角 */
+.brand-title::after {
+  content: '✦';
+  position: absolute;
+  bottom: -20px;
+  right: -30px;
+  font-size: 24px;
+  color: #c9a84c;
+  text-shadow: 0 0 10px rgba(191, 149, 63, 0.8);
+  animation: starFloat 3s ease-in-out infinite reverse;
+}
+
+@keyframes starFloat {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% { 
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+  }
 }
 
 .brand-title-glow {
@@ -320,20 +366,21 @@ function particleStyle(_index: number) {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1;
-  filter: blur(20px);
+  z-index: 1;
+  filter: blur(15px);
   opacity: 0.5;
   background: radial-gradient(
     ellipse at center,
-    rgba(191, 149, 63, 0.4) 0%,
+    rgba(244, 229, 156, 0.5) 0%,
+    rgba(191, 149, 63, 0.3) 50%,
     transparent 70%
   );
-  animation: glowPulse 4s ease-in-out infinite;
+  animation: glowPulse 3s ease-in-out infinite;
 }
 
 @keyframes glowPulse {
   0%, 100% { transform: scale(1); opacity: 0.4; }
-  50% { transform: scale(1.1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0.7; }
 }
 
 /* ============================================
