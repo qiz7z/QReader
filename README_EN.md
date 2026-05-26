@@ -45,6 +45,7 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Unified rendering for multiple formats
 - Page navigation (prev/next)
 - Reading progress display (percentage/page number)
+- **TXT Live Info Bar**: Real-time clock and word count (read/total) at bottom-left, visible in both fullscreen and normal modes
 - Responsive layout, adaptive to window size
 
 ### ⚙️ Personalized Settings
@@ -525,6 +526,15 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 ---
 
 ## 📝 Changelog
+
+### v0.4.0 (2026-05-26)
+
+#### New Features
+- **TXT Reading Info Bar**: Floating bottom-left info bar with real-time clock and word count (words read / total words), visible in both fullscreen and normal modes
+- **Theme Support**: Info bar adapts to all 4 themes (light, dark, green, parchment)
+
+#### Improvements
+- Info bar font unified with chapter indicator (Georgia/Times New Roman, 14px, 500 weight)
 
 ### v0.3.0 (2026-05-25)
 
