@@ -291,72 +291,59 @@ function particleStyle(_index: number) {
 }
 
 .brand-title-text {
-  /* 金属质感渐变 */
+  /* 简洁金属渐变 */
   background: linear-gradient(
-    135deg,
+    180deg,
     #f4e59c 0%,
-    #c9a84c 15%,
-    #f4e59c 25%,
-    #bf953f 35%,
-    #f4e59c 45%,
-    #aa771c 55%,
-    #f4e59c 65%,
-    #bf953f 75%,
-    #f4e59c 85%,
+    #c9a84c 40%,
+    #bf953f 60%,
     #aa771c 100%
   );
-  background-size: 300% auto;
+  background-size: 100% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 1px rgba(170, 119, 28, 0.8);
-  animation: metalShimmer 4s ease-in-out infinite;
-  /* 立体阴影 */
+  /* 清晰阴影 */
   filter: 
-    drop-shadow(0 2px 0px rgba(150, 100, 50, 0.5))
-    drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4))
-    drop-shadow(0 0 15px rgba(191, 149, 63, 0.5));
+    drop-shadow(0 1px 0 rgba(150, 100, 50, 0.4))
+    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 12px rgba(191, 149, 63, 0.4));
   position: relative;
   z-index: 2;
-}
-
-@keyframes metalShimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
 }
 
 /* 装饰花纹 - 左上角 */
 .brand-title::before {
   content: '✦';
   position: absolute;
-  top: -20px;
-  left: -30px;
-  font-size: 24px;
+  top: -18px;
+  left: -28px;
+  font-size: 20px;
   color: #c9a84c;
-  text-shadow: 0 0 10px rgba(191, 149, 63, 0.8);
-  animation: starFloat 3s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(191, 149, 63, 0.6);
+  animation: starFloat 4s ease-in-out infinite;
 }
 
 /* 装饰花纹 - 右下角 */
 .brand-title::after {
   content: '✦';
   position: absolute;
-  bottom: -20px;
-  right: -30px;
-  font-size: 24px;
+  bottom: -18px;
+  right: -28px;
+  font-size: 20px;
   color: #c9a84c;
-  text-shadow: 0 0 10px rgba(191, 149, 63, 0.8);
-  animation: starFloat 3s ease-in-out infinite reverse;
+  text-shadow: 0 0 8px rgba(191, 149, 63, 0.6);
+  animation: starFloat 4s ease-in-out infinite reverse;
 }
 
 @keyframes starFloat {
   0%, 100% { 
     transform: scale(1) rotate(0deg);
-    opacity: 0.8;
+    opacity: 0.6;
   }
   50% { 
-    transform: scale(1.2) rotate(180deg);
-    opacity: 1;
+    transform: scale(1.15) rotate(180deg);
+    opacity: 0.9;
   }
 }
 
@@ -367,20 +354,19 @@ function particleStyle(_index: number) {
   width: 100%;
   height: 100%;
   z-index: 1;
-  filter: blur(15px);
-  opacity: 0.5;
+  filter: blur(12px);
+  opacity: 0.4;
   background: radial-gradient(
     ellipse at center,
-    rgba(244, 229, 156, 0.5) 0%,
-    rgba(191, 149, 63, 0.3) 50%,
+    rgba(191, 149, 63, 0.3) 0%,
     transparent 70%
   );
   animation: glowPulse 3s ease-in-out infinite;
 }
 
 @keyframes glowPulse {
-  0%, 100% { transform: scale(1); opacity: 0.4; }
-  50% { transform: scale(1.15); opacity: 0.7; }
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.1); opacity: 0.5; }
 }
 
 /* ============================================
