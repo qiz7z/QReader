@@ -1807,7 +1807,14 @@ onBeforeUnmount(() => {
   accent-color: #1890ff;
   -webkit-appearance: none; appearance: none;
   background: rgba(0,0,0,0.12); border-radius: 2px; outline: none;
+  border: none;
 }
+
+.zoom-slider:focus {
+  outline: none;
+  border: none;
+}
+
 .zoom-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 16px; height: 16px; border-radius: 50%;
@@ -1815,14 +1822,32 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   cursor: pointer; transition: all 0.15s;
 }
+
 .zoom-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
 }
+
+.zoom-slider::-webkit-slider-thumb:focus {
+  outline: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2), 0 0 0 2px rgba(24,144,255,0.3);
+}
+
 .zoom-slider::-moz-range-thumb {
   width: 16px; height: 16px; border-radius: 50%;
   background: #1890ff; border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   cursor: pointer;
+}
+
+.zoom-slider::-moz-range-thumb:focus {
+  outline: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2), 0 0 0 2px rgba(24,144,255,0.3);
+}
+
+.zoom-slider::-moz-range-track {
+  background: rgba(0,0,0,0.12);
+  border: none;
+  border-radius: 2px;
 }
 .zoom-label {
   font-size: 12px; font-weight: 500; color: #555;
