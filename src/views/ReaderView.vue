@@ -1815,12 +1815,14 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(4px);
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 13px;
   color: #888;
   z-index: 50;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 .info-time {
   font-weight: 500;
