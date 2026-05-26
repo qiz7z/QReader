@@ -2519,16 +2519,16 @@ onBeforeUnmount(() => {
 .theme-parchment .danger-btn:hover { background: #c04040; color: #fff; }
 .theme-parchment .nav-btn { background: rgba(255,255,255,0.3); color: #3d2a00; border-color: #c9b894; }
 .theme-parchment .reader-main { background: #f5e6c8; color: #3d2a00; }
-.theme-parchment .pdf-zoom-controls { background: rgba(245,230,200,0.92); border-color: #d4c5a9; }
-.theme-parchment .zoom-btn { background: rgba(61,42,0,0.08); color: #3d2a00; }
-.theme-parchment .zoom-btn:hover { background: rgba(139,105,20,0.12); color: #8b6914; }
-.theme-parchment .zoom-slider { background: transparent; accent-color: #8b6914; }
-.theme-parchment .zoom-slider::-webkit-slider-runnable-track { background: rgba(61,42,0,0.12); }
-.theme-parchment .zoom-slider::-webkit-slider-thumb { background: #8b6914; border-color: #f5e6c8; }
-.theme-parchment .zoom-slider::-moz-range-track { background: rgba(61,42,0,0.12); }
-.theme-parchment .zoom-label { color: #3d2a00; }
-.theme-parchment .annotation-zoom-divider { background: rgba(61,42,0,0.15); }
-.theme-parchment .annotation-divider { background: rgba(61,42,0,0.15); }
+.theme-parchment .pdf-zoom-controls { background: #fff; border-color: #ddd; }
+.theme-parchment .zoom-btn { background: rgba(0,0,0,0.06); color: #555; }
+.theme-parchment .zoom-btn:hover { background: rgba(24,144,255,0.15); color: #1890ff; }
+.theme-parchment .zoom-slider { background: transparent; accent-color: #1890ff; }
+.theme-parchment .zoom-slider::-webkit-slider-runnable-track { background: rgba(0,0,0,0.12); }
+.theme-parchment .zoom-slider::-webkit-slider-thumb { background: #1890ff; border-color: #fff; }
+.theme-parchment .zoom-slider::-moz-range-track { background: rgba(0,0,0,0.12); }
+.theme-parchment .zoom-label { color: #555; }
+.theme-parchment .annotation-zoom-divider { background: rgba(0,0,0,0.1); }
+.theme-parchment .annotation-divider { background: rgba(0,0,0,0.1); }
 
 /* PDF 文本选中浮动工具栏 */
 </style>
