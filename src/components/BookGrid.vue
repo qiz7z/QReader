@@ -288,7 +288,7 @@ function confirmDelete(bookId: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f0e6, #ebe4d4);
+  background: linear-gradient(135deg, #d4c8b0, #c4b498);
   overflow: hidden;
   position: relative;
 }

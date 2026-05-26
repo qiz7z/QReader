@@ -10,9 +10,18 @@
       <span class="ornament-line"></span>
       <span class="ornament-center">
         <svg class="ornament-icon" viewBox="0 0 40 40" fill="none">
-          <path d="M20 4 L24 12 L32 12 L26 18 L28 28 L20 22 L12 28 L14 18 L8 12 L16 12 Z" fill="#c9a84c" opacity="0.8"/>
+          <!-- 平铺的书籍图标 -->
+          <path d="M6 8 C6 6, 8 4, 12 4 L20 4 L20 36 L12 36 C8 36, 6 34, 6 32 Z" stroke="#c9a84c" stroke-width="1.5" fill="none"/>
+          <path d="M20 4 L34 4 C36 4, 38 6, 38 8 L38 32 C38 34, 36 36, 34 36 L20 36" stroke="#c9a84c" stroke-width="1.5" fill="none"/>
+          <path d="M10 10 L16 10" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M10 14 L16 14" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M10 18 L16 18" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M24 10 L34 10" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M24 14 L34 14" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M24 18 L34 18" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
       </span>
+      <h1 class="brand-title">QReader</h1>
       <span class="ornament-line"></span>
     </div>
     
@@ -247,9 +256,254 @@ async function loadBooks() {
 </script>
 
 <style scoped>
-@keyframes bgDrift {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.92; }
+/* ============================================
+   魔法粒子背景
+   ============================================ */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
+}
+
+.library-view {
+  min-height: 100vh;
+  padding: 32px 24px 48px;
+  background: 
+    linear-gradient(180deg, #0f141f 0%, #1a1f2e 50%, #252030 100%);
+  color: #e8e4d0;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.magic-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  left: var(--left);
+  top: var(--top);
+  width: var(--size);
+  height: var(--size);
+  background: radial-gradient(circle, rgba(191, 149, 63, 0.6) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float var(--duration) ease-in infinite;
+  animation-delay: var(--delay);
+  box-shadow: 0 0 10px rgba(191, 149, 63, 0.4);
+}
+
+/* ============================================
+   装饰分割线
+   ============================================ */
+.decorative-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.line-segment {
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c9a84c, transparent);
+  box-shadow: 0 0 8px rgba(191, 149, 63, 0.3);
+}
+
+.line-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c9a84c;
+  position: relative;
+  box-shadow: 0 0 10px rgba(191, 149, 63, 0.6);
+  animation: dotGlow 3s ease-in-out infinite;
+}
+
+@keyframes dotGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(191, 149, 63, 0.6); }
+  50% { box-shadow: 0 0 16px rgba(191, 149, 63, 1); }
+}
+
+.line-dot::before,
+.line-dot::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #c9a84c;
+  opacity: 0.5;
+}
+
+.line-dot::before {
+  top: -6px;
+}
+
+.line-dot::after {
+  bottom: -6px;
+}
+
+/* ============================================
+   装饰光晕
+   ============================================ */
+.bg-glow {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(191, 149, 63, 0.15) 0%, transparent 70%);
+  filter: blur(40px);
+  animation: glowFloat 20s ease-in-out infinite;
+}
+
+.glow-1 {
+  top: -150px;
+  right: -100px;
+  animation-delay: -5s;
+}
+
+.glow-2 {
+  bottom: -150px;
+  left: -100px;
+  background: radial-gradient(circle, rgba(184, 134, 11, 0.12) 0%, transparent 70%);
+  animation-delay: -10s;
+}
+
+@keyframes glowFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -40px) scale(1.1); }
+  66% { transform: translate(-30px, 30px) scale(0.9); }
+}
+
+/* ============================================
+   主要内容区域
+   ============================================ */
+.content-section {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  font-family: 'Times New Roman', Times, serif;
+  color: #c9a84c;
+  letter-spacing: 2px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* 空状态样式 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  background: rgba(45, 53, 72, 0.5);
+  border: 1px solid rgba(191, 149, 63, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  color: #c9a84c;
+  opacity: 0.7;
+  margin-bottom: 24px;
+}
+
+.empty-state-title {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: 'Times New Roman', Times, serif;
+  color: #e8e4d0;
+  letter-spacing: 1px;
+}
+
+.empty-state-description {
+  margin: 0 0 32px;
+  font-size: 14px;
+  color: #b8a888;
+  line-height: 1.6;
+}
+
+.empty-state .upload-button {
+  padding: 16px 32px;
+  border: 1px solid rgba(191, 149, 63, 0.3);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(191, 149, 63, 0.2) 0%, rgba(170, 119, 28, 0.2) 100%);
+  color: #c9a84c;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 16px rgba(191, 149, 63, 0.3);
+  letter-spacing: 2px;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.empty-state .upload-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(191, 149, 63, 0.4);
+  background: linear-gradient(135deg, rgba(191, 149, 63, 0.3) 0%, rgba(170, 119, 28, 0.3) 100%);
+  border-color: rgba(191, 149, 63, 0.5);
+}
+
+.brand-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(191, 149, 63, 0.2) 0%, rgba(170, 119, 28, 0.2) 100%);
+  border: 2px solid rgba(191, 149, 63, 0.4);
+  box-shadow: 0 0 30px rgba(191, 149, 63, 0.3);
+}
+
+.brand-icon {
+  width: 56px;
+  height: 56px;
+  color: #c9a84c;
+  filter: drop-shadow(0 0 10px rgba(191, 149, 63, 0.3));
+}
+
+.brand-title {
+  font-size: 36px;
+  font-weight: 700;
+  font-family: 'Times New Roman', Times, serif;
+  background: linear-gradient(135deg, #c9a84c 0%, #bf953f 50%, #aa771c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 6px;
+  filter: drop-shadow(0 2px 8px rgba(191, 149, 63, 0.4));
 }
 
 @keyframes float {
@@ -284,11 +538,10 @@ async function loadBooks() {
   z-index: -2;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(249, 245, 232, 0.85), rgba(248, 244, 228, 0.9)),
+    linear-gradient(rgba(235, 225, 200, 0.75), rgba(225, 215, 190, 0.8)),
     url('/background.png');
-  background-size: auto, cover;
+  background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
   animation: bgDrift 8s ease-in-out infinite;
 }
 
@@ -331,18 +584,34 @@ async function loadBooks() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
   background: linear-gradient(135deg, rgba(191, 149, 63, 0.1), rgba(191, 149, 63, 0.05));
   border: 1px solid rgba(191, 149, 63, 0.3);
   border-radius: 50%;
   animation: glow 3s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .ornament-icon {
-  width: 28px;
-  height: 28px;
+  width: 56px;
+  height: 56px;
   filter: drop-shadow(0 0 4px rgba(191, 149, 63, 0.5));
+}
+
+.brand-title {
+  margin: 0 16px;
+  font-size: 36px;
+  font-weight: 700;
+  font-family: 'Times New Roman', Times, serif;
+  background: linear-gradient(135deg, #c9a84c 0%, #bf953f 50%, #aa771c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 4px;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px rgba(191, 149, 63, 0.4));
+  white-space: nowrap;
 }
 
 .library-header {
