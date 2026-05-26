@@ -2358,6 +2358,30 @@ onBeforeUnmount(() => {
 .theme-dark .hl-btn-save:hover { background: #40a9ff; }
 .theme-dark .hl-note-input { background: #3a3a3a; border-color: #555; color: #ccc; }
 .theme-dark .hl-note-input:focus { border-color: #1890ff; }
+.theme-dark .home-btn, .theme-dark .library-btn {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  color: #ccc;
+}
+.theme-dark .home-btn:hover, .theme-dark .library-btn:hover {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.theme-dark .tool-btn {
+  background: rgba(255,255,255,0.08);
+  color: #aaa;
+  border: none;
+}
+.theme-dark .tool-btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+.theme-dark .tool-btn.active {
+  background: rgba(24,144,255,0.2);
+  color: #1890ff;
+}
 .theme-dark .annotation-item { background: #2a2a2a; border-color: #444; }
 .theme-dark .annotation-text { color: #ccc; }
 .theme-dark .annotation-note { color: #999; background: rgba(255,255,255,0.05); }
