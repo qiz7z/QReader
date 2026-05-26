@@ -137,7 +137,6 @@
         <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
       </div>
     </div>
-    </div>
     <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode-wrap': readerStore.readerMode === 'page' }">
           <!-- 滚动模式：所有章节连续显示 -->
           <div
