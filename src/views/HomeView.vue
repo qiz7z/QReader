@@ -12,7 +12,7 @@
         <div class="brand-section">
           <div class="brand-identity">
             <div class="logo-wrapper">
-              <img src="./qreader-icon.png" alt="QReader Logo" class="logo-image" />
+              <img src="/qreader-icon-transparent.png" alt="QReader Logo" class="logo-image" />
             </div>
             <h1 class="brand-title">QReader</h1>
           </div>
