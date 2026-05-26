@@ -1806,7 +1806,7 @@ onBeforeUnmount(() => {
   width: 80px; height: 4px; cursor: pointer;
   accent-color: #1890ff;
   -webkit-appearance: none; appearance: none;
-  background: rgba(0,0,0,0.12); border-radius: 2px; outline: none;
+  background: transparent; border-radius: 2px; outline: none;
   border: none;
 }
 
@@ -1815,9 +1815,15 @@ onBeforeUnmount(() => {
   border: none;
 }
 
+.zoom-slider::-webkit-slider-runnable-track {
+  width: 100%; height: 4px;
+  background: rgba(0,0,0,0.12); border-radius: 2px; border: none;
+}
+
 .zoom-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 16px; height: 16px; border-radius: 50%;
+  margin-top: -6px;
   background: #1890ff; border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   cursor: pointer; transition: all 0.15s;
@@ -1832,6 +1838,11 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 4px rgba(0,0,0,0.2), 0 0 0 2px rgba(24,144,255,0.3);
 }
 
+.zoom-slider::-moz-range-track {
+  width: 100%; height: 4px;
+  background: rgba(0,0,0,0.12); border: none; border-radius: 2px;
+}
+
 .zoom-slider::-moz-range-thumb {
   width: 16px; height: 16px; border-radius: 50%;
   background: #1890ff; border: 2px solid #fff;
@@ -1844,11 +1855,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 4px rgba(0,0,0,0.2), 0 0 0 2px rgba(24,144,255,0.3);
 }
 
-.zoom-slider::-moz-range-track {
-  background: rgba(0,0,0,0.12);
-  border: none;
-  border-radius: 2px;
-}
 .zoom-label {
   font-size: 12px; font-weight: 500; color: #555;
   min-width: 38px; text-align: center;
@@ -1901,8 +1907,10 @@ onBeforeUnmount(() => {
 }
 .theme-dark .zoom-btn { background: rgba(255,255,255,0.1); color: #ccc; }
 .theme-dark .zoom-btn:hover { background: rgba(24,144,255,0.2); color: #1890ff; }
-.theme-dark .zoom-slider { background: rgba(255,255,255,0.15); accent-color: #1890ff; }
+.theme-dark .zoom-slider { background: transparent; accent-color: #1890ff; }
+.theme-dark .zoom-slider::-webkit-slider-runnable-track { background: rgba(255,255,255,0.15); }
 .theme-dark .zoom-slider::-webkit-slider-thumb { background: #1890ff; border-color: #444; }
+.theme-dark .zoom-slider::-moz-range-track { background: rgba(255,255,255,0.15); }
 .theme-dark .zoom-label { color: #ccc; }
 .fullscreen-btn { padding: 6px; display: flex; align-items: center; justify-content: center; }
 .fullscreen-btn:hover { background: rgba(24,144,255,0.1); border-color: #1890ff; }
@@ -2447,8 +2455,10 @@ onBeforeUnmount(() => {
 .theme-green .reader-main { background: #e8f0e3; color: #3a3a3a; }
 .theme-green .zoom-btn { background: rgba(46,74,46,0.08); color: #3a5a3a; }
 .theme-green .zoom-btn:hover { background: rgba(90,158,66,0.12); color: #5a9e42; }
-.theme-green .zoom-slider { background: rgba(46,74,46,0.15); accent-color: #5a9e42; }
+.theme-green .zoom-slider { background: transparent; accent-color: #5a9e42; }
+.theme-green .zoom-slider::-webkit-slider-runnable-track { background: rgba(46,74,46,0.15); }
 .theme-green .zoom-slider::-webkit-slider-thumb { background: #5a9e42; border-color: #e8f0e3; }
+.theme-green .zoom-slider::-moz-range-track { background: rgba(46,74,46,0.15); }
 .theme-green .zoom-label { color: #3a5a3a; }
 
 .theme-parchment { background: #f5e6c8; color: #3d2a00; }
@@ -2512,8 +2522,10 @@ onBeforeUnmount(() => {
 .theme-parchment .pdf-zoom-controls { background: rgba(245,230,200,0.92); border-color: #d4c5a9; }
 .theme-parchment .zoom-btn { background: rgba(61,42,0,0.08); color: #3d2a00; }
 .theme-parchment .zoom-btn:hover { background: rgba(139,105,20,0.12); color: #8b6914; }
-.theme-parchment .zoom-slider { background: rgba(61,42,0,0.15); accent-color: #8b6914; }
+.theme-parchment .zoom-slider { background: transparent; accent-color: #8b6914; }
+.theme-parchment .zoom-slider::-webkit-slider-runnable-track { background: rgba(61,42,0,0.12); }
 .theme-parchment .zoom-slider::-webkit-slider-thumb { background: #8b6914; border-color: #f5e6c8; }
+.theme-parchment .zoom-slider::-moz-range-track { background: rgba(61,42,0,0.12); }
 .theme-parchment .zoom-label { color: #3d2a00; }
 .theme-parchment .annotation-zoom-divider { background: rgba(61,42,0,0.15); }
 .theme-parchment .annotation-divider { background: rgba(61,42,0,0.15); }
