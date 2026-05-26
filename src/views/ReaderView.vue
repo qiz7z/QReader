@@ -217,6 +217,13 @@
             <path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path>
           </svg>
         </button>
+
+        <!-- 左下角阅读信息 -->
+        <div v-if="book && bookFormat !== 'pdf'" class="reader-info-bar">
+          <span class="info-time">{{ currentTime }}</span>
+          <span class="info-divider">|</span>
+          <span class="info-progress">{{ wordsRead }} / {{ totalWords }} 字</span>
+        </div>
       </main>
 
       <!-- 划线笔记浮动工具栏 -->
@@ -510,6 +517,45 @@ const currentChapter = ref(0)
 const pageTransition = ref('page-forward')
 const isFullscreen = ref(false)
 const pdfScale = ref(2.0)
+
+// 实时时钟
+const currentTime = ref('')
+let timeTimer: number | undefined
+function startClock() {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  function update() {
+    const d = new Date()
+    currentTime.value = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  }
+  update()
+  timeTimer = window.setInterval(update, 1000)
+}
+
+// 阅读字数统计
+const totalWords = computed(() => {
+  if (!book.value?.content?.length) return 0
+  let count = 0
+  for (const ch of book.value.content) {
+    const text = (ch.content || '').replace(/<[^>]*>/g, '')
+    count += text.length
+  }
+  return count
+})
+
+const wordsRead = computed(() => {
+  if (!book.value?.content?.length) return 0
+  let count = 0
+  for (let i = 0; i < currentChapter.value; i++) {
+    const text = (book.value.content[i]?.content || '').replace(/<[^>]*>/g, '')
+    count += text.length
+  }
+  // 当前章节按一半估算（因为没有精确的 scroll 百分比跟踪）
+  if (book.value.content[currentChapter.value]) {
+    const text = (book.value.content[currentChapter.value]?.content || '').replace(/<[^>]*>/g, '')
+    count += Math.round(text.length * 0.5)
+  }
+  return count
+})
 
 // PDF 标注相关
 const annotationMode = ref(false)
@@ -1364,6 +1410,7 @@ function toggleFullscreen() {
 function onFs() { isFullscreen.value = !!document.fullscreenElement }
 
 onMounted(async () => {
+  startClock()
   document.addEventListener('keydown', handleKeydown)
   try { const s = localStorage.getItem('reader-sidebar-width'); if (s) { const n = parseInt(s, 10); if (!Number.isNaN(n)) sidebarWidth.value = Math.max(minW, Math.min(maxW, n)) } } catch {}
   
@@ -1421,6 +1468,7 @@ function onTocClick(idx: number) {
 }
 
 onBeforeUnmount(() => { 
+  if (timeTimer) clearInterval(timeTimer)
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('fullscreenchange', onFs)
   stopReadAloud()
@@ -1752,6 +1800,52 @@ onBeforeUnmount(() => {
   border-color: #1890ff;
   color: #1890ff;
   transform: translateY(-1px);
+}
+
+/* 左下角阅读信息 */
+.reader-info-bar {
+  position: fixed;
+  bottom: 14px;
+  left: 80px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 20px;
+  font-size: 12px;
+  color: #888;
+  z-index: 50;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+.info-time {
+  font-weight: 500;
+}
+.info-divider {
+  opacity: 0.4;
+}
+.info-progress {
+  opacity: 0.85;
+}
+
+.theme-dark .reader-info-bar {
+  background: rgba(40,40,40,0.8);
+  border-color: rgba(255,255,255,0.08);
+  color: #999;
+}
+.theme-green .reader-info-bar {
+  background: rgba(232,240,227,0.85);
+  border-color: rgba(74,122,74,0.15);
+  color: #5a7a5a;
+}
+.theme-parchment .reader-info-bar {
+  background: rgba(240,226,200,0.85);
+  border-color: rgba(180,160,120,0.2);
+  color: #7a6a4a;
 }
 
 /* PDF 控件条 - 集成标注和缩放 */
