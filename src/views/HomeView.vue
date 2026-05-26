@@ -10,32 +10,36 @@
       <div class="hero-content">
         <!-- 品牌标识 -->
         <div class="brand-section">
-          <div class="logo-wrapper">
-            <svg class="logo-svg" viewBox="0 0 200 200" fill="none">
-              <!-- 魔法书 -->
-              <path d="M60 40 C60 30, 70 20, 90 20 L110 20 L110 180 L90 180 C70 180, 60 170, 60 160 Z" stroke="url(#logoGradient)" stroke-width="2" fill="none"/>
-              <path d="M110 20 L150 20 C160 20, 170 30, 170 40 L170 160 C170 170, 160 180, 150 180 L110 180" stroke="url(#logoGradient)" stroke-width="2" fill="none"/>
-              <!-- 书页线条 -->
-              <path d="M70 50 L100 50" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M70 65 L100 65" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M70 80 L100 80" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M120 50 L160 50" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M120 65 L160 65" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M120 80 L160 80" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-              <!-- 魔法星芒 -->
-              <path d="M100 30 L105 20 L110 30 L120 35 L110 40 L105 50 L100 40 L90 35 Z" fill="#1890ff" opacity="0.8"/>
-              <!-- 装饰光环 -->
-              <circle cx="100" cy="100" r="90" stroke="#c9a84c" stroke-width="0.5" opacity="0.3" stroke-dasharray="4 4"/>
-              <circle cx="100" cy="100" r="85" stroke="#c9a84c" stroke-width="0.5" opacity="0.2" stroke-dasharray="4 4"/>
-            </svg>
+          <div class="brand-identity">
+            <div class="logo-wrapper">
+              <svg class="logo-svg" viewBox="0 0 200 200" fill="none">
+                <!-- 魔法书 -->
+                <path d="M60 40 C60 30, 70 20, 90 20 L110 20 L110 180 L90 180 C70 180, 60 170, 60 160 Z" stroke="url(#logoGradient)" stroke-width="2" fill="none"/>
+                <path d="M110 20 L150 20 C160 20, 170 30, 170 40 L170 160 C170 170, 160 180, 150 180 L110 180" stroke="url(#logoGradient)" stroke-width="2" fill="none"/>
+                <!-- 书页线条 -->
+                <path d="M70 50 L100 50" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M70 65 L100 65" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M70 80 L100 80" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M120 50 L160 50" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M120 65 L160 65" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M120 80 L160 80" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- 魔法星芒 -->
+                <path d="M100 30 L105 20 L110 30 L120 35 L110 40 L105 50 L100 40 L90 35 Z" fill="#1890ff" opacity="0.8"/>
+                <!-- 装饰光环 -->
+                <circle cx="100" cy="100" r="90" stroke="#c9a84c" stroke-width="0.5" opacity="0.3" stroke-dasharray="4 4"/>
+                <circle cx="100" cy="100" r="85" stroke="#c9a84c" stroke-width="0.5" opacity="0.2" stroke-dasharray="4 4"/>
+                <!-- 渐变定义 -->
+                <defs>
+                  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#c9a84c"/>
+                    <stop offset="50%" style="stop-color:#bf953f"/>
+                    <stop offset="100%" style="stop-color:#aa771c"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <h1 class="brand-title">QReader</h1>
           </div>
-        </div>
-
-        <!-- 主标题区 -->
-        <div class="title-section">
-          <h1 class="main-title">
-            <span class="title-primary">QReader</span>
-          </h1>
           <p class="subtitle">
             <span class="subtitle-cn">魔法藏书阁</span>
             <span class="subtitle-separator">·</span>
@@ -265,49 +269,49 @@ function particleStyle(_index: number) {
    品牌标识
    ============================================ */
 .brand-section {
-  margin-bottom: 32px;
+  margin-bottom: 40px;
+}
+
+.brand-identity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 16px;
 }
 
 .logo-wrapper {
-  display: inline-block;
+  flex-shrink: 0;
   animation: logoFloat 4s ease-in-out infinite;
 }
 
 @keyframes logoFloat {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-8px); }
 }
 
 .logo-svg {
-  width: 160px;
-  height: 160px;
-  filter: drop-shadow(0 0 20px rgba(191, 149, 63, 0.4));
+  width: 100px;
+  height: 100px;
+  filter: drop-shadow(0 0 16px rgba(191, 149, 63, 0.4));
 }
 
-/* ============================================
-   标题区域
-   ============================================ */
-.title-section {
-  margin-bottom: 40px;
-}
-
-.main-title {
-  margin: 0 0 16px;
-  font-size: 64px;
+.brand-title {
+  font-size: 56px;
   font-weight: 700;
   font-family: 'Times New Roman', Times, serif;
-  letter-spacing: 8px;
-  line-height: 1.1;
-}
-
-.title-primary {
-  background: var(--color-brand);
+  background: linear-gradient(135deg, #c9a84c 0%, #bf953f 50%, #aa771c 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  letter-spacing: 8px;
   filter: drop-shadow(0 2px 8px rgba(191, 149, 63, 0.4));
+  line-height: 1;
 }
 
+/* ============================================
+   副标题区域
+   ============================================ */
 .subtitle {
   display: flex;
   align-items: center;
