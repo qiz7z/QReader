@@ -12,7 +12,7 @@
         <div class="brand-section">
           <div class="brand-identity">
             <div class="logo-wrapper">
-              <img src="/favicon.svg" alt="QReader Logo" class="logo-image" />
+              <img src="./qreader-icon.png" alt="QReader Logo" class="logo-image" />
             </div>
             <h1 class="brand-title">QReader</h1>
           </div>
@@ -267,8 +267,8 @@ function particleStyle(_index: number) {
 }
 
 .logo-image {
-  width: 80px;
-  height: 80px;
+  width: 90px;
+  height: 90px;
   filter: drop-shadow(0 0 16px rgba(191, 149, 63, 0.4));
   transition: filter 0.3s ease;
 }
