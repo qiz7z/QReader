@@ -1815,7 +1815,7 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(4px);
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 14px;
   color: #888;
   z-index: 50;
   font-variant-numeric: tabular-nums;
