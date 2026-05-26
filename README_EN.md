@@ -49,6 +49,7 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 
 ### ⚙️ Personalized Settings
 - **Font Size**: 5-level font size adjustment
+- **Font Weight**: 5-level font weight (multi-layer shadow stacking, Windows optimized)
 - **Theme Switch**: Light/Dark/Green mode
 - **Reading Settings**: Line spacing, margins, font family
 
@@ -534,6 +535,8 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 - **Persistent Annotations**: Annotations visible even when toolbar is collapsed
 
 #### Improvements
+- **Font Weight 5-Level**: Multi-layer shadow stacking (4/6/8/12 layers), visible difference per level, Windows Microsoft YaHei optimized
+- **TOC Panel Collapsed**: Table of contents panel collapsed by default for cleaner UI
 - **Storage Refactor**: Switched to LocalStorage, isolated by file content hash
 - **Erase Precision**: Segment distance replaces point-to-point distance for better hit detection
 - **Coordinate Fix**: `screenX * canvas.width / rect.width` eliminates CSS zoom bias
