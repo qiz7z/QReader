@@ -40,6 +40,7 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Grid/list view of all books
 - Display cover, title, author, file size, reading time
 - Delete books (cascade delete bookmarks and notes)
+- **Magic Academy UI**: Immersive brand visuals on Home and Library pages
 
 ### 📖 Reading Experience
 - Unified rendering for multiple formats
@@ -65,28 +66,19 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Notes list management
 - Click note to jump to original text
 
-### 🖊️ PDF Annotation
-- Pen tool with 6 colors, 0.5-10mm stroke width
-- Line erase: swipe across annotation strokes to erase
-- Lasso erase: draw a loop to erase all annotations inside
-- Persistent annotation storage (LocalStorage)
-- Annotations remain visible when toolbar is collapsed
+### 🖊️ PDF Features
+- **Pen Annotation**: Canvas overlay with 6 colors, 0.5-10mm stroke width
+- **Line Erase**: Swipe across annotation strokes to erase (segment distance detection)
+- **Lasso Erase**: Draw a loop, ray-casting detection to batch erase annotations inside
+- **Fullscreen**: Bottom-right floating button for one-click fullscreen toggle
+- **Persistent Annotations**: Annotations visible even when toolbar is collapsed
 
 ### 💾 Progress Saving
 - Auto-save reading progress
 - Auto-jump to last position on reopen
 - Independent progress per book
 
-### 📄 PDF Features
-- **Chapter Navigation**: Jump to chapter start from PDF outline/table of contents
-- **Page Indicator**: Display current chapter/page number
-- **Pen Tool**: 6 colors, 0.5-10mm stroke width
-- **Line Erase**: Swipe across annotation strokes to erase
-- **Lasso Erase**: Draw a loop to erase all annotations inside
-- **Persistent Storage**: Annotations saved to LocalStorage, survive page refresh
-- **Always Visible**: Annotations remain visible even when toolbar is collapsed
 
----
 
 ## 🛠️ Tech Stack
 
@@ -530,11 +522,21 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 ### v0.4.0 (2026-05-26)
 
 #### New Features
+- **Magic Academy UI**: Redesigned Home and Library pages with magic academy theme, enhanced brand text effects
+- **QReader Rebrand**: Horizontal logo + brand name layout, transparent logo background, blue icon
+- **PDF Fullscreen**: Fullscreen reading mode for PDF with bottom-right floating toggle button
 - **TXT Reading Info Bar**: Floating bottom-left info bar with real-time clock and word count (words read / total words), visible in both fullscreen and normal modes
 - **Theme Support**: Info bar adapts to all 4 themes (light, dark, green, parchment)
 
 #### Improvements
+- **PDF Fullscreen Button**: Unified bottom-right floating button across all formats
+- **Zoom Controls**: Fixed white background in parchment mode, removed yellow box and divider line
+- **Dark Mode**: Fixed fullscreen button blending into background
 - Info bar font unified with chapter indicator (Georgia/Times New Roman, 14px, 500 weight)
+
+#### Bug Fixes
+- Fixed PDF range slider style override (WebKit/Firefox)
+- Fixed compilation error (extra div closing tag)
 
 ### v0.3.0 (2026-05-25)
 
