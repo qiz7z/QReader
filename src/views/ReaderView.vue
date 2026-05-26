@@ -136,15 +136,7 @@
         <button class="zoom-btn" @click="adjustZoom(0.25)">+</button>
         <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
       </div>
-      <div class="annotation-zoom-divider"></div>
-      <button class="zoom-btn pdf-fullscreen-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏'">
-        <svg v-if="isFullscreen" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-        </svg>
-        <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
-        </svg>
-      </button>
+    </div>
     </div>
     <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode-wrap': readerStore.readerMode === 'page' }">
           <!-- 滚动模式：所有章节连续显示 -->
@@ -220,7 +212,7 @@
         </div>
 
         <!-- 悬浮全屏按钮 -->
-        <button v-if="!isFullscreen && bookFormat !== 'pdf'" class="fullscreen-btn-float" @click="toggleFullscreen" title="全屏阅读">
+        <button v-if="!isFullscreen" class="fullscreen-btn-float" @click="toggleFullscreen" title="全屏阅读">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path>
             <path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path>
