@@ -31,7 +31,7 @@
               </svg>
             </button>
           </div>
-          <div class="sidebar-content" :style="{ fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css, fontWeight: [0, 300, 400, 700][readerStore.fontWeight] || 400 }">
+          <div class="sidebar-content" :style="{ ...getFontWeightStyle(readerStore.fontWeight), fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css }">
             <div v-if="book?.content?.length" v-for="(ch, idx) in book.content" :key="ch.id || idx" class="toc-item" :class="{ active: currentChapter === idx }" @click="onTocClick(idx)">
               <span class="toc-icon">#</span>
               <span class="toc-title">{{ ch.title || `第 ${idx + 1} 章` }}</span>
@@ -338,9 +338,9 @@
                 <div class="size-control">
                   <button @click="readerStore.setFontWeight(Math.max(1, readerStore.fontWeight - 1))">−</button>
                   <div class="size-dots">
-                    <span v-for="i in 3" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span>
+                    <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span>
                   </div>
-                  <button @click="readerStore.setFontWeight(Math.min(3, readerStore.fontWeight + 1))">+</button>
+                  <button @click="readerStore.setFontWeight(Math.min(5, readerStore.fontWeight + 1))">+</button>
                 </div>
               </div>
                 <div class="setting-group">
@@ -463,7 +463,7 @@
     <div v-if="isFullscreen && showFullToc && book" class="full-toc-overlay" @click="showFullToc = false">
       <div class="full-toc" @click.stop>
         <div class="full-toc-hd"><span>目录</span><button @click="showFullToc = false">关闭</button></div>
-        <div class="full-toc-bd" :style="{ fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css, fontWeight: [0, 300, 400, 700][readerStore.fontWeight] || 400 }">
+        <div class="full-toc-bd" :style="{ ...getFontWeightStyle(readerStore.fontWeight), fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css }">
           <div v-for="(ch, idx) in book.content" :key="ch.id || idx" class="full-toc-item" :class="{ active: currentChapter === idx }" @click="currentChapter = idx; showFullToc = false">
             <span class="toc-icon">#</span>{{ ch.title || `第 ${idx + 1} 章` }}
           </div>
@@ -527,7 +527,7 @@ const pdfReaderRef = ref<InstanceType<typeof PdfReader> | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const bodyRef = ref<HTMLElement | null>(null)
 
-const showTocPanel = ref(true)
+const showTocPanel = ref(false)
 const sidebarWidth = ref(200)
 const minW = 120
 const maxW = 400
@@ -611,11 +611,74 @@ function setSentenceRef(el: HTMLElement | Element | null, idx: number) {
 
 const lineHeightLabels = ['紧凑', '适中', '标准', '宽松', '超宽']
 
+function getFontWeightStyle(fw: number) {
+  // Windows 优化：用多层阴影堆叠模拟真实加粗效果
+  if (fw === 1) return { 
+    fontWeight: 300,
+    textShadow: 'none',
+    fontSynthesis: 'none'
+  }
+  if (fw === 2) return { 
+    fontWeight: 400,
+    textShadow: `
+      -0.3px -0.3px 0 currentColor,
+      0.3px -0.3px 0 currentColor,
+      -0.3px 0.3px 0 currentColor,
+      0.3px 0.3px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
+  if (fw === 3) return { 
+    fontWeight: 400,
+    textShadow: `
+      -0.5px -0.5px 0 currentColor,
+      0.5px -0.5px 0 currentColor,
+      -0.5px 0.5px 0 currentColor,
+      0.5px 0.5px 0 currentColor,
+      0 -0.5px 0 currentColor,
+      0 0.5px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
+  if (fw === 4) return { 
+    fontWeight: 500,
+    textShadow: `
+      -0.8px -0.8px 0 currentColor,
+      0.8px -0.8px 0 currentColor,
+      -0.8px 0.8px 0 currentColor,
+      0.8px 0.8px 0 currentColor,
+      -0.8px 0 0 currentColor,
+      0.8px 0 0 currentColor,
+      0 -0.8px 0 currentColor,
+      0 0.8px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
+  return { 
+    fontWeight: 700,
+    textShadow: `
+      -1px -1px 0 currentColor,
+      1px -1px 0 currentColor,
+      -1px 1px 0 currentColor,
+      1px 1px 0 currentColor,
+      -1px 0 0 currentColor,
+      1px 0 0 currentColor,
+      0 -1px 0 currentColor,
+      0 1px 0 currentColor,
+      -0.5px -0.5px 0 currentColor,
+      0.5px -0.5px 0 currentColor,
+      -0.5px 0.5px 0 currentColor,
+      0.5px 0.5px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
+}
+
 const contentStyle = computed(() => ({
   fontSize: `${14 + readerStore.fontSize * 2}px`,
-  fontWeight: [0, 300, 400, 700][readerStore.fontWeight] || 400,
   fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css,
   lineHeight: readerStore.getLineHeight(),
+  ...getFontWeightStyle(readerStore.fontWeight),
 }))
 
 async function loadBook(id: string) {

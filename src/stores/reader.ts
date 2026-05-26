@@ -6,7 +6,7 @@ export const useReaderStore = defineStore('reader', {
   state: () => ({
     fontSize: 3,
     theme: 'parchment' as 'light' | 'dark' | 'green' | 'parchment',
-    fontWeight: 2,
+    fontWeight: 1,
     fontFamily: 0,
     lineHeight: 3, // index into LINE_HEIGHTS (1‑based, stored as 1‑5)
     readerMode: 'scroll' as 'scroll' | 'page',
@@ -47,7 +47,7 @@ export const useReaderStore = defineStore('reader', {
       } catch {}
       try {
         const fw = localStorage.getItem('reader-fontWeight')
-        if (fw) { const n = parseInt(fw, 10); if (!Number.isNaN(n)) this.fontWeight = Math.max(1, Math.min(3, n)) }
+        if (fw) { const n = parseInt(fw, 10); if (!Number.isNaN(n)) this.fontWeight = Math.max(1, Math.min(5, n)) }
       } catch {}
       try {
         const t = localStorage.getItem('reader-theme')

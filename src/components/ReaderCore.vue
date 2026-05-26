@@ -44,14 +44,67 @@ const fontSizeMap: Record<number, string> = {
   5: '20px',
 }
 
-const fontWeightMap: Record<number, number> = {
-  1: 200,
-  2: 300,
-  3: 350,
-  4: 400,
-  5: 500,
-  6: 600,
-  7: 700,
+function getFontWeightStyle(fw: number) {
+  // Windows 优化：用多层阴影堆叠模拟真实加粗效果
+  if (fw === 1) return { 
+    fontWeight: 300,
+    textShadow: 'none',
+    fontSynthesis: 'none'
+  }
+  if (fw === 2) return { 
+    fontWeight: 400,
+    textShadow: `
+      -0.3px -0.3px 0 currentColor,
+      0.3px -0.3px 0 currentColor,
+      -0.3px 0.3px 0 currentColor,
+      0.3px 0.3px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
+  if (fw === 3) return { 
+    fontWeight: 400,
+    textShadow: `
+      -0.5px -0.5px 0 currentColor,
+      0.5px -0.5px 0 currentColor,
+      -0.5px 0.5px 0 currentColor,
+      0.5px 0.5px 0 currentColor,
+      0 -0.5px 0 currentColor,
+      0 0.5px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
+  if (fw === 4) return { 
+    fontWeight: 500,
+    textShadow: `
+      -0.8px -0.8px 0 currentColor,
+      0.8px -0.8px 0 currentColor,
+      -0.8px 0.8px 0 currentColor,
+      0.8px 0.8px 0 currentColor,
+      -0.8px 0 0 currentColor,
+      0.8px 0 0 currentColor,
+      0 -0.8px 0 currentColor,
+      0 0.8px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
+  return { 
+    fontWeight: 700,
+    textShadow: `
+      -1px -1px 0 currentColor,
+      1px -1px 0 currentColor,
+      -1px 1px 0 currentColor,
+      1px 1px 0 currentColor,
+      -1px 0 0 currentColor,
+      1px 0 0 currentColor,
+      0 -1px 0 currentColor,
+      0 1px 0 currentColor,
+      -0.5px -0.5px 0 currentColor,
+      0.5px -0.5px 0 currentColor,
+      -0.5px 0.5px 0 currentColor,
+      0.5px 0.5px 0 currentColor
+    `,
+    fontSynthesis: 'weight'
+  }
 }
 
 const themeStyles: Record<string, { bg: string; color: string }> = {
@@ -65,15 +118,12 @@ const currentContent = computed(() => {
   return props.book.content[props.currentChapter].content
 })
 
-const readerStyle = computed(() => {
-  const style = themeStyles[props.theme] || themeStyles.light
-  return {
-    fontSize: fontSizeMap[props.fontSize] || '16px',
-    fontWeight: fontWeightMap[props.fontWeight] || 400,
-    backgroundColor: style.bg,
-    color: style.color,
-  }
-})
+const readerStyle = computed(() => ({
+  fontSize: fontSizeMap[props.fontSize] || '16px',
+  backgroundColor: themeStyles[props.theme]?.bg || '#ffffff',
+  color: themeStyles[props.theme]?.color || '#333333',
+  ...getFontWeightStyle(props.fontWeight),
+}))
 
 function handleTextSelection() {
   const selection = window.getSelection()
