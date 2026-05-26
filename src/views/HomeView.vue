@@ -14,7 +14,10 @@
             <div class="logo-wrapper">
               <img src="/qreader-icon-transparent.png" alt="QReader Logo" class="logo-image" />
             </div>
-            <h1 class="brand-title">QReader</h1>
+            <h1 class="brand-title">
+              <span class="brand-title-text">QReader</span>
+              <div class="brand-title-glow"></div>
+            </h1>
           </div>
           <p class="subtitle">
             <span class="subtitle-cn">魔法藏书阁</span>
@@ -281,13 +284,56 @@ function particleStyle(_index: number) {
   font-size: 56px;
   font-weight: 700;
   font-family: 'Times New Roman', Times, serif;
-  background: linear-gradient(135deg, #c9a84c 0%, #bf953f 50%, #aa771c 100%);
+  letter-spacing: 8px;
+  line-height: 1;
+  position: relative;
+  display: inline-block;
+}
+
+.brand-title-text {
+  background: linear-gradient(
+    135deg,
+    #c9a84c 0%,
+    #bf953f 15%,
+    #c9a84c 30%,
+    #aa771c 50%,
+    #bf953f 70%,
+    #c9a84c 85%,
+    #aa771c 100%
+  );
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: 8px;
-  filter: drop-shadow(0 2px 8px rgba(191, 149, 63, 0.4));
-  line-height: 1;
+  animation: goldShimmer 3s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.5));
+}
+
+@keyframes goldShimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.brand-title-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  filter: blur(20px);
+  opacity: 0.5;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(191, 149, 63, 0.4) 0%,
+    transparent 70%
+  );
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.1); opacity: 0.6; }
 }
 
 /* ============================================
