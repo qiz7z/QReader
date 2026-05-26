@@ -32,6 +32,12 @@
     >
       <div class="book-cover">
         <img :src="getCoverUrl(book)" alt="封面" />
+        <div v-if="book.progress && book.progress.percentage > 0" class="progress-overlay">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" :style="{ width: book.progress.percentage + '%' }"></div>
+          </div>
+          <span class="progress-text">{{ Math.round(book.progress.percentage) }}%</span>
+        </div>
       </div>
       <div class="book-info">
         <h3 class="book-title" :title="book.title">{{ book.title }}</h3>
@@ -48,11 +54,15 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, reactive, watch } from 'vue'
-import type { BookRecord } from '@/types'
+import type { BookRecord, ProgressRecord } from '@/types'
 import type { ImportingBook } from '@/stores/library'
 
+interface BookWithProgress extends BookRecord {
+  progress?: ProgressRecord
+}
+
 const props = defineProps<{
-  books: BookRecord[]
+  books: BookWithProgress[]
   importingBooks?: ImportingBook[]
 }>()
 
@@ -278,6 +288,7 @@ function confirmDelete(bookId: string) {
   justify-content: center;
   background-color: #f0f0f0;
   overflow: hidden;
+  position: relative;
 }
 
 .book-cover img {
@@ -286,8 +297,71 @@ function confirmDelete(bookId: string) {
   object-fit: cover;
 }
 
+.progress-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress-bar-track {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+  backdrop-filter: blur(2px);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fff, #e6f7ff);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  text-align: left;
+  font-weight: 500;
+}
+
 .book-info {
   padding: 12px;
+}
+
+.book-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-author {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-meta {
+  margin: 0 0 2px;
+  font-size: 12px;
+  color: #999;
+}
+
+.book-time {
+  margin: 0;
+  font-size: 11px;
+  color: #bbb;
 }
 
 .book-title {
@@ -333,6 +407,7 @@ function confirmDelete(bookId: string) {
   font-size: 12px;
   opacity: 0;
   transition: opacity 0.2s;
+  z-index: 1;
 }
 
 .book-card:hover .delete-btn {

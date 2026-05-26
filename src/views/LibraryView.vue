@@ -39,7 +39,7 @@
       <UploadButton @book-imported="handleBookImported" />
       <BookGrid
         v-if="hasBooks"
-        :books="filteredBooks"
+        :books="filteredBooksWithProgress"
         :importing-books="importingBooks"
         @book-click="handleBookClick"
         @book-delete="handleBookDelete"
@@ -111,16 +111,20 @@ import { StorageService } from '@/services/StorageService'
 import UploadButton from '@/components/UploadButton.vue'
 import BookGrid from '@/components/BookGrid.vue'
 import SearchBar from '@/components/SearchBar.vue'
-import type { BookRecord } from '@/types'
+import type { BookRecord, ProgressRecord } from '@/types'
+
+interface BookWithProgress extends BookRecord {
+  progress?: ProgressRecord
+}
 
 const router = useRouter()
 const libraryStore = useLibraryStore()
 const readerStore = useReaderStore()
 
-const filteredBooks = computed(() => libraryStore.filteredBooks)
 const importingBooks = computed(() => libraryStore.importingBooks)
 const hasBooks = computed(() => libraryStore.books.length > 0)
 const isLoading = ref(true)
+const booksWithProgress = ref<BookWithProgress[]>([])
 
 const goHome = () => {
   router.push('/')
@@ -128,8 +132,21 @@ const goHome = () => {
 
 const searchQuery = ref('')
 
+const filteredBooksWithProgress = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim()
+  if (!query) return booksWithProgress.value
+  
+  return booksWithProgress.value.filter(book =>
+    book.title.toLowerCase().includes(query) ||
+    book.author.toLowerCase().includes(query)
+  )
+})
+
 const handleBookImported = (book: BookRecord) => {
   libraryStore.addBook(book)
+  StorageService.getProgress(book.id).then(progress => {
+    booksWithProgress.value.push({ ...book, progress })
+  })
 }
 
 const handleBookClick = (bookId: string) => {
@@ -138,6 +155,7 @@ const handleBookClick = (bookId: string) => {
 
 const handleBookDelete = (bookId: string) => {
   libraryStore.removeBook(bookId)
+  booksWithProgress.value = booksWithProgress.value.filter(b => b.id !== bookId)
 }
 
 const handleSearch = (query: string) => {
@@ -166,6 +184,7 @@ async function executeClear() {
   if (selectedBooks) {
     await StorageService.clearBooks()
     libraryStore.resetBooks()
+    booksWithProgress.value = []
   }
   if (clearOptions.bookmarks) await StorageService.clearBookmarks()
   if (clearOptions.notes) await StorageService.clearNotes()
@@ -176,13 +195,27 @@ async function executeClear() {
   Object.assign(clearOptions, { books: false, bookmarks: false, notes: false, progress: false, settings: false })
 
   if (selectedBooks) {
-    await libraryStore.loadBooks()
+    await loadBooks()
   }
 }
 
 onMounted(() => {
-  libraryStore.loadBooks()
+  loadBooks()
 })
+
+async function loadBooks() {
+  isLoading.value = true
+  await libraryStore.loadBooks()
+  
+  const allBooks = libraryStore.books
+  const progressPromises = allBooks.map(async (book) => {
+    const progress = await StorageService.getProgress(book.id)
+    return { ...book, progress } as BookWithProgress
+  })
+  
+  booksWithProgress.value = await Promise.all(progressPromises)
+  isLoading.value = false
+}
 </script>
 
 <style scoped>
