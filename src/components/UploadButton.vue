@@ -103,9 +103,9 @@ async function importFiles(files: File[]) {
       libraryStore.updateImportProgress(importId, 95)
       await nextTick()
 
-      // 完成：移除导入中卡片，添加正式卡片
+      // 完成：移除导入中卡片，emit 事件让父组件添加正式卡片
       libraryStore.removeImportingBook(importId)
-      libraryStore.addBook(bookRecord)
+      emit('book-imported', bookRecord)
     } catch (error) {
       libraryStore.removeImportingBook(importId)
       console.error('[Upload] Error importing file:', error)
@@ -123,18 +123,17 @@ async function importFiles(files: File[]) {
   justify-content: center;
   min-width: 200px;
   padding: 32px 24px;
-  border: none;
+  border: 2px solid rgba(191, 149, 63, 0.3);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
-  background: #9a9a9a;
-  color: #1a1a1a;
-  box-shadow: 0 4px 16px rgba(154, 154, 154, 0.3);
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.8), rgba(245, 230, 200, 0.6));
+  color: #3a2a10;
+  box-shadow: 0 4px 16px rgba(191, 149, 63, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   position: relative;
   overflow: hidden;
 }
 
-/* Ink drop bloom */
 .upload-button::before {
   content: '';
   position: absolute;
@@ -144,7 +143,7 @@ async function importFiles(files: File[]) {
   height: 120px;
   margin: -60px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.12) 30%, transparent 70%);
+  background: radial-gradient(circle, rgba(191, 149, 63, 0.4) 0%, rgba(191, 149, 63, 0.12) 30%, transparent 70%);
   transform: scale(0);
   opacity: 0;
   transition: transform 0.6s cubic-bezier(0.08, 0.82, 0.17, 1), opacity 0.4s;
@@ -155,23 +154,25 @@ async function importFiles(files: File[]) {
   transform: scale(3);
   opacity: 1;
   box-shadow:
-    50px -35px 0 -8px rgba(0,0,0,0.08),
-    -40px 30px 0 -6px rgba(0,0,0,0.05),
-    60px 40px 0 -14px rgba(0,0,0,0.04),
-    -55px -40px 0 -10px rgba(0,0,0,0.06),
-    0 -50px 0 -4px rgba(0,0,0,0.03);
+    50px -35px 0 -8px rgba(191, 149, 63, 0.08),
+    -40px 30px 0 -6px rgba(191, 149, 63, 0.05),
+    60px 40px 0 -14px rgba(191, 149, 63, 0.04),
+    -55px -40px 0 -10px rgba(191, 149, 63, 0.06),
+    0 -50px 0 -4px rgba(191, 149, 63, 0.03);
 }
 
 .upload-button:hover {
-  background: #7a7a7a;
+  background: linear-gradient(135deg, rgba(255, 255, 250, 0.9), rgba(250, 240, 220, 0.8));
+  border-color: rgba(191, 149, 63, 0.5);
   transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 28px rgba(191, 149, 63, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
 }
 
 .is-dragging {
   transform: scale(1.03);
-  background: #666;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(135deg, rgba(255, 255, 250, 0.95), rgba(245, 240, 230, 0.9));
+  border-color: rgba(191, 149, 63, 0.6);
+  box-shadow: 0 8px 32px rgba(191, 149, 63, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
 .upload-icon {
@@ -180,7 +181,8 @@ async function importFiles(files: File[]) {
   opacity: 0.7;
   position: relative;
   z-index: 1;
-  color: #1a1a1a;
+  color: #5a3f2a;
+  font-weight: 300;
 }
 
 .upload-text {
@@ -191,16 +193,18 @@ async function importFiles(files: File[]) {
   letter-spacing: 3px;
   position: relative;
   z-index: 1;
-  color: #1a1a1a;
+  color: #3a2a10;
+  text-shadow: 0 1px 2px rgba(191, 149, 63, 0.2);
 }
 
 .upload-hint {
   margin: 6px 0 0;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   font-family: 'Times New Roman', Times, KaiTi, STKaiti, '楷体', serif;
-  color: rgba(26, 26, 26, 0.5);
+  color: rgba(58, 42, 16, 0.5);
   position: relative;
   z-index: 1;
+  font-style: italic;
 }
 </style>

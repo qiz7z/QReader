@@ -1,10 +1,21 @@
 <template>
   <div class="library-view" :class="`theme-${readerStore.theme}`">
+    <!-- 魔法粒子背景 -->
+    <div class="magic-particles">
+      <div class="particle" v-for="i in 20" :key="i" :style="particleStyle(i)"></div>
+    </div>
+    
+    <!-- 顶部装饰条 -->
     <div class="library-ornament">
       <span class="ornament-line"></span>
-      <span class="ornament-center"></span>
+      <span class="ornament-center">
+        <svg class="ornament-icon" viewBox="0 0 40 40" fill="none">
+          <path d="M20 4 L24 12 L32 12 L26 18 L28 28 L20 22 L12 28 L14 18 L8 12 L16 12 Z" fill="#c9a84c" opacity="0.8"/>
+        </svg>
+      </span>
       <span class="ornament-line"></span>
     </div>
+    
     <header class="library-header">
       <div class="header-left">
         <button class="home-btn" @click="goHome" title="返回首页">
@@ -16,13 +27,17 @@
         </button>
         <div class="brand">
           <svg class="logo-icon" viewBox="0 0 40 40" fill="none">
-            <path d="M14 4 C22 4, 28 10, 28 18 C28 26, 22 30, 14 30 C10 30, 8 28, 8 24" stroke="#1890ff" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="14" y1="15" x2="22" y2="15" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="14" y1="19" x2="22" y2="19" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="14" y1="23" x2="18" y2="23" stroke="#40a9ff" stroke-width="1.2" stroke-linecap="round"/>
-            <path d="M24 26 L32 34" stroke="#1890ff" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- 魔法书图标 -->
+            <path d="M8 8 C8 6, 10 4, 14 4 L32 4 C34 4, 36 6, 36 8 L36 32 C36 34, 34 36, 32 36 L14 36 C10 36, 8 34, 8 32 Z" stroke="#c9a84c" stroke-width="1.5" fill="none"/>
+            <path d="M14 4 L14 36" stroke="#c9a84c" stroke-width="1.5"/>
+            <path d="M18 10 L28 10" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M18 15 L28 15" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M18 20 L26 20" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M18 25 L26 25" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
+            <!-- 魔法星芒 -->
+            <path d="M30 8 L32 4 L34 8 L38 10 L34 12 L32 16 L30 12 L26 10 Z" fill="#1890ff" opacity="0.6"/>
           </svg>
-          <h1 class="brand-name">我的书架</h1>
+          <h1 class="brand-name">我的藏书阁</h1>
         </div>
       </div>
       <div class="header-actions">
@@ -142,11 +157,24 @@ const filteredBooksWithProgress = computed(() => {
   )
 })
 
-const handleBookImported = (book: BookRecord) => {
+// 魔法粒子随机样式生成
+function particleStyle(_index: number) {
+  const delay = Math.random() * 5
+  const duration = 3 + Math.random() * 4
+  const left = Math.random() * 100
+  const size = 2 + Math.random() * 4
+  return {
+    '--delay': `${delay}s`,
+    '--duration': `${duration}s`,
+    '--left': `${left}%`,
+    '--size': `${size}px`,
+  }
+}
+
+const handleBookImported = async (book: BookRecord) => {
   libraryStore.addBook(book)
-  StorageService.getProgress(book.id).then(progress => {
-    booksWithProgress.value.push({ ...book, progress })
-  })
+  const progress = await StorageService.getProgress(book.id)
+  booksWithProgress.value.unshift({ ...book, progress })
 }
 
 const handleBookClick = (bookId: string) => {
@@ -224,6 +252,23 @@ async function loadBooks() {
   50% { opacity: 0.92; }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(191, 149, 63, 0.4); }
+  50% { box-shadow: 0 0 14px rgba(191, 149, 63, 0.8); }
+}
+
 .library-view {
   max-width: 1200px;
   margin: 0 auto;
@@ -236,10 +281,10 @@ async function loadBooks() {
   content: '';
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(245, 230, 200, 0.5), rgba(240, 230, 208, 0.65)),
+    linear-gradient(rgba(249, 245, 232, 0.85), rgba(248, 244, 228, 0.9)),
     url('/background.png');
   background-size: auto, cover;
   background-position: center;
@@ -247,26 +292,57 @@ async function loadBooks() {
   animation: bgDrift 8s ease-in-out infinite;
 }
 
+/* 魔法粒子背景 */
+.magic-particles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  left: var(--left);
+  bottom: -10px;
+  width: var(--size);
+  height: var(--size);
+  background: radial-gradient(circle, rgba(191, 149, 63, 0.6) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float var(--duration) ease-in infinite;
+  animation-delay: var(--delay);
+}
+
 .library-ornament {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .ornament-line {
   flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #c9a84c, transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #c9a84c, #bf953f, #c9a84c, transparent);
+  box-shadow: 0 0 8px rgba(191, 149, 63, 0.3);
 }
 
 .ornament-center {
-  width: 8px;
-  height: 8px;
-  background: linear-gradient(135deg, #bf953f, #fcf6ba, #aa771c);
-  transform: rotate(45deg);
-  border-radius: 1px;
-  box-shadow: 0 0 6px rgba(191, 149, 63, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(191, 149, 63, 0.1), rgba(191, 149, 63, 0.05));
+  border: 1px solid rgba(191, 149, 63, 0.3);
+  border-radius: 50%;
+  animation: glow 3s ease-in-out infinite;
+}
+
+.ornament-icon {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 0 4px rgba(191, 149, 63, 0.5));
 }
 
 .library-header {
@@ -276,10 +352,24 @@ async function loadBooks() {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid;
-  border-image: linear-gradient(90deg, transparent, #1890ff, #40a9ff, #1890ff, transparent) 1;
-  background: transparent;
+  padding: 20px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(191, 149, 63, 0.2);
+  background: linear-gradient(135deg, rgba(255, 254, 248, 0.9), rgba(249, 245, 232, 0.7));
+  box-shadow: 0 4px 16px rgba(139, 115, 85, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+}
+
+.library-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #c9a84c, #bf953f, #c9a84c, transparent);
 }
 
 .header-left {
@@ -292,62 +382,81 @@ async function loadBooks() {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
+  padding: 8px 16px;
   border: 1px solid rgba(139, 90, 43, 0.3);
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(245, 230, 200, 0.6) 0%, rgba(230, 215, 185, 0.5) 100%);
-  color: #8b5a2b;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.8), rgba(245, 230, 200, 0.6));
+  color: #5a3f2a;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.3px;
-  backdrop-filter: blur(8px);
+  letter-spacing: 0.5px;
+  font-family: KaiTi, STKaiti, '楷体', serif;
+  box-shadow: 0 2px 4px rgba(139, 90, 43, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(191, 149, 63, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.home-btn:hover::before {
+  opacity: 1;
+}
+
+.home-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 250, 0.95), rgba(250, 240, 220, 0.8));
+  border-color: rgba(191, 149, 63, 0.4);
+  color: #3a2a10;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(191, 149, 63, 0.2);
 }
 
 .home-icon {
   width: 18px;
   height: 18px;
   transition: all 0.25s;
-}
-
-.home-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 250, 240, 0.7) 0%, rgba(245, 230, 200, 0.6) 100%);
-  border-color: rgba(139, 90, 43, 0.5);
-  color: #6b4423;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 90, 43, 0.12);
+  position: relative;
+  z-index: 1;
 }
 
 .home-btn:hover .home-icon {
   transform: scale(1.05);
 }
 
-.home-btn:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 6px rgba(139, 90, 43, 0.08);
-}
-
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  position: relative;
 }
 
 .logo-icon {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(191, 149, 63, 0.3));
 }
 
 .brand-name {
   margin: 0;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: #1890ff;
-  text-shadow: 0 1px 2px rgba(24,144,255,0.25), 0 2px 4px rgba(0,0,0,0.06);
+  letter-spacing: 2px;
+  font-family: 'KaiTi', 'STKaiti', '楷体', serif;
+  background: linear-gradient(135deg, #3a2a10 0%, #5a3f2a 50%, #2d1f10 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
 }
 
 .header-actions {
@@ -362,22 +471,24 @@ async function loadBooks() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(139, 90, 43, 0.3);
   border-radius: 8px;
-  background: rgba(139, 90, 43, 0.08);
-  color: #8b5a2b;
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.6), rgba(245, 230, 200, 0.5));
+  color: #5a3f2a;
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(139, 90, 43, 0.1);
 }
 
 .clear-all-btn:hover {
-  background: rgba(139, 90, 43, 0.15);
-  border-color: rgba(139, 90, 43, 0.5);
-  color: #6b4423;
+  background: linear-gradient(135deg, rgba(255, 255, 250, 0.8), rgba(250, 240, 220, 0.7));
+  border-color: rgba(191, 149, 63, 0.4);
+  color: #3a2a10;
   transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(191, 149, 63, 0.2);
 }
 
 .clear-all-btn:active {

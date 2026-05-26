@@ -267,17 +267,19 @@ function confirmDelete(bookId: string) {
 
 .book-card {
   position: relative;
-  background: white;
+  background: linear-gradient(135deg, #fffef8, #fffdf0);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.12), inset 0 0 0 1px rgba(191, 149, 63, 0.08);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  border: 1px solid rgba(191, 149, 63, 0.1);
 }
 
 .book-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 20px rgba(191, 149, 63, 0.2), inset 0 0 0 1px rgba(191, 149, 63, 0.15);
+  border-color: rgba(191, 149, 63, 0.25);
 }
 
 .book-cover {
@@ -286,7 +288,7 @@ function confirmDelete(bookId: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f0f0f0;
+  background: linear-gradient(135deg, #f5f0e6, #ebe4d4);
   overflow: hidden;
   position: relative;
 }
@@ -295,6 +297,7 @@ function confirmDelete(bookId: string) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  box-shadow: inset 0 0 0 1px rgba(191, 149, 63, 0.1);
 }
 
 .progress-overlay {
@@ -309,29 +312,95 @@ function confirmDelete(bookId: string) {
 
 .progress-bar-track {
   height: 3px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(58, 42, 16, 0.3);
   border-radius: 2px;
   overflow: hidden;
   backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #fff, #e6f7ff);
+  background: linear-gradient(90deg, #c9a84c, #fcf6ba, #bf953f);
   transition: width 0.3s ease;
   border-radius: 2px;
+  box-shadow: 0 0 6px rgba(191, 149, 63, 0.4);
 }
 
 .progress-text {
   font-size: 11px;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(58, 42, 16, 0.8), 0 0 8px rgba(191, 149, 63, 0.5);
   text-align: left;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: Georgia, serif;
+  letter-spacing: 0.5px;
 }
 
 .book-info {
   padding: 12px;
+  background: linear-gradient(135deg, rgba(255, 254, 248, 0.9), rgba(249, 245, 232, 0.7));
+}
+
+.book-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #3a2a10;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'KaiTi', 'STKaiti', '楷体', serif;
+  font-weight: 600;
+}
+
+.book-author {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #6b5340;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+}
+
+.book-meta {
+  margin: 0 0 2px;
+  font-size: 12px;
+  color: #8b7355;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.book-time {
+  margin: 0;
+  font-size: 11px;
+  color: #a89578;
+  font-style: italic;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  background-color: rgba(139, 90, 43, 0.9);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+  z-index: 1;
+  font-family: KaiTi, STKaiti, '楷体', serif;
+}
+
+.book-card:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background-color: rgba(91, 59, 28, 0.95);
+  box-shadow: 0 2px 8px rgba(139, 90, 43, 0.3);
 }
 
 .book-title {
