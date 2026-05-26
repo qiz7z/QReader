@@ -12,31 +12,7 @@
         <div class="brand-section">
           <div class="brand-identity">
             <div class="logo-wrapper">
-              <svg class="logo-svg" viewBox="0 0 200 200" fill="none">
-                <!-- 魔法书 -->
-                <path d="M60 40 C60 30, 70 20, 90 20 L110 20 L110 180 L90 180 C70 180, 60 170, 60 160 Z" stroke="url(#logoGradient)" stroke-width="2" fill="none"/>
-                <path d="M110 20 L150 20 C160 20, 170 30, 170 40 L170 160 C170 170, 160 180, 150 180 L110 180" stroke="url(#logoGradient)" stroke-width="2" fill="none"/>
-                <!-- 书页线条 -->
-                <path d="M70 50 L100 50" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M70 65 L100 65" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M70 80 L100 80" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M120 50 L160 50" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M120 65 L160 65" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M120 80 L160 80" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
-                <!-- 魔法星芒 -->
-                <path d="M100 30 L105 20 L110 30 L120 35 L110 40 L105 50 L100 40 L90 35 Z" fill="#1890ff" opacity="0.8"/>
-                <!-- 装饰光环 -->
-                <circle cx="100" cy="100" r="90" stroke="#c9a84c" stroke-width="0.5" opacity="0.3" stroke-dasharray="4 4"/>
-                <circle cx="100" cy="100" r="85" stroke="#c9a84c" stroke-width="0.5" opacity="0.2" stroke-dasharray="4 4"/>
-                <!-- 渐变定义 -->
-                <defs>
-                  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#c9a84c"/>
-                    <stop offset="50%" style="stop-color:#bf953f"/>
-                    <stop offset="100%" style="stop-color:#aa771c"/>
-                  </linearGradient>
-                </defs>
-              </svg>
+              <img src="/favicon.svg" alt="QReader Logo" class="logo-image" />
             </div>
             <h1 class="brand-title">QReader</h1>
           </div>
@@ -290,10 +266,15 @@ function particleStyle(_index: number) {
   50% { transform: translateY(-8px); }
 }
 
-.logo-svg {
-  width: 100px;
-  height: 100px;
+.logo-image {
+  width: 80px;
+  height: 80px;
   filter: drop-shadow(0 0 16px rgba(191, 149, 63, 0.4));
+  transition: filter 0.3s ease;
+}
+
+.logo-wrapper:hover .logo-image {
+  filter: drop-shadow(0 0 24px rgba(191, 149, 63, 0.6));
 }
 
 .brand-title {
