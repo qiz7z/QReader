@@ -2515,6 +2515,8 @@ onBeforeUnmount(() => {
 .theme-parchment .zoom-slider { background: rgba(61,42,0,0.15); accent-color: #8b6914; }
 .theme-parchment .zoom-slider::-webkit-slider-thumb { background: #8b6914; border-color: #f5e6c8; }
 .theme-parchment .zoom-label { color: #3d2a00; }
+.theme-parchment .annotation-zoom-divider { background: rgba(61,42,0,0.15); }
+.theme-parchment .annotation-divider { background: rgba(61,42,0,0.15); }
 
 /* PDF 文本选中浮动工具栏 */
 </style>
