@@ -270,7 +270,10 @@ async function loadBooks() {
   min-height: 100vh;
   padding: 32px 24px 48px;
   background: 
-    linear-gradient(180deg, #0a0e1a 0%, #1a1f2e 40%, #2a2540 100%);
+    linear-gradient(180deg, rgba(15, 20, 31, 0.85) 0%, rgba(26, 31, 46, 0.85) 50%, rgba(37, 32, 48, 0.85) 100%),
+    url('/background.png');
+  background-size: cover;
+  background-position: center;
   color: #e8e4d0;
   position: relative;
   overflow-x: hidden;
