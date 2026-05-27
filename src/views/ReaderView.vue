@@ -918,7 +918,7 @@ function handleTextSelection() {
     y: rect.top - bodyRect.top - 8,
   }
   hlSelectedText.value = text
-  hlSelectedColor.value = hlColors[0]
+  // 保留用户上次选择的颜色，不重置为默认黄色
   hlNoteInput.value = ''
   hlShowNoteInput.value = false
   showHlToolbar.value = true
