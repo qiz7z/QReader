@@ -88,7 +88,7 @@
           <!-- 画笔工具 + 颜色 -->
           <div class="annotation-divider"></div>
           <button class="annotation-action-btn tool-btn" :class="{ active: !eraserMode && !highlighterMode }" @click.stop="eraserMode = ''; highlighterMode = false" title="画笔">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 20h9"/>
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
             </svg>
@@ -107,7 +107,7 @@
           <!-- 荧光笔工具 + 颜色 -->
           <div class="annotation-divider"></div>
           <button class="annotation-action-btn tool-btn highlighter-btn" :class="{ active: highlighterMode }" @click.stop="highlighterMode = !highlighterMode; eraserMode = ''" title="荧光笔">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 21l1.5-5.5L17 3l4 4L8.5 19.5z"/>
               <path d="M3 21l2-2"/>
               <path d="M14.5 6.5l3 3" opacity="0.5"/>
@@ -135,14 +135,14 @@
           <!-- 橡皮擦工具 -->
           <div class="annotation-divider"></div>
           <button class="annotation-action-btn" :class="{ active: eraserMode === 'line' }" @click.stop="eraserMode = eraserMode === 'line' ? '' : 'line'; highlighterMode = false" title="线条擦除">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 20H8.5l-5-5a2 2 0 0 1 0-2.83l9-9a2 2 0 0 1 2.83 0l4.5 4.5"/>
               <path d="M11.5 14.5L16 10"/>
               <path d="M3 17l3 2.5"/>
             </svg>
           </button>
           <button class="annotation-action-btn" :class="{ active: eraserMode === 'lasso' }" @click.stop="eraserMode = eraserMode === 'lasso' ? '' : 'lasso'; highlighterMode = false" title="圈套擦除">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 3a9 9 0 1 1-7 15"/>
               <path d="M5 18a2 2 0 0 1 2-2"/>
               <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
@@ -152,7 +152,7 @@
           <!-- 清除全部 -->
           <div class="annotation-divider"></div>
           <button class="annotation-action-btn danger-btn" @click.stop="clearAllAnnotations" title="清除全部">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"/>
               <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               <path d="M19 6v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
@@ -1924,13 +1924,19 @@ onBeforeUnmount(() => {
 
 /* PDF 标注工具栏 */
 .pdf-annotation-toolbar {
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 6px;
-  border-radius: 18px;
+  display: flex; align-items: center; gap: 3px;
+  padding: 3px 5px;
+  border-radius: 14px;
   transition: background 0.2s;
 }
 .pdf-annotation-toolbar.annotation-active {
   background: rgba(24,144,255,0.08);
+}
+.pdf-annotation-toolbar .annotation-action-btn {
+  width: 22px; height: 22px; border: none;
+  background: transparent; border-radius: 4px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0; padding: 0;
 }
 
 /* 标注和缩放之间的分隔线 */
@@ -2011,7 +2017,7 @@ onBeforeUnmount(() => {
   margin-left: 4px;
 }
 .annotation-toggle-btn {
-  width: 32px; height: 32px; border: none;
+  width: 26px; height: 26px; border: none;
   background: rgba(0,0,0,0.06); border-radius: 50%;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: all 0.15s; flex-shrink: 0; padding: 0;
@@ -2024,19 +2030,19 @@ onBeforeUnmount(() => {
   background: rgba(24,144,255,0.2); color: #1890ff;
 }
 .annotation-divider {
-  width: 1px; height: 24px; background: rgba(0,0,0,0.1); margin: 0 4px;
+  width: 1px; height: 18px; background: rgba(0,0,0,0.1); margin: 0 3px;
 }
 .annotation-colors {
-  display: flex; gap: 4px; align-items: center; margin: 0 4px;
+  display: flex; gap: 3px; align-items: center; margin: 0 3px;
 }
 .annotation-color-btn {
-  width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent;
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent;
   cursor: pointer; transition: all 0.15s; padding: 0; flex-shrink: 0;
 }
 .annotation-color-btn:hover { transform: scale(1.15); }
-.annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
+.annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 1px #fff, 0 0 0 2px #333; }
 .tool-btn {
-  min-width: 28px;
+  min-width: 20px;
 }
 .tool-btn.active {
   background: rgba(24,144,255,0.2);
@@ -2050,11 +2056,11 @@ onBeforeUnmount(() => {
   color: #b8860b;
 }
 .highlighter-colors {
-  margin-left: 4px;
+  margin-left: 3px;
 }
 .highlighter-color-btn {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border: 2px solid rgba(0,0,0,0.2);
 }
 .highlighter-color-btn.active {
@@ -2066,18 +2072,18 @@ onBeforeUnmount(() => {
   color: #ff4d4f;
 }
 .annotation-width {
-  display: flex; align-items: center; gap: 6px; margin: 0 4px;
+  display: flex; align-items: center; gap: 4px; margin: 0 3px;
 }
 .width-btn {
-  width: 24px; height: 24px; border: none; border-radius: 4px;
-  background: rgba(0,0,0,0.06); cursor: pointer; font-size: 16px; color: #555;
+  width: 20px; height: 20px; border: none; border-radius: 4px;
+  background: rgba(0,0,0,0.06); cursor: pointer; font-size: 14px; color: #555;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s; padding: 0;
 }
 .width-btn:hover { background: rgba(24,144,255,0.15); color: #1890ff; }
 .width-value {
-  font-size: 11px; font-weight: 500; color: #555;
-  min-width: 40px; text-align: center; font-variant-numeric: tabular-nums;
+  font-size: 10px; font-weight: 500; color: #555;
+  min-width: 32px; text-align: center; font-variant-numeric: tabular-nums;
 }
 .theme-dark .fullscreen-btn-float {
   background: rgba(45,45,45,0.85);
