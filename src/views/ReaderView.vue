@@ -55,7 +55,7 @@
       <div v-if="showTocPanel" class="resize-bar" @mousedown="startResize"></div>
 
   <!-- 主阅读区 -->
-  <main class="reader-main" ref="mainRef" :class="{ 'page-mode': readerStore.readerMode === 'page' }">
+  <main class="reader-main" ref="mainRef" :class="{ 'page-mode': readerStore.readerMode === 'page' }" @click="rightPanel = ''">
     <PdfReader
       ref="pdfReaderRef"
       v-if="book && bookFormat === 'pdf'"
@@ -276,9 +276,9 @@
       </div>
 
       <!-- 右侧工具栏 -->
-      <aside class="reader-right">
+      <aside class="reader-right" @click.stop>
         <div class="right-tools">
-          <button class="tool-btn" @click="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud' }" title="朗读">
+          <button class="tool-btn" @click.stop="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud' }" title="朗读">
             <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2"></rect>
               <line x1="9" y1="9" x2="9" y2="15"></line>
@@ -290,10 +290,10 @@
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
             </svg>
           </button>
-          <button class="tool-btn" @click="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架">📚</button>
-          <button class="tool-btn" @click="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置">⚙</button>
-          <button class="tool-btn" @click="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记">✎</button>
-          <button class="tool-btn" @click="toggleRight('bookmarks')" :class="{ active: rightPanel === 'bookmarks' }" title="书签">
+          <button class="tool-btn" @click.stop="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架">📚</button>
+          <button class="tool-btn" @click.stop="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置">⚙</button>
+          <button class="tool-btn" @click.stop="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记">✎</button>
+          <button class="tool-btn" @click.stop="toggleRight('bookmarks')" :class="{ active: rightPanel === 'bookmarks' }" title="书签">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             </svg>
