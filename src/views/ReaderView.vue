@@ -1206,7 +1206,8 @@ function pauseReadAloud() {
   }
 }
 
-function _resumeReadAloud() {
+// @ts-ignore
+function resumeReadAloud() {
   if (synth && !isReadAloudPlaying.value) {
     synth.resume()
     isReadAloudPlaying.value = true
