@@ -713,17 +713,15 @@ defineExpose({
   -webkit-text-size-adjust: none;
   color: transparent;
   cursor: text;
-  /* 调试用：显示文本层边框 */
-  /* border: 2px solid red; */
+  border: 2px solid red;
 }
 
 .text-layer :deep(span) {
-  color: transparent;
+  color: black;
+  background: rgba(255,255,0,0.3);
   position: absolute;
   white-space: pre;
   transform-origin: 0% 0%;
-  /* 调试用：显示文本 */
-  /* color: black; background: rgba(255,255,0,0.3); */
 }
 
 .text-layer :deep(span::selection) {
