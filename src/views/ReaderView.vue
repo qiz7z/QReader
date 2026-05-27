@@ -1816,7 +1816,7 @@ onBeforeUnmount(() => {
 .reader-content-page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px 20px 0;
+  padding: 24px 20px 0;
   flex: 1;
   position: relative;
   overflow: hidden;
@@ -1830,8 +1830,7 @@ onBeforeUnmount(() => {
   transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   will-change: transform;
   flex-shrink: 0;
-  flex: 1;
-  overflow: hidden;
+  padding-bottom: 20px;
 }
 .page-content-inner.swiping {
   transition: none !important;
@@ -1840,6 +1839,7 @@ onBeforeUnmount(() => {
   position: relative;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 .page-turn-area {
   position: absolute;
