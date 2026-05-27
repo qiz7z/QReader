@@ -85,60 +85,73 @@
         </button>
         
         <template v-if="annotationMode">
+          <!-- 画笔工具 + 颜色 -->
           <div class="annotation-divider"></div>
-          <div class="annotation-colors">
+          <button class="annotation-action-btn tool-btn" :class="{ active: !eraserMode && !highlighterMode }" @click.stop="eraserMode = ''; highlighterMode = false" title="画笔">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+            </svg>
+          </button>
+          <div class="annotation-colors" v-if="!eraserMode && !highlighterMode">
             <button 
               v-for="color in penColors" 
               :key="color"
               class="annotation-color-btn"
-              :class="{ active: penColor === color && !eraserMode && !highlighterMode }"
+              :class="{ active: penColor === color }"
               :style="{ background: color }"
-              @click.stop="eraserMode = ''; highlighterMode = false; penColor = color"
+              @click.stop="penColor = color"
             ></button>
           </div>
+          
+          <!-- 荧光笔工具 + 颜色 -->
           <div class="annotation-divider"></div>
-          <div class="annotation-width">
-            <button class="width-btn" @click.stop="adjustPenWidth(-0.5)">−</button>
-            <span class="width-value">{{ penWidth.toFixed(1) }}mm</span>
-            <button class="width-btn" @click.stop="adjustPenWidth(0.5)">+</button>
-          </div>
-          <div class="annotation-divider"></div>
-          <button class="annotation-action-btn highlighter-btn" :class="{ active: highlighterMode }" @click.stop="highlighterMode = !highlighterMode; eraserMode = ''" title="荧光笔">
+          <button class="annotation-action-btn tool-btn highlighter-btn" :class="{ active: highlighterMode }" @click.stop="highlighterMode = !highlighterMode; eraserMode = ''" title="荧光笔">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 21l1.5-5.5L17 3l4 4L8.5 19.5z"/>
               <path d="M3 21l2-2"/>
               <path d="M14.5 6.5l3 3" opacity="0.5"/>
             </svg>
           </button>
-          <template v-if="highlighterMode">
-            <div class="annotation-colors highlighter-colors">
-              <button 
-                v-for="color in highlighterColors" 
-                :key="color"
-                class="annotation-color-btn highlighter-color-btn"
-                :class="{ active: penColor === color }"
-                :style="{ background: color, opacity: 0.7 }"
-                @click.stop="penColor = color"
-              ></button>
-            </div>
-          </template>
+          <div class="annotation-colors highlighter-colors" v-if="highlighterMode">
+            <button 
+              v-for="color in highlighterColors" 
+              :key="color"
+              class="annotation-color-btn highlighter-color-btn"
+              :class="{ active: penColor === color }"
+              :style="{ background: color }"
+              @click.stop="penColor = color"
+            ></button>
+          </div>
+          
+          <!-- 线宽调节 -->
           <div class="annotation-divider"></div>
-          <button class="annotation-action-btn" :class="{ active: eraserMode === 'line' }" @click.stop="eraserMode = eraserMode === 'line' ? '' : 'line'" title="线条擦除">
+          <div class="annotation-width">
+            <button class="width-btn" @click.stop="adjustPenWidth(-0.5)">−</button>
+            <span class="width-value">{{ highlighterMode ? highlighterWidth.toFixed(0) + 'px' : penWidth.toFixed(1) + 'mm' }}</span>
+            <button class="width-btn" @click.stop="adjustPenWidth(0.5)">+</button>
+          </div>
+          
+          <!-- 橡皮擦工具 -->
+          <div class="annotation-divider"></div>
+          <button class="annotation-action-btn" :class="{ active: eraserMode === 'line' }" @click.stop="eraserMode = eraserMode === 'line' ? '' : 'line'; highlighterMode = false" title="线条擦除">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 20H8.5l-5-5a2 2 0 0 1 0-2.83l9-9a2 2 0 0 1 2.83 0l4.5 4.5"/>
               <path d="M11.5 14.5L16 10"/>
               <path d="M3 17l3 2.5"/>
             </svg>
           </button>
-          <button class="annotation-action-btn" :class="{ active: eraserMode === 'lasso' }" @click.stop="eraserMode = eraserMode === 'lasso' ? '' : 'lasso'" title="圈套擦除">
+          <button class="annotation-action-btn" :class="{ active: eraserMode === 'lasso' }" @click.stop="eraserMode = eraserMode === 'lasso' ? '' : 'lasso'; highlighterMode = false" title="圈套擦除">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 3a9 9 0 1 1-7 15"/>
               <path d="M5 18a2 2 0 0 1 2-2"/>
               <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
             </svg>
           </button>
+          
+          <!-- 清除全部 -->
           <div class="annotation-divider"></div>
-          <button class="annotation-action-btn" @click.stop="clearAllAnnotations" title="清除全部">
+          <button class="annotation-action-btn danger-btn" @click.stop="clearAllAnnotations" title="清除全部">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"/>
               <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -1391,7 +1404,11 @@ function toggleAnnotationMode() {
 }
 
 function adjustPenWidth(delta: number) {
-  penWidth.value = Math.max(0.5, Math.min(10, penWidth.value + delta))
+  if (highlighterMode.value) {
+    highlighterWidth.value = Math.max(10, Math.min(40, highlighterWidth.value + delta))
+  } else {
+    penWidth.value = Math.max(0.5, Math.min(10, penWidth.value + delta))
+  }
 }
 
 function handlePdfAnnotationsChange(newAnnotations: PdfAnnotation[]) {
@@ -2018,11 +2035,18 @@ onBeforeUnmount(() => {
 }
 .annotation-color-btn:hover { transform: scale(1.15); }
 .annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
+.tool-btn {
+  min-width: 28px;
+}
+.tool-btn.active {
+  background: rgba(24,144,255,0.2);
+  color: #1890ff;
+}
 .highlighter-btn {
   position: relative;
 }
 .highlighter-btn.active {
-  background: rgba(255, 255, 0, 0.3);
+  background: rgba(255, 255, 0, 0.25);
   color: #b8860b;
 }
 .highlighter-colors {
@@ -2036,6 +2060,10 @@ onBeforeUnmount(() => {
 .highlighter-color-btn.active {
   border-color: #333;
   box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333;
+}
+.danger-btn:hover {
+  background: rgba(255, 77, 79, 0.15);
+  color: #ff4d4f;
 }
 .annotation-width {
   display: flex; align-items: center; gap: 6px; margin: 0 4px;
