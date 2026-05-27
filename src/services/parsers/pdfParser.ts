@@ -14,18 +14,23 @@ export async function parsePDF(file: File, arrayBuffer: ArrayBuffer): Promise<Pa
   const outline = await pdf.getOutline()
   
   if (outline && outline.length > 0) {
+    console.log('[PDF Parser] Outline found:', outline.length, 'items')
     // 有大纲时，按大纲条目创建章节
     for (let i = 0; i < outline.length; i++) {
       const item = outline[i]
       let pageNum = 1
 
+      console.log(`[PDF Parser] Chapter ${i}:`, item.title, 'dest:', item.dest)
+      
       // 获取大纲条目对应的页码
       if (item.dest) {
         try {
           const dest = typeof item.dest === 'string' ? await pdf.getDestination(item.dest) : await pdf.getDestination(item.dest as any)
+          console.log(`[PDF Parser] dest resolved:`, dest)
           if (dest && dest[0]) {
             const pageIndex = await pdf.getPageIndex(dest[0])
             pageNum = pageIndex + 1
+            console.log(`[PDF Parser] pageIndex: ${pageIndex}, pageNum: ${pageNum}`)
           }
         } catch (e) {
           console.warn(`[PDF Parser] Failed to get page for chapter ${i}:`, e)
@@ -37,6 +42,8 @@ export async function parsePDF(file: File, arrayBuffer: ArrayBuffer): Promise<Pa
         chapterId: `chapter-${i}`,
         position: pageNum, // position 存储起始页码
       })
+      
+      console.log(`[PDF Parser] Pushed TOC entry: position=${pageNum}`)
 
       content.push({
         id: `chapter-${i}`,
