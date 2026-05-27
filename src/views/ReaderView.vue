@@ -1002,7 +1002,7 @@ const highlightedSentences = computed(() => {
       const escaped = hl.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       result = result.replace(
         new RegExp(escaped, 'g'),
-        m => `<mark class="hl" style="--hl-color:${hl.highlightColor}; background-color: ${hl.highlightColor}; opacity: 0.3">${m}</mark>`
+        m => `<mark class="hl" style="--hl-color:${hl.highlightColor}; background-color: ${hl.highlightColor}">${m}</mark>`
       )
     }
     return result
