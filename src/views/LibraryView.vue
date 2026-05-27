@@ -541,7 +541,7 @@ async function loadBooks() {
   z-index: -2;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(235, 225, 200, 0.75), rgba(225, 215, 190, 0.8)),
+    linear-gradient(180deg, rgba(15, 20, 31, 0.85) 0%, rgba(26, 31, 46, 0.85) 50%, rgba(37, 32, 48, 0.85) 100%),
     url('/background.png');
   background-size: cover;
   background-position: center;
