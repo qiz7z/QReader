@@ -642,7 +642,6 @@ const totalPages = ref(1)
 const pageHeight = ref(0)
 const pageContentRef = ref<HTMLElement | null>(null)
 const pageContentInnerRef = ref<HTMLElement | null>(null)
-const pageTransition = ref('') // '' | 'forward' | 'backward'
 const touchStartX = ref(0)
 const touchStartY = ref(0)
 const isSwiping = ref(false)
