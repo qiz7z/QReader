@@ -198,32 +198,35 @@
             @touchmove="handleTouchMove"
             @touchend="handleTouchEnd"
           >
-            <div
-              class="page-content-inner"
-              :class="{ 'swiping': isSwiping }"
-              ref="pageContentInnerRef"
-              :style="{
-                ...contentStyle,
-                transform: `translateY(${-currentPage * pageHeight + (isSwiping ? 0 : 0)}px)`,
-                transition: isSwiping ? 'none' : undefined
-              }"
-              @mouseup="handleTextSelection"
-            >
-              <p
-                v-for="(paragraph, idx) in highlightedSentences"
-                :key="idx"
-                :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
-                :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
-                v-html="paragraph"
-              />
-            </div>
+            <!-- 内容区域（可翻页） -->
+            <div class="page-content-wrapper">
+              <div
+                class="page-content-inner"
+                :class="{ 'swiping': isSwiping }"
+                ref="pageContentInnerRef"
+                :style="{
+                  ...contentStyle,
+                  transform: `translateY(${-currentPage * pageHeight}px)`,
+                  transition: isSwiping ? 'none' : undefined
+                }"
+                @mouseup="handleTextSelection"
+              >
+                <p
+                  v-for="(paragraph, idx) in highlightedSentences"
+                  :key="idx"
+                  :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
+                  :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
+                  v-html="paragraph"
+                />
+              </div>
 
-            <!-- 翻页点击区域（带提示箭头） -->
-            <div class="page-turn-area left" @click="prevPageContent" :class="{ 'has-prev': currentPage > 0 || currentChapter > 0 }">
-              <span class="turn-hint">&#8249;</span>
-            </div>
-            <div class="page-turn-area right" @click="nextPageContent" :class="{ 'has-next': currentPage < totalPages - 1 || (book && currentChapter < book.content.length - 1) }">
-              <span class="turn-hint">&#8250;</span>
+              <!-- 翻页点击区域（带提示箭头） -->
+              <div class="page-turn-area left" @click="prevPageContent" :class="{ 'has-prev': currentPage > 0 || currentChapter > 0 }">
+                <span class="turn-hint">&#8249;</span>
+              </div>
+              <div class="page-turn-area right" @click="nextPageContent" :class="{ 'has-next': currentPage < totalPages - 1 || (book && currentChapter < book.content.length - 1) }">
+                <span class="turn-hint">&#8250;</span>
+              </div>
             </div>
 
             <!-- 底部信息栏：进度条 + 页码 -->
@@ -862,7 +865,9 @@ async function recalcPage() {
   const content = pageContentInnerRef.value
   if (!container || !content) return
 
-  pageHeight.value = container.clientHeight
+  // 获取容器高度，减去底部信息栏高度（约 50px）
+  const bottomBarHeight = 50
+  pageHeight.value = container.clientHeight - bottomBarHeight
   totalPages.value = Math.max(1, Math.ceil(content.scrollHeight / pageHeight.value))
   if (currentPage.value >= totalPages.value) {
     currentPage.value = Math.max(0, totalPages.value - 1)
@@ -1811,26 +1816,35 @@ onBeforeUnmount(() => {
 .reader-content-page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px 20px 60px;
+  padding: 16px 20px 0;
   flex: 1;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
+  display: flex;
+  flex-direction: column;
 }
 .page-content-inner {
   transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   will-change: transform;
   flex-shrink: 0;
+  flex: 1;
+  overflow: hidden;
 }
 .page-content-inner.swiping {
   transition: none !important;
 }
+.page-content-wrapper {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
 .page-turn-area {
   position: absolute;
   top: 0;
-  bottom: 60px;
+  bottom: 0;
   width: 25%;
   cursor: pointer;
   z-index: 10;
@@ -1873,10 +1887,7 @@ onBeforeUnmount(() => {
 }
 /* 底部信息栏 */
 .page-bottom-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   padding: 8px 20px 12px;
   background: linear-gradient(transparent, rgba(255, 255, 255, 0.95));
   z-index: 20;
