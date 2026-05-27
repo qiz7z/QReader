@@ -68,6 +68,7 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 
 ### 🖊️ PDF Features
 - **Pen Annotation**: Canvas overlay with 6 colors, 0.5-10mm stroke width
+- **Highlighter Annotation**: Semi-transparent painting effect, 4 fluorescent colors (yellow, green, pink, blue), 10-40px stroke width
 - **Line Erase**: Swipe across annotation strokes to erase (segment distance detection)
 - **Lasso Erase**: Draw a loop, ray-casting detection to batch erase annotations inside
 - **Fullscreen**: Bottom-right floating button for one-click fullscreen toggle
@@ -518,6 +519,21 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 ---
 
 ## 📝 Changelog
+
+### v0.5.0 (2026-05-27)
+
+#### New Features
+- **Highlighter Tool**: New highlighter in annotation mode with semi-transparent painting effect, 4 fluorescent colors (yellow, green, pink, blue)
+- **Toolbar Layout Optimization**: Reorganized annotation toolbar with clearer grouping (pen/highlighter/eraser)
+- **Click Outside to Close**: Right side panels (Read Aloud, Shelf, Settings, etc.) now close when clicking blank area in reading area
+
+#### Improvements
+- **Reduced Toolbar Size**: Buttons, icons, and color dots unified to smaller sizes for a more compact UI
+- **Highlighter Independent Width**: Highlighter uses pixel-level width (10-40px), separate from pen's millimeter-level width
+- **Danger Color for Clear Button**: Clear All button turns red on hover for better warning
+
+#### Removed
+- Removed PDF text highlight feature (textLayer implementation had compatibility issues)
 
 ### v0.4.0 (2026-05-26)
 
