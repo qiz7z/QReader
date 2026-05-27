@@ -233,17 +233,9 @@
               </div>
             </div>
 
-            <!-- 底部信息栏：进度条 + 页码 -->
+            <!-- 底部页码 -->
             <div class="page-bottom-bar">
-              <div class="page-progress">
-                <div class="progress-bar">
-                  <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
-                </div>
-              </div>
-              <div class="page-info">
-                <span class="page-num">{{ currentPage + 1 }} / {{ totalPages }}</span>
-                <span class="progress-text">{{ progressPercent }}%</span>
-              </div>
+              <span class="page-num">{{ currentPage + 1 }} / {{ totalPages }}</span>
             </div>
           </div>
         </div>
@@ -656,12 +648,6 @@ const touchStartY = ref(0)
 const isSwiping = ref(false)
 const swipeOffset = ref(0) // 滑动偏移量，用于实时预览
 
-// 翻页进度百分比
-const progressPercent = computed(() => {
-  if (totalPages.value <= 1) return 100
-  return Math.round(((currentPage.value + 1) / totalPages.value) * 100)
-})
-
 const rightPanel = ref('')
 const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | null }>>([])
 const showFullToc = ref(false)
@@ -882,8 +868,8 @@ async function recalcPage() {
   const content = pageContentInnerRef.value
   if (!container || !wrapper || !content) return
 
-  // 获取容器尺寸，减去底部信息栏高度（约 50px）
-  const bottomBarHeight = 50
+  // 获取容器尺寸，减去底部页码栏高度（约 30px）
+  const bottomBarHeight = 30
   pageHeight.value = container.clientHeight - bottomBarHeight
   pageWidth.value = container.clientWidth
   
@@ -1944,32 +1930,11 @@ onBeforeUnmount(() => {
   transform: scale(1.1);
   transition: all 0.2s;
 }
-/* 底部信息栏 */
+/* 底部页码 */
 .page-bottom-bar {
   flex-shrink: 0;
-  padding: 8px 20px 12px;
-  background: linear-gradient(transparent, rgba(255, 255, 255, 0.95));
-  z-index: 20;
-}
-.page-progress {
-  margin-bottom: 6px;
-}
-.progress-bar {
-  height: 2px;
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 1px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #1890ff, #40a9ff);
-  border-radius: 1px;
-  transition: width 0.3s ease;
-}
-.page-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 6px 20px 8px;
+  text-align: center;
 }
 .page-num {
   font-size: 11px;
@@ -2859,10 +2824,7 @@ onBeforeUnmount(() => {
 
 .theme-dark .reader-main { background: #1a1a1a; color: #d0d0d0; }
 .theme-dark .page-bottom-bar { background: linear-gradient(transparent, rgba(26, 26, 26, 0.95)); }
-.theme-dark .progress-bar { background: rgba(255, 255, 255, 0.1); }
-.theme-dark .progress-fill { background: linear-gradient(90deg, #1890ff, #40a9ff); }
 .theme-dark .page-num { color: rgba(255, 255, 255, 0.45); }
-.theme-dark .progress-text { color: rgba(255, 255, 255, 0.35); }
 .theme-dark .turn-hint { color: rgba(255, 255, 255, 0.2); text-shadow: none; }
 .theme-dark .page-turn-area:hover .turn-hint { color: rgba(255, 255, 255, 0.4); }
 .theme-dark .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(255, 255, 255, 0.05), transparent); }
@@ -2947,19 +2909,13 @@ onBeforeUnmount(() => {
 
 /* 翻页模式主题适配 */
 .theme-parchment .page-bottom-bar { background: linear-gradient(transparent, rgba(245, 230, 200, 0.95)); }
-.theme-parchment .progress-bar { background: rgba(0, 0, 0, 0.1); }
-.theme-parchment .progress-fill { background: linear-gradient(90deg, #8b6914, #a88520); }
 .theme-parchment .page-num { color: rgba(61, 42, 0, 0.5); }
-.theme-parchment .progress-text { color: rgba(61, 42, 0, 0.35); }
 .theme-parchment .turn-hint { color: rgba(61, 42, 0, 0.2); }
 .theme-parchment .page-turn-area:hover .turn-hint { color: rgba(61, 42, 0, 0.4); }
 .theme-parchment .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(139, 105, 20, 0.08), transparent); }
 .theme-parchment .page-turn-area.right.has-next:hover { background: linear-gradient(to left, rgba(139, 105, 20, 0.08), transparent); }
 .theme-green .page-bottom-bar { background: linear-gradient(transparent, rgba(232, 240, 227, 0.95)); }
-.theme-green .progress-bar { background: rgba(0, 0, 0, 0.08); }
-.theme-green .progress-fill { background: linear-gradient(90deg, #5a9e42, #7bc462); }
 .theme-green .page-num { color: rgba(58, 90, 58, 0.5); }
-.theme-green .progress-text { color: rgba(58, 90, 58, 0.35); }
 .theme-green .turn-hint { color: rgba(58, 90, 58, 0.2); }
 .theme-green .page-turn-area:hover .turn-hint { color: rgba(58, 90, 58, 0.4); }
 .theme-green .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(90, 158, 66, 0.08), transparent); }
