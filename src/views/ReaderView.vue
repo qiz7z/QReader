@@ -1455,10 +1455,13 @@ watch(currentChapter, async () => {
 // 目录点击处理
 function onTocClick(idx: number) {
   console.log('[ReaderView] onTocClick idx:', idx, 'bookFormat:', bookFormat.value)
+  console.log('[ReaderView] book.value?.toc:', book.value?.toc)
   currentChapter.value = idx
   if (bookFormat.value === 'pdf' && book.value?.toc?.[idx]) {
     // PDF: 从 toc 中读取起始页码
-    const pageNum = book.value.toc[idx].position
+    const tocEntry = book.value.toc[idx]
+    console.log('[ReaderView] PDF toc entry:', tocEntry)
+    const pageNum = tocEntry.position
     console.log('[ReaderView] PDF toc click, pageNum:', pageNum)
     nextTick(() => {
       console.log('[ReaderView] pdfReaderRef:', pdfReaderRef.value)
