@@ -105,9 +105,9 @@
           <div class="annotation-divider"></div>
           <button class="annotation-action-btn highlighter-btn" :class="{ active: highlighterMode }" @click.stop="highlighterMode = !highlighterMode; eraserMode = ''" title="荧光笔">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
+              <path d="M3 21l1.5-5.5L17 3l4 4L8.5 19.5z"/>
+              <path d="M3 21l2-2"/>
+              <path d="M14.5 6.5l3 3" opacity="0.5"/>
             </svg>
           </button>
           <template v-if="highlighterMode">
