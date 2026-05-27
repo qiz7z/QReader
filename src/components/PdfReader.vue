@@ -459,14 +459,24 @@ watch(() => props.annotations, (newAnnots) => {
 
 // 导出滚动到指定页的方法
 function scrollToPage(pageNum: number) {
-  const wrapper = document.querySelector('.pdf-pages-wrapper')
-  if (!wrapper) return
+  console.log('[PdfReader] scrollToPage called with pageNum:', pageNum)
   
-  // pageNum 是从 1 开始的 PDF 页码，查找对应的 DOM 元素
-  const pages = wrapper.querySelectorAll('.pdf-page')
-  const pageEl = pages[pageNum - 1]
+  // 使用 pdf-pages 容器而不是 pdf-pages-wrapper
+  const pagesContainer = document.querySelector('.pdf-pages')
+  if (!pagesContainer) {
+    console.error('[PdfReader] .pdf-pages not found')
+    return
+  }
+  
+  // pageNum 是从 1 开始的 PDF 页码
+  const pageWrappers = pagesContainer.querySelectorAll('.pdf-page-wrapper')
+  const pageEl = pageWrappers[pageNum - 1]
+  
   if (pageEl) {
+    console.log('[PdfReader] Found page element, scrolling...')
     pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } else {
+    console.error('[PdfReader] Page element not found for pageNum:', pageNum, 'total pages:', pageWrappers.length)
   }
 }
 

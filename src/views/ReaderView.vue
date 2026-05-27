@@ -1454,12 +1454,17 @@ watch(currentChapter, async () => {
 
 // 目录点击处理
 function onTocClick(idx: number) {
+  console.log('[ReaderView] onTocClick idx:', idx, 'bookFormat:', bookFormat.value)
   currentChapter.value = idx
   if (bookFormat.value === 'pdf' && book.value?.toc?.[idx]) {
     // PDF: 从 toc 中读取起始页码
     const pageNum = book.value.toc[idx].position
+    console.log('[ReaderView] PDF toc click, pageNum:', pageNum)
     nextTick(() => {
-      pdfReaderRef.value?.scrollToPage?.(pageNum)
+      console.log('[ReaderView] pdfReaderRef:', pdfReaderRef.value)
+      setTimeout(() => {
+        pdfReaderRef.value?.scrollToPage?.(pageNum)
+      }, 100)
     })
   } else {
     // EPUB/TXT: 滚动到章节开头
