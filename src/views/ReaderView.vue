@@ -198,15 +198,19 @@
             @touchmove="handleTouchMove"
             @touchend="handleTouchEnd"
           >
-            <!-- 内容区域（可翻页） -->
-            <div class="page-content-wrapper">
+            <!-- 内容区域（CSS multi-column 翻页） -->
+            <div class="page-content-wrapper" ref="pageContentWrapperRef" @scroll="handleWrapperScroll">
               <div
                 class="page-content-inner"
                 :class="{ 'swiping': isSwiping }"
                 ref="pageContentInnerRef"
                 :style="{
                   ...contentStyle,
-                  transform: `translateY(${-currentPage * pageHeight}px)`,
+                  columnWidth: pageWidth + 'px',
+                  columnGap: '0px',
+                  columnFill: 'auto',
+                  height: pageHeight + 'px',
+                  width: (pageWidth * totalPages) + 'px',
                   transition: isSwiping ? 'none' : undefined
                 }"
                 @mouseup="handleTextSelection"
@@ -643,7 +647,9 @@ const maxW = 400
 const currentPage = ref(0)
 const totalPages = ref(1)
 const pageHeight = ref(0)
+const pageWidth = ref(0) // CSS multi-column: 每页宽度
 const pageContentRef = ref<HTMLElement | null>(null)
+const pageContentWrapperRef = ref<HTMLElement | null>(null)
 const pageContentInnerRef = ref<HTMLElement | null>(null)
 const touchStartX = ref(0)
 const touchStartY = ref(0)
@@ -857,25 +863,56 @@ function scrollToChapterStart() {
   if (mainRef.value) mainRef.value.scrollTop = 0
 }
 
-// 翻页模式：重新计算每页高度和总页数
+// 处理 wrapper 滚动事件（同步 currentPage）
+function handleWrapperScroll() {
+  const wrapper = pageContentWrapperRef.value
+  if (!wrapper || !pageWidth.value) return
+  const newPage = Math.round(wrapper.scrollLeft / pageWidth.value)
+  if (newPage !== currentPage.value) {
+    currentPage.value = Math.max(0, Math.min(newPage, totalPages.value - 1))
+  }
+}
+
+// 翻页模式：重新计算每页尺寸和总页数（CSS multi-column 方案）
 async function recalcPage() {
   if (readerStore.readerMode !== 'page') return
   await nextTick()
   const container = pageContentRef.value
+  const wrapper = pageContentWrapperRef.value
   const content = pageContentInnerRef.value
-  if (!container || !content) return
+  if (!container || !wrapper || !content) return
 
-  // 获取容器高度，减去底部信息栏高度（约 50px）
+  // 获取容器尺寸，减去底部信息栏高度（约 50px）
   const bottomBarHeight = 50
   pageHeight.value = container.clientHeight - bottomBarHeight
+  pageWidth.value = container.clientWidth
   
-  // 计算内容总高度（减去 padding）
-  const paddingVertical = 80 // 上下各 40px padding
-  const contentHeight = content.scrollHeight - paddingVertical
-  totalPages.value = Math.max(1, Math.ceil(contentHeight / pageHeight.value))
+  // 使用 CSS multi-column 分页：column-width 固定，内容自然流动
+  // 总宽度 = 每页宽度 × 页数，页数由内容自动计算
+  // 先设置 column-width 和高度，让浏览器自动计算列数
+  content.style.columnWidth = pageWidth.value + 'px'
+  content.style.columnGap = '0px'
+  content.style.columnFill = 'auto'
+  content.style.height = pageHeight.value + 'px'
+  content.style.width = 'auto' // 让浏览器自动计算总宽度
+  
+  // 等待浏览器重新布局
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  
+  // 计算总页数：scrollWidth / pageWidth
+  // scrollWidth 包含所有列的总宽度
+  const scrollWidth = content.scrollWidth
+  totalPages.value = Math.max(1, Math.round(scrollWidth / pageWidth.value))
+  
+  // 设置最终宽度以包含所有列
+  content.style.width = (pageWidth.value * totalPages.value) + 'px'
+  
   if (currentPage.value >= totalPages.value) {
     currentPage.value = Math.max(0, totalPages.value - 1)
   }
+  
+  // 滚动到当前页
+  scrollToPage(currentPage.value)
 }
 
 // 监听影响分页的配置变化
@@ -889,11 +926,19 @@ watch(
   }
 )
 
+// 滚动到指定页（CSS multi-column: 使用 scrollLeft）
+function scrollToPage(page: number) {
+  const wrapper = pageContentWrapperRef.value
+  if (!wrapper) return
+  wrapper.scrollLeft = page * pageWidth.value
+}
+
 // 翻页模式下的翻页逻辑（带动画）
 function prevPageContent() {
   if (currentPage.value > 0) {
     pageTransition.value = 'backward'
     currentPage.value--
+    scrollToPage(currentPage.value)
     setTimeout(() => { pageTransition.value = '' }, 350)
   } else if (currentChapter.value > 0) {
     // 如果已经是第一页，则跳到上一章的最后一页
@@ -901,6 +946,7 @@ function prevPageContent() {
     currentChapter.value--
     nextTick(() => {
       currentPage.value = totalPages.value - 1
+      scrollToPage(currentPage.value)
       setTimeout(() => { pageTransition.value = '' }, 350)
     })
   }
@@ -910,12 +956,14 @@ function nextPageContent() {
   if (currentPage.value < totalPages.value - 1) {
     pageTransition.value = 'forward'
     currentPage.value++
+    scrollToPage(currentPage.value)
     setTimeout(() => { pageTransition.value = '' }, 350)
   } else if (book.value && currentChapter.value < book.value.content.length - 1) {
     // 如果已经是最后一页，则跳到下一章的第一页
     pageTransition.value = 'forward'
     currentChapter.value++
     currentPage.value = 0
+    scrollToPage(0)
     setTimeout(() => { pageTransition.value = '' }, 350)
   }
 }
@@ -1831,10 +1879,11 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 .page-content-inner {
-  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  will-change: transform;
+  transition: scroll-left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   flex-shrink: 0;
-  padding: 40px 0;
+  overflow: hidden;
+  column-gap: 0;
+  column-fill: auto;
 }
 .page-content-inner.swiping {
   transition: none !important;
@@ -1842,8 +1891,14 @@ onBeforeUnmount(() => {
 .page-content-wrapper {
   position: relative;
   flex: 1;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   min-height: 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.page-content-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 .page-turn-area {
   position: absolute;
