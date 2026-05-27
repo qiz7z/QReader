@@ -42,12 +42,13 @@ const props = defineProps<{
   penColor?: string
   penWidth?: number
   eraserMode?: string // '' | 'lasso' | 'line'
+  highlighterMode?: boolean // 荧光笔模式
+  highlighterWidth?: number // 荧光笔宽度
 }>()
 
 const emit = defineEmits<{
   (e: 'annotations-change', annotations: PdfAnnotation[]): void
   (e: 'erase-annotation', annotationId: string): void
-  (e: 'text-highlight', highlight: {id: string, page: number, text: string, color: string, rects: {x: number, y: number, w: number, h: number}[]}): void
 }>()
 
 const loading = ref(true)
@@ -157,7 +158,10 @@ function renderAnnotation(ctx: CanvasRenderingContext2D, annotation: PdfAnnotati
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   
-  if (annotation.opacity !== undefined) {
+  // 荧光笔模式：半透明效果
+  if (annotation.type === 'highlighter') {
+    ctx.globalAlpha = 0.3
+  } else if (annotation.opacity !== undefined) {
     ctx.globalAlpha = annotation.opacity
   }
   
@@ -329,8 +333,18 @@ function handleAnnotationMove(event: MouseEvent) {
   pageAnnots.forEach(a => renderAnnotation(ctx, a))
   
   ctx.beginPath()
-  ctx.strokeStyle = props.penColor || '#ff0000'
-  ctx.lineWidth = props.penWidth || 2
+  
+  // 荧光笔模式：半透明、更宽
+  if (props.highlighterMode) {
+    ctx.globalAlpha = 0.3
+    ctx.strokeStyle = props.penColor || '#ffff00'
+    ctx.lineWidth = props.highlighterWidth || 20
+  } else {
+    ctx.globalAlpha = 1.0
+    ctx.strokeStyle = props.penColor || '#ff0000'
+    ctx.lineWidth = props.penWidth || 2
+  }
+  
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   
@@ -341,6 +355,7 @@ function handleAnnotationMove(event: MouseEvent) {
       ctx.lineTo(pts[i].x, pts[i].y)
     }
     ctx.stroke()
+    ctx.globalAlpha = 1.0
   }
 }
 
@@ -384,12 +399,16 @@ function handleAnnotationUp(_event: MouseEvent) {
   isDrawing.value = false
   
   if (currentPoints.value.length > 1) {
+    // 荧光笔模式：使用更大的宽度和记录类型
+    const annotationType = props.highlighterMode ? 'highlighter' : 'pen'
+    const annotationWidth = props.highlighterMode ? (props.highlighterWidth || 20) : (props.penWidth || 2)
+    
     emit('annotations-change', [{
       id: '',
       page: currentPageNum.value,
-      type: 'pen',
+      type: annotationType,
       color: props.penColor || '#ff0000',
-      width: props.penWidth || 2,
+      width: annotationWidth,
       points: currentPoints.value,
       createdAt: Date.now()
     }])

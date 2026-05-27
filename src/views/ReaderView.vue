@@ -68,6 +68,8 @@
       :pen-color="penColor"
       :pen-width="penWidth"
       :eraser-mode="eraserMode"
+      :highlighter-mode="highlighterMode"
+      :highlighter-width="highlighterWidth"
       @annotations-change="handlePdfAnnotationsChange"
       @erase-annotation="handleEraseAnnotation"
     />
@@ -89,9 +91,9 @@
               v-for="color in penColors" 
               :key="color"
               class="annotation-color-btn"
-              :class="{ active: penColor === color && !eraserMode }"
+              :class="{ active: penColor === color && !eraserMode && !highlighterMode }"
               :style="{ background: color }"
-              @click.stop="eraserMode = ''; penColor = color"
+              @click.stop="eraserMode = ''; highlighterMode = false; penColor = color"
             ></button>
           </div>
           <div class="annotation-divider"></div>
@@ -100,6 +102,26 @@
             <span class="width-value">{{ penWidth.toFixed(1) }}mm</span>
             <button class="width-btn" @click.stop="adjustPenWidth(0.5)">+</button>
           </div>
+          <div class="annotation-divider"></div>
+          <button class="annotation-action-btn highlighter-btn" :class="{ active: highlighterMode }" @click.stop="highlighterMode = !highlighterMode; eraserMode = ''" title="荧光笔">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </button>
+          <template v-if="highlighterMode">
+            <div class="annotation-colors highlighter-colors">
+              <button 
+                v-for="color in highlighterColors" 
+                :key="color"
+                class="annotation-color-btn highlighter-color-btn"
+                :class="{ active: penColor === color }"
+                :style="{ background: color, opacity: 0.7 }"
+                @click.stop="penColor = color"
+              ></button>
+            </div>
+          </template>
           <div class="annotation-divider"></div>
           <button class="annotation-action-btn" :class="{ active: eraserMode === 'line' }" @click.stop="eraserMode = eraserMode === 'line' ? '' : 'line'" title="线条擦除">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -560,10 +582,13 @@ const wordsRead = computed(() => {
 // PDF 标注相关
 const annotationMode = ref(false)
 const eraserMode = ref('') // '' | 'lasso' | 'line'
+const highlighterMode = ref(false) // 荧光笔模式
 const pdfAnnotations = ref<PdfAnnotation[]>([])
 const penColors = ['#ff0000', '#00aa00', '#0066ff', '#ffaa00', '#9933ff', '#000000']
+const highlighterColors = ['#ffff00', '#00ff00', '#ff69b4', '#87ceeb'] // 荧光笔颜色
 const penColor = ref(penColors[0])
 const penWidth = ref(2.0)
+const highlighterWidth = ref(20) // 荧光笔宽度
 const currentFileId = ref('')
 
 function adjustZoom(delta: number) {
@@ -1993,6 +2018,25 @@ onBeforeUnmount(() => {
 }
 .annotation-color-btn:hover { transform: scale(1.15); }
 .annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333; }
+.highlighter-btn {
+  position: relative;
+}
+.highlighter-btn.active {
+  background: rgba(255, 255, 0, 0.3);
+  color: #b8860b;
+}
+.highlighter-colors {
+  margin-left: 4px;
+}
+.highlighter-color-btn {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0,0,0,0.2);
+}
+.highlighter-color-btn.active {
+  border-color: #333;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333;
+}
 .annotation-width {
   display: flex; align-items: center; gap: 6px; margin: 0 4px;
 }

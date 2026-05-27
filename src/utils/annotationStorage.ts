@@ -11,7 +11,7 @@ export interface Point {
 export interface PdfAnnotation {
   id: string
   page: number
-  type: 'pen' | 'highlight' | 'underline'
+  type: 'pen' | 'highlight' | 'underline' | 'highlighter'
   color: string
   width: number
   points?: Point[]
