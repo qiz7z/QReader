@@ -229,7 +229,7 @@
       <!-- 划线笔记浮动工具栏 -->
       <div v-if="showHlToolbar" class="hl-toolbar" :style="{ left: hlToolbarPos.x + 'px', top: hlToolbarPos.y + 'px' }">
         <div class="hl-colors">
-          <button v-for="c in hlColors" :key="c" class="hl-color-btn" :class="{ active: hlSelectedColor === c }" :style="{ background: c }" @click="hlSelectedColor = c"></button>
+          <button v-for="c in hlColors" :key="c" class="hl-color-btn" :class="{ active: hlSelectedColor === c }" :style="{ background: c }" @click="hlSelectedColor = c; console.log('hlColor clicked:', c)"></button>
         </div>
         <div class="hl-actions">
           <button class="hl-btn hl-btn-note" @click="hlShowNoteInput = !hlShowNoteInput">{{ hlShowNoteInput ? '取消' : '笔记' }}</button>
@@ -930,6 +930,8 @@ async function saveHighlight() {
   const chapter = book.value.content?.[currentChapter.value]
   if (!chapter) return
 
+  console.log('[saveHighlight] hlSelectedColor:', hlSelectedColor.value)
+  
   const note = await StorageService.addNote({
     bookId: bookId.value,
     chapterId: chapter.id || '',
