@@ -123,37 +123,52 @@ async function renderTextLayer(pageNum: number) {
   const textLayerDiv = textLayerRefs.get(pageNum)
   if (!textLayerDiv || !pdfDoc) return
   
-  const page = await pdfDoc.getPage(pageNum)
-  const viewport = page.getViewport({ scale: BASE_RENDER_SCALE })
-  
-  // 设置文本层大小与 canvas 一致
-  textLayerDiv.style.width = `${viewport.width}px`
-  textLayerDiv.style.height = `${viewport.height}px`
-  
-  // 获取文本内容
-  const textContent = await page.getTextContent()
-  
-  // 使用 pdfjs-dist 的 TextLayer
-  const { TextLayer } = await import('pdfjs-dist')
-  
-  const textLayer = new TextLayer({
-    textContentSource: textContent,
-    container: textLayerDiv,
-    viewport,
-  })
-  
-  await textLayer.render()
+  try {
+    const page = await pdfDoc.getPage(pageNum)
+    const viewport = page.getViewport({ scale: BASE_RENDER_SCALE })
+    
+    // 设置文本层大小与 canvas 一致
+    textLayerDiv.style.width = `${viewport.width}px`
+    textLayerDiv.style.height = `${viewport.height}px`
+    
+    // 获取文本内容
+    const textContent = await page.getTextContent()
+    
+    // 使用 pdfjs-dist 的 TextLayer
+    const { TextLayer } = await import('pdfjs-dist')
+    
+    const textLayer = new TextLayer({
+      textContentSource: textContent,
+      container: textLayerDiv,
+      viewport,
+    })
+    
+    // 等待渲染完成
+    await textLayer.render()
+    console.log('[PdfReader] TextLayer rendered for page', pageNum, 'textDivs:', textLayer.textDivs?.length)
+  } catch (e: any) {
+    console.warn('TextLayer render error:', e)
+  }
 }
 
 /**
  * 处理文本选择（高亮）
  */
 function handleTextSelect(event: MouseEvent) {
+  console.log('[PdfReader] handleTextSelect called')
   const selection = window.getSelection()
-  if (!selection || selection.isCollapsed) return
+  if (!selection || selection.isCollapsed) {
+    console.log('[PdfReader] No selection or collapsed')
+    return
+  }
   
   const text = selection.toString().trim()
-  if (!text) return
+  if (!text) {
+    console.log('[PdfReader] No text selected')
+    return
+  }
+  
+  console.log('[PdfReader] Selected text:', text)
   
   const target = event.currentTarget as HTMLDivElement
   const pageNum = parseInt(target.dataset.page || '0')
@@ -164,11 +179,17 @@ function handleTextSelect(event: MouseEvent) {
   
   // 转换为 canvas 内部坐标
   const textLayerDiv = textLayerRefs.get(pageNum)
-  if (!textLayerDiv) return
+  if (!textLayerDiv) {
+    console.log('[PdfReader] No textLayerDiv for page', pageNum)
+    return
+  }
   
   const layerRect = textLayerDiv.getBoundingClientRect()
   const canvas = canvasRefs.get(pageNum)
-  if (!canvas) return
+  if (!canvas) {
+    console.log('[PdfReader] No canvas for page', pageNum)
+    return
+  }
   
   const scaleX = canvas.width / canvas.getBoundingClientRect().width
   const scaleY = canvas.height / canvas.getBoundingClientRect().height
