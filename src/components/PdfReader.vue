@@ -462,7 +462,9 @@ function scrollToPage(pageNum: number) {
   const wrapper = document.querySelector('.pdf-pages-wrapper')
   if (!wrapper) return
   
-  const pageEl = wrapper.querySelector(`.pdf-page-wrapper:nth-child(${pageNum})`)
+  // pageNum 是从 1 开始的 PDF 页码，查找对应的 DOM 元素
+  const pages = wrapper.querySelectorAll('.pdf-page')
+  const pageEl = pages[pageNum - 1]
   if (pageEl) {
     pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
