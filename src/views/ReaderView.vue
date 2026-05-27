@@ -189,16 +189,24 @@
             />
           </div>
 
-          <!-- 翻页模式：transform 平移翻页 -->
+          <!-- 翻页模式：优化版 -->
           <div
             v-else
             class="reader-content-page"
             ref="pageContentRef"
+            @touchstart="handleTouchStart"
+            @touchmove="handleTouchMove"
+            @touchend="handleTouchEnd"
           >
             <div
               class="page-content-inner"
+              :class="{ 'swiping': isSwiping }"
               ref="pageContentInnerRef"
-              :style="{ ...contentStyle, transform: `translateY(${-currentPage * pageHeight}px)` }"
+              :style="{
+                ...contentStyle,
+                transform: `translateY(${-currentPage * pageHeight + (isSwiping ? 0 : 0)}px)`,
+                transition: isSwiping ? 'none' : undefined
+              }"
               @mouseup="handleTextSelection"
             >
               <p
@@ -210,13 +218,25 @@
               />
             </div>
 
-            <!-- 翻页点击区域 -->
-            <div class="page-turn-area left" @click="prevPageContent"></div>
-            <div class="page-turn-area right" @click="nextPageContent"></div>
+            <!-- 翻页点击区域（带提示箭头） -->
+            <div class="page-turn-area left" @click="prevPageContent" :class="{ 'has-prev': currentPage > 0 || currentChapter > 0 }">
+              <span class="turn-hint">&#8249;</span>
+            </div>
+            <div class="page-turn-area right" @click="nextPageContent" :class="{ 'has-next': currentPage < totalPages - 1 || (book && currentChapter < book.content.length - 1) }">
+              <span class="turn-hint">&#8250;</span>
+            </div>
 
-            <!-- 页码指示 -->
-            <div class="page-indicator">
-              {{ currentPage + 1 }} / {{ totalPages }}
+            <!-- 底部信息栏：进度条 + 页码 -->
+            <div class="page-bottom-bar">
+              <div class="page-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+                </div>
+              </div>
+              <div class="page-info">
+                <span class="page-num">{{ currentPage + 1 }} / {{ totalPages }}</span>
+                <span class="progress-text">{{ progressPercent }}%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -622,6 +642,17 @@ const totalPages = ref(1)
 const pageHeight = ref(0)
 const pageContentRef = ref<HTMLElement | null>(null)
 const pageContentInnerRef = ref<HTMLElement | null>(null)
+const pageTransition = ref('') // '' | 'forward' | 'backward'
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const isSwiping = ref(false)
+const swipeOffset = ref(0) // 滑动偏移量，用于实时预览
+
+// 翻页进度百分比
+const progressPercent = computed(() => {
+  if (totalPages.value <= 1) return 100
+  return Math.round(((currentPage.value + 1) / totalPages.value) * 100)
+})
 
 const rightPanel = ref('')
 const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | null }>>([])
@@ -850,27 +881,71 @@ watch(
   }
 )
 
-// 翻页模式下的翻页逻辑
+// 翻页模式下的翻页逻辑（带动画）
 function prevPageContent() {
   if (currentPage.value > 0) {
+    pageTransition.value = 'backward'
     currentPage.value--
+    setTimeout(() => { pageTransition.value = '' }, 350)
   } else if (currentChapter.value > 0) {
     // 如果已经是第一页，则跳到上一章的最后一页
+    pageTransition.value = 'backward'
     currentChapter.value--
     nextTick(() => {
       currentPage.value = totalPages.value - 1
+      setTimeout(() => { pageTransition.value = '' }, 350)
     })
   }
 }
 
 function nextPageContent() {
   if (currentPage.value < totalPages.value - 1) {
+    pageTransition.value = 'forward'
     currentPage.value++
+    setTimeout(() => { pageTransition.value = '' }, 350)
   } else if (book.value && currentChapter.value < book.value.content.length - 1) {
     // 如果已经是最后一页，则跳到下一章的第一页
+    pageTransition.value = 'forward'
     currentChapter.value++
     currentPage.value = 0
+    setTimeout(() => { pageTransition.value = '' }, 350)
   }
+}
+
+// 触摸手势处理
+function handleTouchStart(e: TouchEvent) {
+  if (readerStore.readerMode !== 'page') return
+  touchStartX.value = e.touches[0].clientX
+  touchStartY.value = e.touches[0].clientY
+  isSwiping.value = false
+  swipeOffset.value = 0
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (readerStore.readerMode !== 'page') return
+  const deltaX = e.touches[0].clientX - touchStartX.value
+  const deltaY = e.touches[0].clientY - touchStartY.value
+  
+  // 水平滑动距离大于垂直时才触发翻页
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+    isSwiping.value = true
+    swipeOffset.value = deltaX
+    e.preventDefault()
+  }
+}
+
+function handleTouchEnd() {
+  if (readerStore.readerMode !== 'page' || !isSwiping.value) return
+  
+  const threshold = 50 // 滑动超过 50px 才翻页
+  if (swipeOffset.value > threshold) {
+    prevPageContent()
+  } else if (swipeOffset.value < -threshold) {
+    nextPageContent()
+  }
+  
+  isSwiping.value = false
+  swipeOffset.value = 0
 }
 
 function prevPage() {
@@ -1737,53 +1812,105 @@ onBeforeUnmount(() => {
 .reader-content-page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px 20px 100px;
+  padding: 16px 20px 60px;
   flex: 1;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .page-content-inner {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   will-change: transform;
   flex-shrink: 0;
+}
+.page-content-inner.swiping {
+  transition: none !important;
 }
 .page-turn-area {
   position: absolute;
   top: 0;
-  bottom: 0;
-  width: 30%;
+  bottom: 60px;
+  width: 25%;
   cursor: pointer;
   z-index: 10;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  opacity: 0;
 }
 .page-turn-area.left {
   left: 0;
+  justify-content: flex-start;
+  padding-left: 16px;
 }
 .page-turn-area.right {
   right: 0;
+  justify-content: flex-end;
+  padding-right: 16px;
 }
-.page-turn-area:hover {
-  background: rgba(24, 144, 255, 0.05);
+.page-turn-area.has-prev:hover,
+.page-turn-area.has-next:hover {
+  opacity: 1;
 }
-.page-turn-area.left:hover {
-  background: linear-gradient(to right, rgba(24, 144, 255, 0.1), transparent);
+.page-turn-area.left.has-prev:hover {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.06), transparent);
 }
-.page-turn-area.right:hover {
-  background: linear-gradient(to left, rgba(24, 144, 255, 0.1), transparent);
+.page-turn-area.right.has-next:hover {
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.06), transparent);
 }
-.page-indicator {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  z-index: 30;
-  pointer-events: none;
+.turn-hint {
+  font-size: 32px;
+  color: rgba(0, 0, 0, 0.3);
+  font-weight: 300;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+.page-turn-area:hover .turn-hint {
+  color: rgba(0, 0, 0, 0.5);
+  transform: scale(1.1);
+  transition: all 0.2s;
+}
+/* 底部信息栏 */
+.page-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 20px 12px;
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.95));
+  z-index: 20;
+}
+.page-progress {
+  margin-bottom: 6px;
+}
+.progress-bar {
+  height: 2px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1890ff, #40a9ff);
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+.page-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.page-num {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+.progress-text {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.35);
+  font-variant-numeric: tabular-nums;
 }
 .reader-content :deep(img) {
   max-width: 100%; height: auto; display: block;
@@ -2662,6 +2789,15 @@ onBeforeUnmount(() => {
 .theme-green .fullscreen-btn-float:hover { background: #f4f9f0; color: #1e3a1e; }
 
 .theme-dark .reader-main { background: #1a1a1a; color: #d0d0d0; }
+.theme-dark .page-bottom-bar { background: linear-gradient(transparent, rgba(26, 26, 26, 0.95)); }
+.theme-dark .progress-bar { background: rgba(255, 255, 255, 0.1); }
+.theme-dark .progress-fill { background: linear-gradient(90deg, #1890ff, #40a9ff); }
+.theme-dark .page-num { color: rgba(255, 255, 255, 0.45); }
+.theme-dark .progress-text { color: rgba(255, 255, 255, 0.35); }
+.theme-dark .turn-hint { color: rgba(255, 255, 255, 0.2); text-shadow: none; }
+.theme-dark .page-turn-area:hover .turn-hint { color: rgba(255, 255, 255, 0.4); }
+.theme-dark .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(255, 255, 255, 0.05), transparent); }
+.theme-dark .page-turn-area.right.has-next:hover { background: linear-gradient(to left, rgba(255, 255, 255, 0.05), transparent); }
 .theme-green .reader-main { background: #e8f0e3; color: #3a3a3a; }
 .theme-green .zoom-btn { background: rgba(46,74,46,0.08); color: #3a5a3a; }
 .theme-green .zoom-btn:hover { background: rgba(90,158,66,0.12); color: #5a9e42; }
@@ -2739,6 +2875,26 @@ onBeforeUnmount(() => {
 .theme-parchment .zoom-label { color: #555; }
 .theme-parchment .annotation-zoom-divider { background: rgba(0,0,0,0.1); }
 .theme-parchment .annotation-divider { background: rgba(0,0,0,0.1); }
+
+/* 翻页模式主题适配 */
+.theme-parchment .page-bottom-bar { background: linear-gradient(transparent, rgba(245, 230, 200, 0.95)); }
+.theme-parchment .progress-bar { background: rgba(0, 0, 0, 0.1); }
+.theme-parchment .progress-fill { background: linear-gradient(90deg, #8b6914, #a88520); }
+.theme-parchment .page-num { color: rgba(61, 42, 0, 0.5); }
+.theme-parchment .progress-text { color: rgba(61, 42, 0, 0.35); }
+.theme-parchment .turn-hint { color: rgba(61, 42, 0, 0.2); }
+.theme-parchment .page-turn-area:hover .turn-hint { color: rgba(61, 42, 0, 0.4); }
+.theme-parchment .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(139, 105, 20, 0.08), transparent); }
+.theme-parchment .page-turn-area.right.has-next:hover { background: linear-gradient(to left, rgba(139, 105, 20, 0.08), transparent); }
+.theme-green .page-bottom-bar { background: linear-gradient(transparent, rgba(232, 240, 227, 0.95)); }
+.theme-green .progress-bar { background: rgba(0, 0, 0, 0.08); }
+.theme-green .progress-fill { background: linear-gradient(90deg, #5a9e42, #7bc462); }
+.theme-green .page-num { color: rgba(58, 90, 58, 0.5); }
+.theme-green .progress-text { color: rgba(58, 90, 58, 0.35); }
+.theme-green .turn-hint { color: rgba(58, 90, 58, 0.2); }
+.theme-green .page-turn-area:hover .turn-hint { color: rgba(58, 90, 58, 0.4); }
+.theme-green .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(90, 158, 66, 0.08), transparent); }
+.theme-green .page-turn-area.right.has-next:hover { background: linear-gradient(to left, rgba(90, 158, 66, 0.08), transparent); }
 
 /* PDF 文本选中浮动工具栏 */
 </style>
