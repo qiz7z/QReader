@@ -1002,7 +1002,7 @@ const highlightedSentences = computed(() => {
       const escaped = hl.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       result = result.replace(
         new RegExp(escaped, 'g'),
-        m => `<mark class="hl" style="--hl-color:${hl.highlightColor}">${m}</mark>`
+        m => `<mark class="hl" style="--hl-color:${hl.highlightColor}; background-color: ${hl.highlightColor}; opacity: 0.3">${m}</mark>`
       )
     }
     return result
@@ -2098,10 +2098,11 @@ onBeforeUnmount(() => {
   border-bottom: 2px solid var(--hl-color);
 }
 .reader-content mark.hl::before {
-  content: ''; position: absolute; inset: -1px -1px -3px;
+  content: ''; position: absolute; inset: 0;
   background: var(--hl-color);
   opacity: 0.25; border-radius: 2px;
   pointer-events: none;
+  z-index: -1;
 }
 
 /* 划线笔记面板 */
