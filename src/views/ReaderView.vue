@@ -497,8 +497,8 @@
       </aside>
     </div>
 
-    <!-- 全屏导航 -->
-    <div v-if="isFullscreen && bookFormat !== 'pdf'" class="fullnav">
+    <!-- 全屏导航 - 鼠标靠近底部时显示 -->
+    <div v-if="isFullscreen && bookFormat !== 'pdf'" class="fullnav" :class="{ visible: showFullNav }">
       <button class="nav-btn" @click="prevPage" :disabled="currentChapter <= 0">上一章</button>
       
       <div class="full-chapter-wrapper">
@@ -651,6 +651,8 @@ const swipeOffset = ref(0) // 滑动偏移量，用于实时预览
 const rightPanel = ref('')
 const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | null }>>([])
 const showFullToc = ref(false)
+const showFullNav = ref(false) // 全屏导航显示状态
+let fullNavTimer: ReturnType<typeof setTimeout> | null = null
 const jumpInput = ref('')
 const isJumping = ref(false)
 const jumpInputRef = ref<HTMLInputElement | null>(null)
@@ -1571,9 +1573,25 @@ function toggleFullscreen() {
 }
 function onFs() { isFullscreen.value = !!document.fullscreenElement }
 
+// 全屏模式下，鼠标靠近底部显示导航栏
+function handleMouseMove(e: MouseEvent) {
+  if (!isFullscreen.value) return
+  const threshold = 100 // 距离底部 100px 内显示
+  const nearBottom = e.clientY > window.innerHeight - threshold
+  if (nearBottom) {
+    showFullNav.value = true
+    if (fullNavTimer) { clearTimeout(fullNavTimer); fullNavTimer = null }
+  } else {
+    if (!fullNavTimer) {
+      fullNavTimer = setTimeout(() => { showFullNav.value = false }, 800)
+    }
+  }
+}
+
 onMounted(async () => {
   startClock()
   document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('mousemove', handleMouseMove)
   try { const s = localStorage.getItem('reader-sidebar-width'); if (s) { const n = parseInt(s, 10); if (!Number.isNaN(n)) sidebarWidth.value = Math.max(minW, Math.min(maxW, n)) } } catch {}
   
   // 加载语音设置
@@ -1639,7 +1657,9 @@ function onTocClick(idx: number) {
 
 onBeforeUnmount(() => { 
   if (timeTimer) clearInterval(timeTimer)
+  if (fullNavTimer) clearTimeout(fullNavTimer)
   document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('fullscreenchange', onFs)
   stopReadAloud()
 })
@@ -2635,8 +2655,9 @@ onBeforeUnmount(() => {
   border-left-color: #40a9ff;
 }
 
-/* 全屏导航 */
-.fullnav { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; z-index: 100; padding: 6px; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+/* 全屏导航 - 底部悬浮，鼠标靠近底部时显示 */
+.fullnav { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; z-index: 100; padding: 6px; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+.fullnav.visible { opacity: 1; pointer-events: auto; }
 .fullnav .nav-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15); color: #fff; cursor: pointer; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s; display: flex; align-items: center; }
 .fullnav .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.35); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); border-color: #fff; }
 .fullnav .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
