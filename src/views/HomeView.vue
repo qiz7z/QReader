@@ -205,7 +205,10 @@ function particleStyle(_index: number) {
   align-items: center;
   padding: 40px 24px;
   background: 
-    linear-gradient(180deg, #0f141f 0%, #1a1f2e 50%, #252030 100%);
+    linear-gradient(180deg, rgba(15, 20, 31, 0.85) 0%, rgba(26, 31, 46, 0.85) 50%, rgba(37, 32, 48, 0.85) 100%),
+    url('/background.png');
+  background-size: cover;
+  background-position: center;
   color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
