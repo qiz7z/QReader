@@ -70,6 +70,7 @@
       :eraser-mode="eraserMode"
       @annotations-change="handlePdfAnnotationsChange"
       @erase-annotation="handleEraseAnnotation"
+      @text-highlight="handlePdfTextHighlight"
     />
     <div v-if="book && bookFormat === 'pdf'" class="pdf-controls-bar">
       <div class="pdf-annotation-toolbar" :class="{ 'annotation-active': annotationMode }">
@@ -1405,6 +1406,32 @@ function clearAllAnnotations() {
   clearAnnotations(currentFileId.value)
   pdfAnnotations.value = []
 }
+
+/**
+ * 处理 PDF 文本高亮
+ */
+function handlePdfTextHighlight(highlight: {id: string, page: number, text: string, color: string, rects: {x: number, y: number, w: number, h: number}[]}) {
+  if (!bookId.value || !book.value) return
+  
+  // 将 PDF 高亮保存为笔记
+  const chapter = book.value.content?.[currentChapter.value]
+  if (!chapter) return
+  
+  // 使用 highlightColor 保存到笔记系统
+  StorageService.addNote({
+    bookId: bookId.value,
+    chapterId: chapter.id || '',
+    position: currentChapter.value,
+    selectedText: highlight.text,
+    note: '',
+    highlightColor: highlight.color,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  })
+  
+  console.log('[ReaderView] PDF text highlight saved:', highlight.text)
+}
+
 function toggleFullscreen() {
   if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}) ; isFullscreen.value = true }
   else { document.exitFullscreen(); isFullscreen.value = false }

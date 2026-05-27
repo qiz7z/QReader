@@ -7,6 +7,13 @@
         <div class="pdf-pages" :style="pagesStyle">
           <div v-for="pageNum in totalPages" :key="pageNum" class="pdf-page-wrapper">
             <canvas :ref="(el) => setCanvasRef(pageNum, el)" class="pdf-page"></canvas>
+            <!-- 文本层（用于文本选择和高亮） -->
+            <div 
+              :ref="(el) => setTextLayerRef(pageNum, el)"
+              class="text-layer"
+              :data-page="pageNum"
+              @mouseup="handleTextSelect"
+            ></div>
             <!-- 标注叠加层 -->
             <canvas 
               :ref="(el) => setAnnotationCanvasRef(pageNum, el)"
@@ -47,6 +54,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'annotations-change', annotations: PdfAnnotation[]): void
   (e: 'erase-annotation', annotationId: string): void
+  (e: 'text-highlight', highlight: {id: string, page: number, text: string, color: string, rects: {x: number, y: number, w: number, h: number}[]}): void
 }>()
 
 const loading = ref(true)
@@ -54,6 +62,7 @@ const error = ref('')
 const totalPages = ref(0)
 const canvasRefs = new Map<number, HTMLCanvasElement>()
 const annotationCanvasRefs = new Map<number, HTMLCanvasElement>()
+const textLayerRefs = new Map<number, HTMLDivElement>()
 const renderTasks = new Map<number, any>()
 let pdfDoc: any = null
 
@@ -61,6 +70,9 @@ let pdfDoc: any = null
 const isDrawing = ref(false)
 const currentPoints = ref<Point[]>([])
 const currentPageNum = ref<number>(0)
+
+// PDF 高亮相关
+const pdfHighlights = ref<{id: string, page: number, text: string, color: string, rects: {x: number, y: number, w: number, h: number}[]}[]>([])
 
 const isErasing = ref(false)
 const eraserPoints = ref<Point[]>([])
@@ -77,6 +89,12 @@ function setCanvasRef(pageNum: number, el: any) {
   if (!el) return
   canvasRefs.set(pageNum, el)
   if (pdfDoc) renderPage(pageNum)
+}
+
+function setTextLayerRef(pageNum: number, el: any) {
+  if (!el) return
+  textLayerRefs.set(pageNum, el)
+  if (pdfDoc) renderTextLayer(pageNum)
 }
 
 function setAnnotationCanvasRef(pageNum: number, el: any) {
@@ -96,6 +114,117 @@ function setAnnotationCanvasRef(pageNum: number, el: any) {
   if (pdfDoc && props.annotations?.length) {
     renderAnnotations(pageNum)
   }
+}
+
+/**
+ * 渲染文本层（用于文本选择和高亮）
+ */
+async function renderTextLayer(pageNum: number) {
+  const textLayerDiv = textLayerRefs.get(pageNum)
+  if (!textLayerDiv || !pdfDoc) return
+  
+  const page = await pdfDoc.getPage(pageNum)
+  const viewport = page.getViewport({ scale: BASE_RENDER_SCALE })
+  
+  // 设置文本层大小与 canvas 一致
+  textLayerDiv.style.width = `${viewport.width}px`
+  textLayerDiv.style.height = `${viewport.height}px`
+  
+  // 获取文本内容
+  const textContent = await page.getTextContent()
+  
+  // 使用 pdfjs-dist 的 TextLayer
+  const { TextLayer } = await import('pdfjs-dist')
+  
+  const textLayer = new TextLayer({
+    textContentSource: textContent,
+    container: textLayerDiv,
+    viewport,
+  })
+  
+  await textLayer.render()
+}
+
+/**
+ * 处理文本选择（高亮）
+ */
+function handleTextSelect(event: MouseEvent) {
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed) return
+  
+  const text = selection.toString().trim()
+  if (!text) return
+  
+  const target = event.currentTarget as HTMLDivElement
+  const pageNum = parseInt(target.dataset.page || '0')
+  
+  // 获取选中文本的位置信息
+  const range = selection.getRangeAt(0)
+  const rects = range.getClientRects()
+  
+  // 转换为 canvas 内部坐标
+  const textLayerDiv = textLayerRefs.get(pageNum)
+  if (!textLayerDiv) return
+  
+  const layerRect = textLayerDiv.getBoundingClientRect()
+  const canvas = canvasRefs.get(pageNum)
+  if (!canvas) return
+  
+  const scaleX = canvas.width / canvas.getBoundingClientRect().width
+  const scaleY = canvas.height / canvas.getBoundingClientRect().height
+  
+  const highlightRects = Array.from(rects).map(rect => ({
+    x: (rect.left - layerRect.left) * scaleX,
+    y: (rect.top - layerRect.top) * scaleY,
+    w: rect.width * scaleX,
+    h: rect.height * scaleY
+  }))
+  
+  // 创建高亮
+  const highlight = {
+    id: crypto.randomUUID(),
+    page: pageNum,
+    text,
+    color: props.penColor || '#ffeb3b',
+    rects: highlightRects
+  }
+  
+  pdfHighlights.value.push(highlight)
+  
+  // 渲染高亮
+  renderPdfHighlights(pageNum)
+  
+  // 通知父组件
+  emit('text-highlight', highlight)
+  
+  // 清除选择
+  selection.removeAllRanges()
+}
+
+/**
+ * 渲染 PDF 文本高亮
+ */
+function renderPdfHighlights(pageNum: number) {
+  const annotationCanvas = annotationCanvasRefs.get(pageNum)
+  if (!annotationCanvas) return
+  
+  const ctx = annotationCanvas.getContext('2d')!
+  
+  // 只清除高亮区域，保留画笔标注
+  const pageHighlights = pdfHighlights.value.filter(h => h.page === pageNum)
+  
+  // 重绘所有标注
+  renderAnnotations(pageNum)
+  
+  // 渲染高亮
+  pageHighlights.forEach(highlight => {
+    ctx.fillStyle = highlight.color
+    ctx.globalAlpha = 0.3
+    highlight.rects.forEach(rect => {
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+    })
+    ctx.globalAlpha = 1.0
+  })
 }
 
 async function renderPage(pageNum: number) {
@@ -136,6 +265,11 @@ async function renderPage(pageNum: number) {
     
     if (props.annotations?.length) {
       renderAnnotations(pageNum)
+    }
+    
+    // 渲染文本层
+    if (textLayerRefs.has(pageNum)) {
+      renderTextLayer(pageNum)
     }
   } catch (e: any) {
     if (e?.name !== 'RenderingCancelledException') {
@@ -541,6 +675,38 @@ defineExpose({
 
 .pdf-page {
   display: block;
+}
+
+/* PDF 文本层 */
+.text-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  overflow: hidden;
+  line-height: 1;
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  color: transparent;
+}
+
+.text-layer :deep(span) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0% 0%;
+}
+
+.text-layer :deep(span::selection) {
+  background: rgba(0, 100, 200, 0.3);
+  color: transparent;
+}
+
+.text-layer :deep(::selection) {
+  background: rgba(0, 100, 200, 0.3);
+  color: transparent;
 }
 
 .annotation-overlay {
