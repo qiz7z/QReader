@@ -11,6 +11,7 @@
             <div 
               :ref="(el) => setTextLayerRef(pageNum, el)"
               class="text-layer"
+              :class="{ 'text-layer-hidden': annotationMode }"
               :data-page="pageNum"
               @mouseup="handleTextSelect"
             ></div>
@@ -705,12 +706,13 @@ defineExpose({
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 5;
+  z-index: 15;
   overflow: hidden;
   line-height: 1;
   text-size-adjust: none;
   -webkit-text-size-adjust: none;
   color: transparent;
+  cursor: text;
 }
 
 .text-layer :deep(span) {
@@ -728,6 +730,11 @@ defineExpose({
 .text-layer :deep(::selection) {
   background: rgba(0, 100, 200, 0.3);
   color: transparent;
+}
+
+.text-layer-hidden {
+  pointer-events: none;
+  z-index: 5;
 }
 
 .annotation-overlay {
