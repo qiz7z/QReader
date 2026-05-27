@@ -868,7 +868,11 @@ async function recalcPage() {
   // 获取容器高度，减去底部信息栏高度（约 50px）
   const bottomBarHeight = 50
   pageHeight.value = container.clientHeight - bottomBarHeight
-  totalPages.value = Math.max(1, Math.ceil(content.scrollHeight / pageHeight.value))
+  
+  // 计算内容总高度（减去 padding）
+  const paddingVertical = 80 // 上下各 40px padding
+  const contentHeight = content.scrollHeight - paddingVertical
+  totalPages.value = Math.max(1, Math.ceil(contentHeight / pageHeight.value))
   if (currentPage.value >= totalPages.value) {
     currentPage.value = Math.max(0, totalPages.value - 1)
   }
@@ -1830,7 +1834,7 @@ onBeforeUnmount(() => {
   transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   will-change: transform;
   flex-shrink: 0;
-  padding-bottom: 20px;
+  padding: 40px 0;
 }
 .page-content-inner.swiping {
   transition: none !important;
