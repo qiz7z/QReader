@@ -55,7 +55,7 @@
       <div v-if="showTocPanel" class="resize-bar" @mousedown="startResize"></div>
 
   <!-- 主阅读区 -->
-  <main class="reader-main" ref="mainRef" :class="{ 'page-mode': readerStore.readerMode === 'page' }" @click="rightPanel = ''">
+  <main class="reader-main" ref="mainRef" @click="rightPanel = ''">
     <PdfReader
       ref="pdfReaderRef"
       v-if="book && bookFormat === 'pdf'"
@@ -172,10 +172,9 @@
         <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
       </div>
     </div>
-    <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode-wrap': readerStore.readerMode === 'page' }">
+    <div v-else-if="book" class="reader-content-wrap">
           <!-- 滚动模式：所有章节连续显示 -->
           <div
-            v-if="readerStore.readerMode === 'scroll'"
             class="reader-content"
             :style="contentStyle"
             @mouseup="handleTextSelection"
@@ -188,57 +187,7 @@
               v-html="paragraph"
             />
           </div>
-
-          <!-- 翻页模式：优化版 -->
-          <div
-            v-else
-            class="reader-content-page"
-            ref="pageContentRef"
-            @touchstart="handleTouchStart"
-            @touchmove="handleTouchMove"
-            @touchend="handleTouchEnd"
-          >
-            <!-- 内容区域（CSS multi-column 翻页） -->
-            <div class="page-content-wrapper" ref="pageContentWrapperRef" @scroll="handleWrapperScroll">
-              <div
-                class="page-content-inner"
-                :class="{ 'swiping': isSwiping }"
-                ref="pageContentInnerRef"
-                :style="{
-                  ...contentStyle,
-                  columnWidth: pageWidth + 'px',
-                  columnGap: '0px',
-                  columnFill: 'auto',
-                  height: pageHeight + 'px',
-                  width: (pageWidth * totalPages) + 'px',
-                  transition: isSwiping ? 'none' : undefined
-                }"
-                @mouseup="handleTextSelection"
-              >
-                <p
-                  v-for="(paragraph, idx) in highlightedSentences"
-                  :key="idx"
-                  :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
-                  :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
-                  v-html="paragraph"
-                />
-              </div>
-
-              <!-- 翻页点击区域（带提示箭头） -->
-              <div class="page-turn-area left" @click="prevPageContent" :class="{ 'has-prev': currentPage > 0 || currentChapter > 0 }">
-                <span class="turn-hint">&#8249;</span>
-              </div>
-              <div class="page-turn-area right" @click="nextPageContent" :class="{ 'has-next': currentPage < totalPages - 1 || (book && currentChapter < book.content.length - 1) }">
-                <span class="turn-hint">&#8250;</span>
-              </div>
-            </div>
-
-            <!-- 底部页码 -->
-            <div class="page-bottom-bar">
-              <span class="page-num">{{ currentPage + 1 }} / {{ totalPages }}</span>
-            </div>
-          </div>
-        </div>
+    </div>
         <div v-else class="loading">加载中...</div>
 
         <!-- 章节导航 -->
@@ -331,12 +280,12 @@
                 <div class="read-aloud-header">
                   <div class="read-aloud-title">朗读</div>
                   <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying, error: isSpeechError }">
-                    {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : synth ? '准备就绪' : '不支持' }}
+                    {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : isVoicesLoaded ? '准备就绪' : '加载中...' }}
                   </div>
                 </div>
                 
                 <div class="read-aloud-controls">
-                  <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="!synth || voiceCache.length === 0">
+                  <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="voiceCache.length === 0">
                     <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
                       <rect x="6" y="4" width="4" height="16"></rect>
                       <rect x="14" y="4" width="4" height="16"></rect>
@@ -351,8 +300,8 @@
                   <div class="setting-row voice-row">
                     <label>音色</label>
                     <select v-model="selectedVoiceName" @change="onVoiceChange" :disabled="voiceCache.length === 0">
-                      <option v-for="voice in voiceCache" :key="voice.name" :value="voice.name">
-                        {{ voice.label }}
+                      <option v-for="voice in voiceCache" :key="voice.id" :value="voice.id">
+                        {{ voice.name }} · {{ voice.style }}
                       </option>
                     </select>
                   </div>
@@ -404,7 +353,7 @@
                   <button @click="readerStore.setFontWeight(Math.min(5, readerStore.fontWeight + 1))">+</button>
                 </div>
               </div>
-                <div class="setting-group">
+              <div class="setting-group">
                 <label class="group-label">行间距</label>
                 <div class="size-control">
                   <button @click="readerStore.setLineHeight(Math.max(1, readerStore.lineHeight - 1))">−</button>
@@ -412,22 +361,16 @@
                     <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.lineHeight }"></span>
                   </div>
                   <button @click="readerStore.setLineHeight(Math.min(5, readerStore.lineHeight + 1))">+</button>
-                  <span class="size-label">{{ lineHeightLabels[readerStore.lineHeight - 1] }}</span>
                 </div>
               </div>
               <div class="setting-group">
                 <label class="group-label">阅读方式</label>
                 <div class="mode-switch">
                   <button
-                    class="mode-btn"
+                    class="mode-btn active"
                     :class="{ active: readerStore.readerMode === 'scroll' }"
                     @click="readerStore.setReaderMode('scroll')"
                   >滚动</button>
-                  <button
-                    class="mode-btn"
-                    :class="{ active: readerStore.readerMode === 'page' }"
-                    @click="readerStore.setReaderMode('page')"
-                  >翻页</button>
                 </div>
               </div>
               <div class="setting-group">
@@ -635,19 +578,6 @@ const sidebarWidth = ref(200)
 const minW = 120
 const maxW = 400
 
-// 翻页模式相关状态
-const currentPage = ref(0)
-const totalPages = ref(1)
-const pageHeight = ref(0)
-const pageWidth = ref(0) // CSS multi-column: 每页宽度
-const pageContentRef = ref<HTMLElement | null>(null)
-const pageContentWrapperRef = ref<HTMLElement | null>(null)
-const pageContentInnerRef = ref<HTMLElement | null>(null)
-const touchStartX = ref(0)
-const touchStartY = ref(0)
-const isSwiping = ref(false)
-const swipeOffset = ref(0) // 滑动偏移量，用于实时预览
-
 const rightPanel = ref('')
 const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | null }>>([])
 const showFullToc = ref(false)
@@ -674,7 +604,6 @@ const bookmarks = ref<BookmarkRecord[]>([])
 const isReadAloudPlaying = ref(false)
 const speechRate = ref(1)
 const selectedVoiceName = ref('')
-let synth: SpeechSynthesis | null = null
 let currentSentenceIndex = ref(0)
 let isAutoAdvancingChapter = false // 朗读自动跳章标记
 const themes = [
@@ -719,8 +648,6 @@ function setSentenceRef(el: HTMLElement | Element | null, idx: number) {
     sentenceRefs.value[idx] = el
   }
 }
-
-const lineHeightLabels = ['紧凑', '适中', '标准', '宽松', '超宽']
 
 function getFontWeightStyle(fw: number) {
   // Windows 优化：用多层阴影堆叠模拟真实加粗效果
@@ -851,182 +778,19 @@ function scrollToChapterStart() {
   if (mainRef.value) mainRef.value.scrollTop = 0
 }
 
-// 处理 wrapper 滚动事件（同步 currentPage）
-function handleWrapperScroll() {
-  const wrapper = pageContentWrapperRef.value
-  if (!wrapper || !pageWidth.value) return
-  const newPage = Math.round(wrapper.scrollLeft / pageWidth.value)
-  if (newPage !== currentPage.value) {
-    currentPage.value = Math.max(0, Math.min(newPage, totalPages.value - 1))
-  }
-}
-
-// 翻页模式：重新计算每页尺寸和总页数（CSS multi-column 方案）
-async function recalcPage() {
-  if (readerStore.readerMode !== 'page') return
-  await nextTick()
-  const container = pageContentRef.value
-  const wrapper = pageContentWrapperRef.value
-  const content = pageContentInnerRef.value
-  if (!container || !wrapper || !content) return
-
-  // 获取容器尺寸，减去底部页码栏高度（约 30px）
-  const bottomBarHeight = 30
-  pageHeight.value = container.clientHeight - bottomBarHeight
-  pageWidth.value = container.clientWidth
-  
-  // 使用 CSS multi-column 分页：column-width 固定，内容自然流动
-  // 总宽度 = 每页宽度 × 页数，页数由内容自动计算
-  // 先设置 column-width 和高度，让浏览器自动计算列数
-  content.style.columnWidth = pageWidth.value + 'px'
-  content.style.columnGap = '0px'
-  content.style.columnFill = 'auto'
-  content.style.height = pageHeight.value + 'px'
-  content.style.width = 'auto' // 让浏览器自动计算总宽度
-  
-  // 等待浏览器重新布局
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-  
-  // 计算总页数：scrollWidth / pageWidth
-  // scrollWidth 包含所有列的总宽度
-  const scrollWidth = content.scrollWidth
-  totalPages.value = Math.max(1, Math.round(scrollWidth / pageWidth.value))
-  
-  // 设置最终宽度以包含所有列
-  content.style.width = (pageWidth.value * totalPages.value) + 'px'
-  
-  if (currentPage.value >= totalPages.value) {
-    currentPage.value = Math.max(0, totalPages.value - 1)
-  }
-  
-  // 滚动到当前页
-  scrollToPage(currentPage.value)
-}
-
-// 监听影响分页的配置变化
-watch(
-  () => [currentChapter.value, readerStore.fontSize, readerStore.lineHeight, readerStore.fontWeight, readerStore.fontFamily],
-  () => {
-    if (readerStore.readerMode === 'page') {
-      currentPage.value = 0
-      recalcPage()
-    }
-  }
-)
-
-// 滚动到指定页（CSS multi-column: 使用 scrollLeft）
-function scrollToPage(page: number) {
-  const wrapper = pageContentWrapperRef.value
-  if (!wrapper) return
-  wrapper.scrollLeft = page * pageWidth.value
-}
-
-// 翻页模式下的翻页逻辑（带动画）
-function prevPageContent() {
-  if (currentPage.value > 0) {
-    pageTransition.value = 'backward'
-    currentPage.value--
-    scrollToPage(currentPage.value)
-    setTimeout(() => { pageTransition.value = '' }, 350)
-  } else if (currentChapter.value > 0) {
-    // 如果已经是第一页，则跳到上一章的最后一页
-    pageTransition.value = 'backward'
-    currentChapter.value--
-    nextTick(() => {
-      currentPage.value = totalPages.value - 1
-      scrollToPage(currentPage.value)
-      setTimeout(() => { pageTransition.value = '' }, 350)
-    })
-  }
-}
-
-function nextPageContent() {
-  if (currentPage.value < totalPages.value - 1) {
-    pageTransition.value = 'forward'
-    currentPage.value++
-    scrollToPage(currentPage.value)
-    setTimeout(() => { pageTransition.value = '' }, 350)
-  } else if (book.value && currentChapter.value < book.value.content.length - 1) {
-    // 如果已经是最后一页，则跳到下一章的第一页
-    pageTransition.value = 'forward'
-    currentChapter.value++
-    currentPage.value = 0
-    scrollToPage(0)
-    setTimeout(() => { pageTransition.value = '' }, 350)
-  }
-}
-
-// 触摸手势处理
-function handleTouchStart(e: TouchEvent) {
-  if (readerStore.readerMode !== 'page') return
-  touchStartX.value = e.touches[0].clientX
-  touchStartY.value = e.touches[0].clientY
-  isSwiping.value = false
-  swipeOffset.value = 0
-}
-
-function handleTouchMove(e: TouchEvent) {
-  if (readerStore.readerMode !== 'page') return
-  const deltaX = e.touches[0].clientX - touchStartX.value
-  const deltaY = e.touches[0].clientY - touchStartY.value
-  
-  // 水平滑动距离大于垂直时才触发翻页
-  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-    isSwiping.value = true
-    swipeOffset.value = deltaX
-    e.preventDefault()
-  }
-}
-
-function handleTouchEnd() {
-  if (readerStore.readerMode !== 'page' || !isSwiping.value) return
-  
-  const threshold = 50 // 滑动超过 50px 才翻页
-  if (swipeOffset.value > threshold) {
-    prevPageContent()
-  } else if (swipeOffset.value < -threshold) {
-    nextPageContent()
-  }
-  
-  isSwiping.value = false
-  swipeOffset.value = 0
-}
-
 function prevPage() {
-  if (readerStore.readerMode === 'page') {
-    prevPageContent()
-  } else {
-    if (currentChapter.value > 0) {
-      pageTransition.value = 'page-back'
-      currentChapter.value--
-      scrollToChapterStart()
-    }
+  if (currentChapter.value > 0) {
+    pageTransition.value = 'page-back'
+    currentChapter.value--
+    scrollToChapterStart()
   }
 }
 
 function nextPage() {
-  if (readerStore.readerMode === 'page') {
-    nextPageContent()
-  } else {
-    if (book.value && currentChapter.value < book.value.content.length - 1) {
-      pageTransition.value = 'page-forward'
-      currentChapter.value++
-      scrollToChapterStart()
-    }
-  }
-}
-
-// 键盘翻页
-function handleKeydown(e: KeyboardEvent) {
-  if (readerStore.readerMode !== 'page') return
-  if (rightPanel.value) return // 如果右侧面板打开，不处理键盘事件
-
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-    e.preventDefault()
-    prevPageContent()
-  } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
-    e.preventDefault()
-    nextPageContent()
+  if (book.value && currentChapter.value < book.value.content.length - 1) {
+    pageTransition.value = 'page-forward'
+    currentChapter.value++
+    scrollToChapterStart()
   }
 }
 
@@ -1166,181 +930,166 @@ const highlightedSentences = computed(() => {
   })
 })
 
-// 翻页模式：内容变化时重新计算页数
-watch(() => [highlightedSentences.value.length, readerStore.readerMode], () => {
-  if (readerStore.readerMode === 'page') {
-    currentPage.value = 0
-    recalcPage()
-  }
-}, { immediate: true })
-
 const allHighlights = computed(() => highlights.value)
 
-// 朗读功能 - 增强稳定性
-let speechQueue: SpeechSynthesisUtterance[] = []
+// 朗读功能 (edge-tts-universal 浏览器端)
 let isSpeechError = ref(false)
 let retryCount = ref(0)
 const MAX_RETRY = 3
 
-// 语音缓存
-const voiceCache = ref<Array<{ name: string; label: string }>>([])
+// edge-tts 语音列表
+const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string }>>([])
 const isVoicesLoaded = ref(false)
+let currentAudio: HTMLAudioElement | null = null
+let ttsAbort: AbortController | null = null
 
-function initSpeechSynthesis() {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    console.warn('[TTS] Speech Synthesis not supported')
-    return
-  }
-  
-  synth = window.speechSynthesis
-  
-  // 防止重复加载
+const EDGE_VOICES = [
+  { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓', gender: '女', style: '温暖' },
+  { id: 'zh-CN-XiaoyiNeural', name: '晓依', gender: '女', style: '活泼' },
+  { id: 'zh-CN-YunjianNeural', name: '云健', gender: '男', style: '激情' },
+  { id: 'zh-CN-YunxiNeural', name: '云希', gender: '男', style: '阳光' },
+  { id: 'zh-CN-YunxiaNeural', name: '云夏', gender: '男', style: '可爱' },
+  { id: 'zh-CN-YunyangNeural', name: '云扬', gender: '男', style: '专业' },
+]
+
+async function loadEdgeTTSVoices() {
   if (isVoicesLoaded.value) return
-  
-  const loadVoices = () => {
-    // 添加延迟确保语音加载完成
-    setTimeout(() => {
-      try {
-        const voices = synth!.getVoices()
-        if (!voices || voices.length === 0) {
-          // 语音未就绪，稍后重试
-          if (retryCount.value < MAX_RETRY) {
-            retryCount.value++
-            loadVoices()
-            return
-          }
-          console.warn('[TTS] No voices available after retries')
-          return
-        }
-        
-        retryCount.value = 0
-        isVoicesLoaded.value = true
-        
-        // 筛选中文语音
-        const zhVoices = voices.filter(v => v.lang.startsWith('zh'))
-        
-        voiceCache.value = (zhVoices.length > 0 ? zhVoices : voices).map(v => ({
-          name: v.name,
-          label: v.name.replace(/ - .*$/, '').trim() || v.name
-        }))
-        
-        // 从缓存加载默认语音
-        const saved = localStorage.getItem('reader-voice')
-        if (saved && voiceCache.value.find(v => v.name === saved)) {
-          selectedVoiceName.value = saved
-        } else if (voiceCache.value.length > 0) {
-          selectedVoiceName.value = voiceCache.value[0].name
-        }
-      } catch (err) {
-        console.error('[TTS] Error loading voices:', err)
-        if (retryCount.value < MAX_RETRY) {
-          retryCount.value++
-          setTimeout(loadVoices, 500 * retryCount.value)
-        }
-      }
-    }, 100 + (retryCount.value * 100))
-  }
-  
-  // 首次加载
-  loadVoices()
-  
-  // 监听语音变化
-  if (synth.onvoiceschanged !== undefined) {
-    synth.onvoiceschanged = () => {
-      if (!isVoicesLoaded.value) {
-        loadVoices()
-      }
-    }
+  voiceCache.value = EDGE_VOICES
+  isVoicesLoaded.value = true
+
+  const saved = localStorage.getItem('reader-voice')
+  if (saved && EDGE_VOICES.find(v => v.id === saved)) {
+    selectedVoiceName.value = saved
+  } else {
+    selectedVoiceName.value = EDGE_VOICES[0].id
   }
 }
 
-// 从指定段落开始朗读 - 增强错误处理
-function readFromSentence(startIndex: number) {
-  if (!synth || sentences.value.length === 0) return
-  
-  currentSentenceIndex.value = startIndex
-  const text = sentences.value[startIndex].replace(/<[^>]*>/g, ' ').trim()
-  
+async function speakSentence(index: number) {
+  if (!sentences.value[index]) return
+
+  stopCurrentAudio()
+  currentSentenceIndex.value = index
+  const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
+
   if (!text) {
-    if (startIndex < sentences.value.length - 1) {
-      readFromSentence(startIndex + 1)
+    if (index < sentences.value.length - 1) {
+      speakSentence(index + 1)
     } else {
-      stopReadAloud()
+      tryNextChapter()
     }
     return
   }
-  
-  // 检查语音是否可用
-  if (!isVoicesLoaded.value || voiceCache.value.length === 0) {
-    console.warn('[TTS] Voices not loaded yet, waiting...')
-    setTimeout(() => readFromSentence(startIndex), 200)
-    return
-  }
-  
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.rate = speechRate.value
-  utterance.pitch = 1.0
-  utterance.volume = 1.0
-  
-  // 设置语音
-  const voices = synth.getVoices()
-  const selectedVoice = voices.find(v => v.name === selectedVoiceName.value)
-  if (selectedVoice) {
-    utterance.voice = selectedVoice
-  }
-  
-  // 错误处理
-  utterance.onerror = (event) => {
-    console.error('[TTS] Error:', event)
-    isSpeechError.value = true
-    
-    // 尝试恢复
-    if (retryCount.value < MAX_RETRY) {
-      retryCount.value++
-      console.log(`[TTS] Retrying ${retryCount.value}/${MAX_RETRY}...`)
-      setTimeout(() => {
-        isSpeechError.value = false
-        readFromSentence(startIndex)
-      }, 500 * retryCount.value)
-    } else {
-      console.error('[TTS] Max retries reached, stopping')
-      stopReadAloud()
+
+  const ratePercent = Math.round((speechRate.value - 1) * 100)
+  const rateStr = (ratePercent >= 0 ? '+' : '') + ratePercent + '%'
+
+  try {
+    ttsAbort = new AbortController()
+    const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
+    const tts = new EdgeTTSBrowser(text, selectedVoiceName.value, { rate: rateStr, volume: '+0%', pitch: '+0Hz' })
+    const result = await tts.synthesize()
+
+    if (ttsAbort?.signal.aborted) return
+
+    const url = URL.createObjectURL(result.audio)
+    const audio = new Audio(url)
+    currentAudio = audio
+    audio.volume = 1.0
+
+    audio.onplay = () => {
+      isSpeechError.value = false
+      retryCount.value = 0
+      isReadAloudPlaying.value = true
+      scrollToSentence(index)
     }
-  }
-  
-  utterance.onstart = () => {
-    isSpeechError.value = false
-    retryCount.value = 0
-    isReadAloudPlaying.value = true
-    // scrollToSentence(startIndex) - temporarily disabled
-  }
-  
-  utterance.onend = () => {
-    if (isSpeechError.value) return
-    
-    if (startIndex < sentences.value.length - 1) {
-      readFromSentence(startIndex + 1)
-    } else if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
-      // 下一章
-      currentChapter.value++
-      // loadChapter(currentChapter.value) - temporarily disabled
-      setTimeout(() => readFromSentence(0), 300)
-    } else {
-      stopReadAloud()
+
+    audio.onended = () => {
+      URL.revokeObjectURL(url)
+      currentAudio = null
+      if (isSpeechError.value) return
+      if (index < sentences.value.length - 1) {
+        speakSentence(index + 1)
+      } else {
+        tryNextChapter()
+      }
     }
+
+    audio.onerror = () => {
+      URL.revokeObjectURL(url)
+      currentAudio = null
+      handleError(index)
+    }
+
+    await audio.play()
+  } catch (err: any) {
+    if (err.name === 'AbortError') return
+    console.error('[TTS] Error:', err)
+    handleError(index)
   }
+}
+
+function handleError(index: number) {
+  isSpeechError.value = true
+  if (retryCount.value < MAX_RETRY) {
+    retryCount.value++
+    setTimeout(() => {
+      isSpeechError.value = false
+      speakSentence(index)
+    }, 500 * retryCount.value)
+  } else {
+    stopReadAloud()
+  }
+}
+
+function tryNextChapter() {
+  if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
+    isAutoAdvancingChapter = true
+    currentChapter.value++
+    setTimeout(() => {
+      isAutoAdvancingChapter = false
+      speakSentence(0)
+    }, 300)
+  } else {
+    stopReadAloud()
+  }
+}
+
+// 滚动到当前朗读的句子
+function scrollToSentence(index: number) {
+  const el = sentenceRefs.value[index]
+  const container = mainRef.value
+  if (!el || !container) return
   
-  // 停止之前的朗读
-  synth.cancel()
-  speechQueue.push(utterance)
-  synth.speak(utterance)
+  // 计算元素相对于容器的位置
+  const containerRect = container.getBoundingClientRect()
+  const elRect = el.getBoundingClientRect()
+  
+  // 如果元素不在可见范围内，或距离底部/顶部太近，则滚动
+  const topGap = elRect.top - containerRect.top
+  const bottomGap = elRect.bottom - containerRect.bottom
+  
+  if (topGap < 80 || bottomGap > -80) {
+    const scrollTarget = container.scrollTop + (elRect.top - containerRect.top) - containerRect.height / 3
+    container.scrollTo({ top: scrollTarget, behavior: 'smooth' })
+  }
+}
+
+function stopCurrentAudio() {
+  ttsAbort?.abort()
+  ttsAbort = null
+  if (currentAudio) {
+    currentAudio.onended = null
+    currentAudio.onerror = null
+    currentAudio.onplay = null
+    currentAudio.pause()
+    currentAudio.src = ''
+    currentAudio = null
+  }
 }
 
 function stopReadAloud() {
-  if (synth) {
-    synth.cancel()
-    speechQueue = []
-  }
+  stopCurrentAudio()
   isReadAloudPlaying.value = false
   isSpeechError.value = false
   retryCount.value = 0
@@ -1348,44 +1097,27 @@ function stopReadAloud() {
 }
 
 function toggleReadAloud() {
-  if (isReadAloudPlaying.value) {
-    pauseReadAloud()
-  } else {
-    readFromSentence(currentSentenceIndex.value)
-  }
-}
-
-function pauseReadAloud() {
-  if (synth && isReadAloudPlaying.value) {
-    synth.pause()
+  if (currentAudio) {
+    stopCurrentAudio()
     isReadAloudPlaying.value = false
-  }
-}
-
-function _resumeReadAloud() {
-  if (synth && !isReadAloudPlaying.value) {
-    synth.resume()
-    isReadAloudPlaying.value = true
+  } else {
+    speakSentence(currentSentenceIndex.value)
   }
 }
 
 function onVoiceChange() {
-  // 保存选择
   try {
     localStorage.setItem('reader-voice', selectedVoiceName.value)
   } catch {}
-  
-  // 如果正在朗读，重新朗读以应用新音色
   if (isReadAloudPlaying.value) {
-    stopReadAloud()
-    setTimeout(() => {
-      readFromSentence(currentSentenceIndex.value)
-    }, 100)
+    const idx = currentSentenceIndex.value
+    stopCurrentAudio()
+    isReadAloudPlaying.value = false
+    speakSentence(idx)
   }
 }
 
 function updateSettings() {
-  // 保存设置
   try {
     localStorage.setItem('reader-speech-rate', String(speechRate.value))
   } catch {}
@@ -1590,7 +1322,6 @@ function handleMouseMove(e: MouseEvent) {
 
 onMounted(async () => {
   startClock()
-  document.addEventListener('keydown', handleKeydown)
   document.addEventListener('mousemove', handleMouseMove)
   try { const s = localStorage.getItem('reader-sidebar-width'); if (s) { const n = parseInt(s, 10); if (!Number.isNaN(n)) sidebarWidth.value = Math.max(minW, Math.min(maxW, n)) } } catch {}
   
@@ -1600,7 +1331,7 @@ onMounted(async () => {
     if (rate) speechRate.value = parseFloat(rate)
   } catch {}
   
-  initSpeechSynthesis()
+  loadEdgeTTSVoices()
   await loadShelf()
   await loadBook(bookId.value)
   document.addEventListener('fullscreenchange', onFs)
@@ -1658,7 +1389,6 @@ function onTocClick(idx: number) {
 onBeforeUnmount(() => { 
   if (timeTimer) clearInterval(timeTimer)
   if (fullNavTimer) clearTimeout(fullNavTimer)
-  document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('fullscreenchange', onFs)
   stopReadAloud()
@@ -1862,110 +1592,8 @@ onBeforeUnmount(() => {
 
 /* 主阅读区 */
 .reader-main { flex: 1; overflow-y: auto; position: relative; min-width: 0; background: #fff; transition: background 0.3s, color 0.3s; }
-.reader-main.page-mode { overflow: hidden; }
 .reader-content-wrap { flex: 1; overflow-y: auto; }
-.reader-content-wrap.page-mode-wrap {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
 .reader-content { max-width: 720px; margin: 0 auto; padding: 16px 20px 100px; }
-.reader-content-page {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 24px 20px 0;
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-  user-select: none;
-  -webkit-user-select: none;
-  display: flex;
-  flex-direction: column;
-}
-.page-content-inner {
-  transition: scroll-left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  flex-shrink: 0;
-  overflow: hidden;
-  column-gap: 0;
-  column-fill: auto;
-}
-.page-content-inner.swiping {
-  transition: none !important;
-}
-.page-content-wrapper {
-  position: relative;
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
-  min-height: 0;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
-}
-.page-content-wrapper::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
-}
-.page-turn-area {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 25%;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  opacity: 0;
-}
-.page-turn-area.left {
-  left: 0;
-  justify-content: flex-start;
-  padding-left: 16px;
-}
-.page-turn-area.right {
-  right: 0;
-  justify-content: flex-end;
-  padding-right: 16px;
-}
-.page-turn-area.has-prev:hover,
-.page-turn-area.has-next:hover {
-  opacity: 1;
-}
-.page-turn-area.left.has-prev:hover {
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.06), transparent);
-}
-.page-turn-area.right.has-next:hover {
-  background: linear-gradient(to left, rgba(0, 0, 0, 0.06), transparent);
-}
-.turn-hint {
-  font-size: 32px;
-  color: rgba(0, 0, 0, 0.3);
-  font-weight: 300;
-  line-height: 1;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-}
-.page-turn-area:hover .turn-hint {
-  color: rgba(0, 0, 0, 0.5);
-  transform: scale(1.1);
-  transition: all 0.2s;
-}
-/* 底部页码 */
-.page-bottom-bar {
-  flex-shrink: 0;
-  padding: 6px 20px 8px;
-  text-align: center;
-}
-.page-num {
-  font-size: 11px;
-  color: rgba(0, 0, 0, 0.45);
-  font-variant-numeric: tabular-nums;
-}
-.progress-text {
-  font-size: 11px;
-  color: rgba(0, 0, 0, 0.35);
-  font-variant-numeric: tabular-nums;
-}
 .reader-content :deep(img) {
   max-width: 100%; height: auto; display: block;
   margin: 1em auto; border-radius: 4px;
@@ -2462,46 +2090,6 @@ onBeforeUnmount(() => {
 .panel-slide-enter-active, .panel-slide-leave-active { transition: opacity 0.2s, transform 0.2s; }
 .panel-slide-enter-from, .panel-slide-leave-to { opacity: 0; transform: translateY(-50%) translateX(8px); }
 
-/* 右侧面板：绝对定位浮动在按钮左侧，垂直居中 */
-.right-panel {
-  position: absolute;
-  right: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 300px;
-  max-width: 70vw;
-  max-height: 85vh;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 30;
-}
-.right-panel-hd {
-  padding: 14px 18px;
-  border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 15px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-.close-btn {
-  width: 24px; height: 24px;
-  border: none; background: #f5f5f5; border-radius: 4px;
-  cursor: pointer; font-size: 12px; color: #666;
-  display: flex; align-items: center; justify-content: center;
-}
-.close-btn:hover { background: #eee; }
-.right-panel-bd { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
-
-/* 过渡动画 */
-.panel-slide-enter-active, .panel-slide-leave-active { transition: opacity 0.2s, transform 0.2s; }
-.panel-slide-enter-from, .panel-slide-leave-to { opacity: 0; transform: translateY(-50%) translateX(8px); }
 
 /* 书架面板 */
 .shelf-panel { min-height: 120px; }
@@ -2542,7 +2130,6 @@ onBeforeUnmount(() => {
 .size-dots { flex: 1; display: flex; gap: 6px; justify-content: center; }
 .dot { width: 12px; height: 12px; border-radius: 3px; background: #e8e8e8; transition: background 0.2s; }
 .dot.active { background: #1890ff; }
-.size-label { font-size: 12px; color: #1890ff; font-weight: 500; min-width: 32px; text-align: center; flex-shrink: 0; }
 .mode-switch {
   display: flex;
   gap: 0;
@@ -2643,16 +2230,19 @@ onBeforeUnmount(() => {
 .setting-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 .setting-value { font-size: 12px; color: #1890ff; font-weight: 500; width: 36px; text-align: right; }
 
-/* 段落高亮 */
+/* 段落高亮 - 朗读追踪 */
 .reader-content p.read-aloud-active {
-  background: rgba(24,144,255,0.08);
+  background: rgba(24,144,255,0.12);
   border-left: 3px solid #1890ff;
   padding-left: 12px;
-  transition: all 0.3s;
+  border-radius: 0 4px 4px 0;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 0 0 1px rgba(24,144,255,0.06);
 }
 .theme-dark .reader-content p.read-aloud-active {
-  background: rgba(24,144,255,0.15);
+  background: rgba(24,144,255,0.2);
   border-left-color: #40a9ff;
+  box-shadow: inset 0 0 0 1px rgba(64,169,255,0.1);
 }
 
 /* 全屏导航 - 底部悬浮，鼠标靠近底部时显示 */
@@ -2776,7 +2366,6 @@ onBeforeUnmount(() => {
 .theme-dark .size-control button { background: #3a3a3a; border-color: #555; color: #ccc; }
 .theme-dark .dot { background: #555; }
 .theme-dark .dot.active { background: #1890ff; }
-.theme-dark .size-label { color: #40a9ff; }
 .theme-dark .mode-switch { background: #2a2a2a; }
 .theme-dark .mode-btn { color: #aaa; }
 .theme-dark .mode-btn.active { background: #3a3a3a; color: #40a9ff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
@@ -2831,7 +2420,6 @@ onBeforeUnmount(() => {
 .theme-green .font-btn.active { color: #2d4a2d; border-bottom-color: #5a9e42; }
 .theme-green .dot { background: #c8dba0; }
 .theme-green .dot.active { background: #5a9e42; }
-.theme-green .size-label { color: #5a9e42; }
 .theme-green .mode-switch { background: #d8e8d0; }
 .theme-green .mode-btn { color: #6a8a6a; }
 .theme-green .mode-btn.active { background: #f0f7eb; color: #5a9e42; box-shadow: 0 1px 4px rgba(90,158,66,0.1); }
@@ -2844,12 +2432,6 @@ onBeforeUnmount(() => {
 .theme-green .fullscreen-btn-float:hover { background: #f4f9f0; color: #1e3a1e; }
 
 .theme-dark .reader-main { background: #1a1a1a; color: #d0d0d0; }
-.theme-dark .page-bottom-bar { background: linear-gradient(transparent, rgba(26, 26, 26, 0.95)); }
-.theme-dark .page-num { color: rgba(255, 255, 255, 0.45); }
-.theme-dark .turn-hint { color: rgba(255, 255, 255, 0.2); text-shadow: none; }
-.theme-dark .page-turn-area:hover .turn-hint { color: rgba(255, 255, 255, 0.4); }
-.theme-dark .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(255, 255, 255, 0.05), transparent); }
-.theme-dark .page-turn-area.right.has-next:hover { background: linear-gradient(to left, rgba(255, 255, 255, 0.05), transparent); }
 .theme-green .reader-main { background: #e8f0e3; color: #3a3a3a; }
 .theme-green .zoom-btn { background: rgba(46,74,46,0.08); color: #3a5a3a; }
 .theme-green .zoom-btn:hover { background: rgba(90,158,66,0.12); color: #5a9e42; }
@@ -2906,7 +2488,6 @@ onBeforeUnmount(() => {
 .theme-parchment .size-control button { background: #f0e6d0; border-color: #c9b894; color: #3d2a00; }
 .theme-parchment .dot { background: #c9b894; }
 .theme-parchment .dot.active { background: #8b6914; }
-.theme-parchment .size-label { color: #8b6914; }
 .theme-parchment .mode-switch { background: #e0d0b0; }
 .theme-parchment .mode-btn { color: #7a6a4a; }
 .theme-parchment .mode-btn.active { background: #f0e6d0; color: #8b6914; box-shadow: 0 1px 4px rgba(139,105,20,0.1); }
@@ -2927,20 +2508,16 @@ onBeforeUnmount(() => {
 .theme-parchment .zoom-label { color: #555; }
 .theme-parchment .annotation-zoom-divider { background: rgba(0,0,0,0.1); }
 .theme-parchment .annotation-divider { background: rgba(0,0,0,0.1); }
-
-/* 翻页模式主题适配 */
-.theme-parchment .page-bottom-bar { background: linear-gradient(transparent, rgba(245, 230, 200, 0.95)); }
-.theme-parchment .page-num { color: rgba(61, 42, 0, 0.5); }
-.theme-parchment .turn-hint { color: rgba(61, 42, 0, 0.2); }
-.theme-parchment .page-turn-area:hover .turn-hint { color: rgba(61, 42, 0, 0.4); }
-.theme-parchment .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(139, 105, 20, 0.08), transparent); }
-.theme-parchment .page-turn-area.right.has-next:hover { background: linear-gradient(to left, rgba(139, 105, 20, 0.08), transparent); }
-.theme-green .page-bottom-bar { background: linear-gradient(transparent, rgba(232, 240, 227, 0.95)); }
-.theme-green .page-num { color: rgba(58, 90, 58, 0.5); }
+.theme-parchment .reader-content p.read-aloud-active {
+  background: rgba(139,105,20,0.12);
+  border-left-color: #8b6914;
+  box-shadow: inset 0 0 0 1px rgba(139,105,20,0.06);
+}
 .theme-green .turn-hint { color: rgba(58, 90, 58, 0.2); }
-.theme-green .page-turn-area:hover .turn-hint { color: rgba(58, 90, 58, 0.4); }
-.theme-green .page-turn-area.left.has-prev:hover { background: linear-gradient(to right, rgba(90, 158, 66, 0.08), transparent); }
-.theme-green .page-turn-area.right.has-next:hover { background: linear-gradient(to left, rgba(90, 158, 66, 0.08), transparent); }
-
+.theme-green .reader-content p.read-aloud-active {
+  background: rgba(90,158,66,0.12);
+  border-left-color: #5a9e42;
+  box-shadow: inset 0 0 0 1px rgba(90,158,66,0.06);
+}
 /* PDF 文本选中浮动工具栏 */
 </style>

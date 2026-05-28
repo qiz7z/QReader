@@ -520,6 +520,28 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 
 ## 📝 Changelog
 
+### v0.6.0 (2026-05-28)
+
+#### New Features
+- **edge-tts-universal TTS Engine**: Migrated from browser SpeechSynthesis API to edge-tts-universal with WebSocket connection to Microsoft TTS service, no backend required
+- **6 Chinese Voices**: Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang with natural and fluent audio quality
+- **Auto-scroll During Read Aloud**: Automatically tracks and scrolls to the current sentence position during reading
+- **Enhanced Read Aloud Highlighting**: Current sentence highlight now includes rounded corners and shadow effects with theme adaptation
+
+#### Improvements
+- **TTS Pause Fix**: Clear audio callbacks before pausing to prevent auto-advancing to next sentence
+- **Page Flip Mode Removed**: Removed page-flip reading mode, unified to scroll mode with only "Scroll" option in settings
+- **Settings Panel Cleanup**: Removed line height text labels ("Super Wide"/"Standard" etc.) for cleaner interface
+- **Favicon Update**: Replaced with transparent icon (no white border)
+- **Theme Switch Fix**: Fixed CSS duplicate blocks causing theme switching issues
+- **Auto Chapter Advance**: Read aloud automatically continues to next chapter when reaching chapter end
+
+#### Removed
+- Removed browser native SpeechSynthesis API (synthesis-failed issues)
+- Removed Flask backend TTS service (edge-tts-universal runs directly in browser)
+- Removed page flip mode related code and CSS
+- Removed line height text label display
+
 ### v0.5.0 (2026-05-27)
 
 #### New Features

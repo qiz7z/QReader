@@ -11,6 +11,7 @@
   "dependencies": {
     "canvas": "^3.2.3",
     "dexie": "^4.4.2",
+    "edge-tts-universal": "^1.4.0",
     "element-plus": "^2.14.0",
     "epubjs": "^0.3.93",
     "mammoth": "^1.12.0",
