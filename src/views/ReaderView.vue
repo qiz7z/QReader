@@ -587,9 +587,11 @@ function startClock() {
 // 阅读时长追踪（秒）
 let readingTimeTimer: number | undefined
 const sessionReadingTime = ref(0)
+let lastSavedTime = 0 // 已保存的时长
 async function startReadingTimeTracker() {
   if (readingTimeTimer) clearInterval(readingTimeTimer)
   sessionReadingTime.value = 0
+  lastSavedTime = 0
   readingTimeTimer = window.setInterval(async () => {
     sessionReadingTime.value++
     // 每 30 秒保存一次进度
@@ -599,9 +601,10 @@ async function startReadingTimeTracker() {
   }, 1000)
 }
 async function saveReadingTime() {
-  if (!bookId.value || !book.value) return
+  if (!bookId.value || !book.value || sessionReadingTime.value <= lastSavedTime) return
+  const timeToSave = sessionReadingTime.value - lastSavedTime
   const currentProgress = await StorageService.getProgress(bookId.value)
-  const totalReadingTime = (currentProgress?.readingTime || 0) + sessionReadingTime.value
+  const totalReadingTime = (currentProgress?.readingTime || 0) + timeToSave
   await StorageService.saveProgress({
     bookId: bookId.value,
     chapterId: book.value.content?.[currentChapter.value]?.id || String(currentChapter.value),
@@ -610,6 +613,7 @@ async function saveReadingTime() {
     updatedAt: Date.now(),
     readingTime: totalReadingTime,
   })
+  lastSavedTime = sessionReadingTime.value
 }
 function stopReadingTimeTracker() {
   if (readingTimeTimer) {
@@ -617,7 +621,7 @@ function stopReadingTimeTracker() {
     readingTimeTimer = undefined
   }
   // 离开时保存最终时长
-  if (sessionReadingTime.value > 0 && bookId.value) {
+  if (sessionReadingTime.value > 0 && sessionReadingTime.value > lastSavedTime && bookId.value) {
     saveReadingTime()
   }
   sessionReadingTime.value = 0
