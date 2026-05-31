@@ -349,6 +349,26 @@ export class StorageService {
     return await db.progress.get(bookId)
   }
 
+  static async getTotalReadingTime(): Promise<number> {
+    await this.initialize()
+    let total = 0
+    if (this.useOPFS) {
+      const allProgress = await opfs.listDirectory(['progress'])
+      for (const file of allProgress) {
+        if (file.endsWith('.json')) {
+          const progress = await opfs.readJSON<ProgressRecord>(['progress'], file)
+          if (progress?.readingTime) total += progress.readingTime
+        }
+      }
+    } else {
+      const allProgress = await db.progress.toArray()
+      for (const p of allProgress) {
+        if (p.readingTime) total += p.readingTime
+      }
+    }
+    return total
+  }
+
   static async saveSettings(settings: ReaderSettings): Promise<void> {
     await this.initialize()
     if (this.useOPFS) {

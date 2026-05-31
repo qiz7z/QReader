@@ -49,6 +49,12 @@
           <h1 class="brand-name">我的藏书阁</h1>
         </div>
       </div>
+      <div class="header-stats">
+        <div class="stat-item">
+          <span class="stat-label">总阅读时长</span>
+          <span class="stat-value">{{ formatReadingTime(totalReadingTime) }}</span>
+        </div>
+      </div>
       <div class="header-actions">
         <SearchBar v-model="searchQuery" @update:modelValue="handleSearch" />
         <button class="clear-all-btn" @click="handleClearAll" title="清除所有数据">
@@ -155,6 +161,11 @@ const goHome = () => {
 }
 
 const searchQuery = ref('')
+const totalReadingTime = ref(0)
+
+async function loadTotalReadingTime() {
+  totalReadingTime.value = await StorageService.getTotalReadingTime()
+}
 
 const filteredBooksWithProgress = computed(() => {
   const query = searchQuery.value.toLowerCase().trim()
@@ -238,6 +249,7 @@ async function executeClear() {
 
 onMounted(() => {
   loadBooks()
+  loadTotalReadingTime()
 })
 
 async function loadBooks() {
@@ -252,6 +264,15 @@ async function loadBooks() {
   
   booksWithProgress.value = await Promise.all(progressPromises)
   isLoading.value = false
+}
+
+function formatReadingTime(seconds: number): string {
+  if (seconds <= 0) return '0 分钟'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return `${hours}小时${minutes}分钟`
+  if (minutes > 0) return `${minutes}分钟`
+  return `${Math.floor(seconds)}秒`
 }
 </script>
 
@@ -737,6 +758,36 @@ async function loadBooks() {
   gap: 12px;
   flex: 1;
   justify-content: flex-end;
+}
+
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.8), rgba(245, 230, 200, 0.6));
+  border: 1px solid rgba(139, 90, 43, 0.2);
+  border-radius: 8px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #8b6e5a;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #5a3f2a;
+  font-family: Georgia, 'Times New Roman', serif;
 }
 
 .clear-all-btn {
