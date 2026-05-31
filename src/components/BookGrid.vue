@@ -43,7 +43,8 @@
         <h3 class="book-title" :title="book.title">{{ book.title }}</h3>
         <p class="book-author" v-if="book.author">{{ book.author }}</p>
         <p class="book-meta">{{ book.format.toUpperCase() }} · {{ formatFileSize(book.fileSize) }}</p>
-        <p class="book-time" v-if="book.updatedAt">{{ formatTime(book.updatedAt) }}</p>
+        <p class="book-time" v-if="book.progress?.readingTime">{{ formatReadingTime(book.progress.readingTime) }}</p>
+        <p class="book-time" v-else-if="book.updatedAt">{{ formatTime(book.updatedAt) }}</p>
       </div>
       <button class="delete-btn" @click.stop="confirmDelete(book.id)">
         删除
@@ -235,6 +236,14 @@ function formatTime(timestamp: number): string {
   if (diff < 60 * 60 * 1000) return Math.floor(diff / (60 * 1000)) + ' 分钟前'
   if (diff < 24 * 60 * 60 * 1000) return Math.floor(diff / (60 * 60 * 1000)) + ' 小时前'
   return date.toLocaleDateString()
+}
+
+function formatReadingTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return `${hours}小时${minutes}分钟`
+  if (minutes > 0) return `${minutes}分钟`
+  return `${Math.floor(seconds)}秒`
 }
 
 function confirmDelete(bookId: string) {

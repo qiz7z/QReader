@@ -584,6 +584,45 @@ function startClock() {
   timeTimer = window.setInterval(update, 1000)
 }
 
+// 阅读时长追踪（秒）
+let readingTimeTimer: number | undefined
+const sessionReadingTime = ref(0)
+async function startReadingTimeTracker() {
+  if (readingTimeTimer) clearInterval(readingTimeTimer)
+  sessionReadingTime.value = 0
+  readingTimeTimer = window.setInterval(async () => {
+    sessionReadingTime.value++
+    // 每 30 秒保存一次进度
+    if (sessionReadingTime.value % 30 === 0 && bookId.value) {
+      await saveReadingTime()
+    }
+  }, 1000)
+}
+async function saveReadingTime() {
+  if (!bookId.value || !book.value) return
+  const currentProgress = await StorageService.getProgress(bookId.value)
+  const totalReadingTime = (currentProgress?.readingTime || 0) + sessionReadingTime.value
+  await StorageService.saveProgress({
+    bookId: bookId.value,
+    chapterId: book.value.content?.[currentChapter.value]?.id || String(currentChapter.value),
+    position: 0,
+    percentage: book.value.content.length > 0 ? (currentChapter.value / book.value.content.length) * 100 : 0,
+    updatedAt: Date.now(),
+    readingTime: totalReadingTime,
+  })
+}
+function stopReadingTimeTracker() {
+  if (readingTimeTimer) {
+    clearInterval(readingTimeTimer)
+    readingTimeTimer = undefined
+  }
+  // 离开时保存最终时长
+  if (sessionReadingTime.value > 0 && bookId.value) {
+    saveReadingTime()
+  }
+  sessionReadingTime.value = 0
+}
+
 // 阅读字数统计
 const totalWords = computed(() => {
   if (!book.value?.content?.length) return 0
@@ -1544,6 +1583,7 @@ function handleMouseMove(e: MouseEvent) {
 
 onMounted(async () => {
   startClock()
+  startReadingTimeTracker()
   document.addEventListener('mousemove', handleMouseMove)
   try { const s = localStorage.getItem('reader-sidebar-width'); if (s) { const n = parseInt(s, 10); if (!Number.isNaN(n)) sidebarWidth.value = Math.max(minW, Math.min(maxW, n)) } } catch {}
   
@@ -1639,11 +1679,13 @@ onMounted(() => {
 onBeforeUnmount(() => { 
   resizeObserver?.disconnect()
   if (timeTimer) clearInterval(timeTimer)
+  if (readingTimeTimer) clearInterval(readingTimeTimer)
   if (fullNavTimer) clearTimeout(fullNavTimer)
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('fullscreenchange', onFs)
   document.removeEventListener('keydown', handlePageKeydown)
   stopReadAloud()
+  stopReadingTimeTracker()
 })
 </script>
 

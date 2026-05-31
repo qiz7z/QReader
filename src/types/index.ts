@@ -59,6 +59,7 @@ export interface ProgressRecord {
   position: number
   percentage: number
   updatedAt: number
+  readingTime?: number // 累计阅读时长（秒）
 }
 
 export interface ReaderSettings {
