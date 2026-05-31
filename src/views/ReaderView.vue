@@ -880,6 +880,12 @@ const fonts = [
   { l: '黑体', v: 3, css: '"HeiTi SC", "SimHei", sans-serif' },
   { l: '等宽', v: 4, css: 'Menlo, Monaco, Consolas, "Courier New", monospace' },
   { l: '仿宋', v: 5, css: '"FangSong", "STFangsong", "AR PL FangSong", serif' },
+  { l: '魏碑', v: 6, css: '"STWeiti", "WeiBei", "AR PL UKai CN", serif' },
+  { l: '行楷', v: 7, css: '"STXingkai", "XingKai", "AR PL UKai CN", serif' },
+  { l: '隶书', v: 8, css: '"SimLi", "LiSu", "STLiti", serif' },
+  { l: '幼圆', v: 9, css: '"STYouyuan", "YouYuan", serif' },
+  { l: '琥珀', v: 10, css: '"STHupo", "HuPo", serif' },
+  { l: '新宋', v: 11, css: '"NSongTi", "Songti SC", "SimSun", serif' },
 ]
 
 const themeClass = computed(() => `theme-${readerStore.theme}`)
