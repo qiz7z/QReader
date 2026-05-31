@@ -40,7 +40,7 @@
           </div>
         </div>
 
-        <div v-show="!showTocPanel" class="sidebar-collapsed">
+        <div v-show="!showTocPanel" class="sidebar-collapsed hover-visible">
           <div class="toc-icon-btn" data-title="目录" @click="showTocPanel = true">
             <svg class="collapsed-icon-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
@@ -55,7 +55,7 @@
       <div v-if="showTocPanel" class="resize-bar" @mousedown="startResize"></div>
 
   <!-- 主阅读区 -->
-  <main class="reader-main" ref="mainRef" @click="rightPanel = ''">
+  <main class="reader-main" :class="{ 'page-mode': readerStore.readerMode === 'page' && pageModeAvailable }" ref="mainRef" @click="rightPanel = ''">
     <PdfReader
       ref="pdfReaderRef"
       v-if="book && bookFormat === 'pdf'"
@@ -172,26 +172,75 @@
         <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
       </div>
     </div>
-    <div v-else-if="book" class="reader-content-wrap">
-          <!-- 滚动模式：所有章节连续显示 -->
-          <div
-            class="reader-content"
-            :style="contentStyle"
-            @mouseup="handleTextSelection"
-          >
-            <p
-              v-for="(paragraph, idx) in highlightedSentences"
-              :key="idx"
-              :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
-              :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
-              v-html="paragraph"
-            />
+    <div v-else-if="book" class="reader-content-wrap" :class="{ 'page-mode': readerStore.readerMode === 'page' && pageModeAvailable }">
+      <!-- 滚动模式 -->
+      <div
+        v-if="readerStore.readerMode === 'scroll' || !pageModeAvailable"
+        class="reader-content"
+        :style="contentStyle"
+        @mouseup="handleTextSelection"
+      >
+        <p
+          v-for="(paragraph, idx) in highlightedSentences"
+          :key="idx"
+          :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
+          :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
+          v-html="paragraph"
+        />
+      </div>
+
+      <!-- 翻页模式 -->
+      <div v-else-if="readerStore.readerMode === 'page' && pageModeAvailable" class="reader-page-mode">
+        <div class="page-viewport" :style="contentStyle" @mouseup="handleTextSelection">
+          <div class="page-col-left">
+            <template v-for="(item, i) in currentPageData?.left || []" :key="'l'+pageNum+'-'+i">
+              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex }"/>
+            </template>
           </div>
+          <div class="page-col-right">
+            <template v-for="(item, i) in currentPageData?.right || []" :key="'r'+pageNum+'-'+i">
+              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex }"/>
+            </template>
+          </div>
+        </div>
+        <div class="page-nav-wrapper page-nav-left-wrapper" @click.stop="pagePrev">
+          <button class="page-nav-side page-nav-left" :disabled="pageNum <= 1 && currentChapter <= 0">◀</button>
+        </div>
+        <div class="page-nav-wrapper page-nav-right-wrapper" @click.stop="pageNext">
+          <button class="page-nav-side page-nav-right" :disabled="pageNum >= totalPageNum && currentChapter >= (book?.content?.length || 1) - 1">▶</button>
+        </div>
+        <div v-if="!isFullscreen" class="page-indicator-bar">
+          <div class="indicator-left">
+            <span class="info-time">{{ currentTime }}</span>
+            <span class="info-divider">|</span>
+            <span class="info-progress">{{ wordsRead }} / {{ totalWords }} 字</span>
+          </div>
+          <div class="indicator-center">
+            <span class="page-indicator-text">{{ pageNum }} / {{ totalPageNum }}</span>
+            <span class="chapter-indicator" v-if="!isJumping" @click.stop="startJump">
+              {{ currentChapter + 1 }} / {{ book?.content?.length || 0 }}
+            </span>
+            <div v-else class="chapter-jump-input-wrapper">
+              <input
+                type="number"
+                v-model.number="jumpInput"
+                @keyup.enter="confirmJump"
+                @blur="confirmJump"
+                ref="jumpInputRef"
+                class="chapter-input"
+                min="1"
+                :max="book?.content?.length || 1"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="loading">加载中...</div>
     </div>
-        <div v-else class="loading">加载中...</div>
 
         <!-- 章节导航 -->
-        <div v-if="!isFullscreen && bookFormat !== 'pdf'" class="reader-nav-cr">
+        <div v-if="!isFullscreen && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-nav-cr">
           <div class="nav-buttons">
             <button class="nav-btn" @click="prevPage" :disabled="currentChapter <= 0">上一章</button>
             <button class="nav-btn" @click="nextPage" :disabled="currentChapter >= (book?.content?.length || 1) - 1">下一章</button>
@@ -222,7 +271,7 @@
         </button>
 
         <!-- 左下角阅读信息 -->
-        <div v-if="book && bookFormat !== 'pdf'" class="reader-info-bar">
+        <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-info-bar">
           <span class="info-time">{{ currentTime }}</span>
           <span class="info-divider">|</span>
           <span class="info-progress">{{ wordsRead }} / {{ totalWords }} 字</span>
@@ -244,7 +293,7 @@
       </div>
 
       <!-- 右侧工具栏 -->
-      <aside class="reader-right" @click.stop>
+      <aside class="reader-right" :class="{ 'hover-visible': !rightPanel }" @mouseenter="showRightTools = true" @mouseleave="showRightTools = false" @click.stop>
         <div class="right-tools">
           <button class="tool-btn" @click.stop="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud' }" title="朗读">
             <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -367,10 +416,16 @@
                 <label class="group-label">阅读方式</label>
                 <div class="mode-switch">
                   <button
-                    class="mode-btn active"
+                    class="mode-btn"
                     :class="{ active: readerStore.readerMode === 'scroll' }"
                     @click="readerStore.setReaderMode('scroll')"
                   >滚动</button>
+                  <button
+                    class="mode-btn"
+                    :class="{ active: readerStore.readerMode === 'page' }"
+                    @click="readerStore.setReaderMode('page')"
+                    v-if="pageModeAvailable"
+                  >翻页</button>
                 </div>
               </div>
               <div class="setting-group">
@@ -513,6 +568,7 @@ const bookFormat = ref('')
 const currentChapter = ref(0)
 const pageTransition = ref('page-forward')
 const isFullscreen = ref(false)
+const pageModeAvailable = computed(() => bookFormat.value && bookFormat.value !== 'pdf')
 const pdfScale = ref(2.0)
 
 // 实时时钟
@@ -575,6 +631,178 @@ const bodyRef = ref<HTMLElement | null>(null)
 
 const showTocPanel = ref(false)
 const sidebarWidth = ref(200)
+const showRightTools = ref(false)
+
+// 翻页模式
+const pageNum = ref(1)
+const totalPageNum = ref(1)
+const pages = ref<Array<{ left: Array<{ html: string, idx: number }>, right: Array<{ html: string, idx: number }> }>>([])
+
+const currentPageData = computed(() => {
+  if (pages.value.length === 0) return null
+  return pages.value[Math.min(pageNum.value, pages.value.length) - 1]
+})
+
+function recalcPages() {
+  const vp = document.querySelector('.page-viewport') as HTMLElement
+  if (!vp) return
+
+  const cs = window.getComputedStyle(vp)
+  const colWidth = (vp.clientWidth - 168) / 2
+  const pageHeight = vp.clientHeight - 40
+  if (pageHeight <= 0 || colWidth <= 0) return
+
+  const margin = parseFloat(cs.fontSize) * 0.8
+
+  const measurer = document.createElement('div')
+  measurer.style.cssText = `position:absolute;visibility:hidden;width:${colWidth}px;font-family:${cs.fontFamily};font-size:${cs.fontSize};line-height:${cs.lineHeight};padding:0;`
+  document.body.appendChild(measurer)
+  const p = document.createElement('p')
+  p.style.margin = '0 0 0.8em 0'
+  measurer.appendChild(p)
+
+  function splitOversized(html: string): string[] {
+    if (!html) return ['']
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    const fullText = tmp.textContent || ''
+    if (!fullText) return [html]
+    const chunks: string[] = []
+    let remainingHtml = html
+    let remainingText = fullText
+    while (remainingText.length > 0) {
+      let lo = 1, hi = remainingText.length
+      p.textContent = remainingText
+      if (p.offsetHeight <= pageHeight) {
+        chunks.push(remainingHtml)
+        break
+      }
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >>> 1
+        p.textContent = remainingText.substring(0, mid)
+        if (p.offsetHeight <= pageHeight) lo = mid
+        else hi = mid - 1
+      }
+      const cut = Math.max(
+        remainingText.lastIndexOf('\n', lo),
+        remainingText.lastIndexOf('。', lo),
+        remainingText.lastIndexOf('！', lo),
+        remainingText.lastIndexOf('？', lo),
+        remainingText.lastIndexOf('.', lo),
+        remainingText.lastIndexOf(' ', lo)
+      )
+      const splitAt = cut > lo * 0.4 ? cut + 1 : lo
+      let htmlChars = 0, textChars = 0, inTag = false
+      for (let i = 0; i < remainingHtml.length && textChars < splitAt; i++) {
+        const c = remainingHtml[i]
+        htmlChars++
+        if (c === '<') inTag = true
+        else if (c === '>') inTag = false
+        else if (!inTag) textChars++
+      }
+      const safeEnd = remainingHtml.lastIndexOf('>', htmlChars)
+      const finalCut = safeEnd > htmlChars * 0.6 ? safeEnd + 1 : htmlChars
+      chunks.push(remainingHtml.substring(0, finalCut))
+      remainingHtml = remainingHtml.substring(finalCut)
+      const nextTmp = document.createElement('div')
+      nextTmp.innerHTML = remainingHtml
+      remainingText = nextTmp.textContent || ''
+    }
+    return chunks
+  }
+
+  const flattedParagraphs: Array<{ html: string, idx: number }> = []
+  const flattedHeights: number[] = []
+
+  highlightedSentences.value.forEach((para, idx) => {
+    p.innerHTML = para
+    const h = p.offsetHeight
+    if (h <= pageHeight) {
+      flattedParagraphs.push({ html: para, idx })
+      flattedHeights.push(h)
+    } else {
+      const chunks = splitOversized(para)
+      for (const chunk of chunks) {
+        p.textContent = chunk
+        flattedParagraphs.push({ html: chunk, idx })
+        flattedHeights.push(p.offsetHeight)
+      }
+    }
+  })
+
+  document.body.removeChild(measurer)
+
+  const newPages: Array<{ left: Array<{ html: string, idx: number }>, right: Array<{ html: string, idx: number }> }> = []
+  let i = 0
+
+  while (i < flattedParagraphs.length) {
+    let leftH = 0
+    const left: Array<{ html: string, idx: number }> = []
+    while (i < flattedParagraphs.length) {
+      const h = flattedHeights[i] + margin
+      if (left.length > 0 && leftH + h > pageHeight) break
+      left.push(flattedParagraphs[i])
+      leftH += h
+      i++
+    }
+
+    let rightH = 0
+    const right: Array<{ html: string, idx: number }> = []
+    while (i < flattedParagraphs.length) {
+      const h = flattedHeights[i] + margin
+      if (right.length > 0 && rightH + h > pageHeight) break
+      right.push(flattedParagraphs[i])
+      rightH += h
+      i++
+    }
+
+    newPages.push({ left, right })
+  }
+
+  pages.value = newPages
+  totalPageNum.value = newPages.length
+  if (pageNum.value > newPages.length) pageNum.value = newPages.length
+}
+
+function pagePrev() {
+  if (pageNum.value > 1) {
+    pageNum.value--
+  } else if (currentChapter.value > 0) {
+    currentChapter.value--
+    pageNum.value = 1
+    pageTransition.value = 'page-back'
+    nextTick(() => recalcPages())
+  }
+}
+
+function pageNext() {
+  if (pageNum.value < totalPageNum.value) {
+    pageNum.value++
+  } else if (book.value && currentChapter.value < book.value.content.length - 1) {
+    currentChapter.value++
+    pageNum.value = 1
+    pageTransition.value = 'page-forward'
+    nextTick(() => recalcPages())
+  }
+}
+
+function handlePageKeydown(e: KeyboardEvent) {
+  if (readerStore.readerMode !== 'page' || !pageModeAvailable.value) return
+  if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
+  console.log('[keydown]', e.key, 'mode:', readerStore.readerMode, 'pageModeAvailable:', pageModeAvailable.value)
+  if (e.key === 'ArrowLeft') { e.preventDefault(); pagePrev() }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); pageNext() }
+}
+
+function handlePageClick(e: MouseEvent) {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const x = e.clientX - rect.left
+  if (x < rect.width / 2) {
+    if (pageNum.value > 1) pageNum.value--
+  } else {
+    if (pageNum.value < totalPageNum.value) pageNum.value++
+  }
+}
 const minW = 120
 const maxW = 400
 
@@ -782,6 +1010,7 @@ function prevPage() {
   if (currentChapter.value > 0) {
     pageTransition.value = 'page-back'
     currentChapter.value--
+    pageNum.value = 1
     scrollToChapterStart()
   }
 }
@@ -790,6 +1019,7 @@ function nextPage() {
   if (book.value && currentChapter.value < book.value.content.length - 1) {
     pageTransition.value = 'page-forward'
     currentChapter.value++
+    pageNum.value = 1
     scrollToChapterStart()
   }
 }
@@ -867,11 +1097,13 @@ async function saveHighlight() {
   highlights.value.push(note)
   showHlToolbar.value = false
   window.getSelection()?.removeAllRanges()
+  if (readerStore.readerMode === 'page') nextTick(() => recalcPages())
 }
 
 async function deleteHighlight(id: string) {
   await StorageService.deleteNote(id)
   highlights.value = highlights.value.filter(h => h.id !== id)
+  if (readerStore.readerMode === 'page') nextTick(() => recalcPages())
 }
 
 function getChapterTitle(chapterId: string) {
@@ -1335,6 +1567,7 @@ onMounted(async () => {
   await loadShelf()
   await loadBook(bookId.value)
   document.addEventListener('fullscreenchange', onFs)
+  document.addEventListener('keydown', handlePageKeydown)
 })
 
 // 章节变化时重置段落索引并加载划线
@@ -1386,11 +1619,40 @@ function onTocClick(idx: number) {
   }
 }
 
+watch([() => readerStore.readerMode, () => readerStore.fontSize, () => currentChapter.value], () => {
+  if (readerStore.readerMode === 'page' && pageModeAvailable.value) {
+    nextTick(() => { setTimeout(recalcPages, 50) })
+  }
+})
+
+watch(() => bookFormat.value, (fmt) => {
+  if (fmt && !pageModeAvailable.value && readerStore.readerMode === 'page') {
+    readerStore.setReaderMode('scroll')
+  }
+  if (fmt && pageModeAvailable.value && readerStore.readerMode === 'page') {
+    nextTick(() => { setTimeout(recalcPages, 50) })
+  }
+})
+
+let resizeObserver: ResizeObserver | null = null
+onMounted(() => {
+  nextTick(() => {
+    if (readerStore.readerMode === 'page' && pageModeAvailable.value) setTimeout(recalcPages, 100)
+  })
+  resizeObserver = new ResizeObserver(() => {
+    if (readerStore.readerMode === 'page' && pageModeAvailable.value) recalcPages()
+  })
+  const vp = document.querySelector('.page-viewport') as HTMLElement
+  if (vp) resizeObserver.observe(vp)
+})
+
 onBeforeUnmount(() => { 
+  resizeObserver?.disconnect()
   if (timeTimer) clearInterval(timeTimer)
   if (fullNavTimer) clearTimeout(fullNavTimer)
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('fullscreenchange', onFs)
+  document.removeEventListener('keydown', handlePageKeydown)
   stopReadAloud()
 })
 </script>
@@ -1547,6 +1809,29 @@ onBeforeUnmount(() => {
   flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
   user-select: none; padding: 15vh 6px 12px; text-align: center;
 }
+.sidebar-collapsed.hover-visible {
+  opacity: 0.1;
+  background: transparent;
+  transition: opacity 0.3s ease;
+}
+.sidebar-collapsed.hover-visible .toc-icon-btn {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+}
+.sidebar-collapsed.hover-visible:hover {
+  opacity: 1;
+}
+.theme-dark .sidebar-collapsed.hover-visible:hover { background: #1a1a1a; }
+.theme-green .sidebar-collapsed.hover-visible:hover { background: #e8f0e3; }
+.theme-parchment .sidebar-collapsed.hover-visible:hover { background: #f5e6c8; }
+.sidebar-collapsed.hover-visible:hover .toc-icon-btn {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  border-color: rgba(0,0,0,0.04);
+}
+.theme-dark .sidebar-collapsed.hover-visible:hover .toc-icon-btn { background: #444; }
+.theme-green .sidebar-collapsed.hover-visible:hover .toc-icon-btn { background: #c8dba0; }
+.theme-parchment .sidebar-collapsed.hover-visible:hover .toc-icon-btn { background: #d4c5a9; }
 .toc-icon-btn {
   width: 46px; height: 46px;
   background: #fff;
@@ -1591,8 +1876,140 @@ onBeforeUnmount(() => {
 .resize-bar:hover { background: rgba(0,0,0,0.06); }
 
 /* 主阅读区 */
-.reader-main { flex: 1; overflow-y: auto; position: relative; min-width: 0; background: #fff; transition: background 0.3s, color 0.3s; }
+.reader-main { flex: 1; overflow-y: auto; position: relative; min-width: 0; background: #fff; transition: background 0.3s, color 0.3s; border-left: 1px solid #eee; }
 .reader-content-wrap { flex: 1; overflow-y: auto; }
+.reader-content-wrap.page-mode { overflow: hidden; display: flex; flex-direction: column; }
+.reader-main.page-mode { overflow: hidden !important; display: flex; flex-direction: column; }
+.reader-page-mode {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.page-viewport {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  padding: 20px 64px 20px 64px;
+  box-sizing: border-box;
+  overflow: hidden;
+  align-items: start;
+  align-content: center;
+  justify-items: stretch;
+}
+.page-col-left,
+.page-col-right {
+  min-width: 0;
+  overflow: hidden;
+}
+.page-col-left p,
+.page-col-right p {
+  margin: 0 0 0.8em 0;
+  line-height: 1.8;
+}
+.page-viewport p {
+  margin: 0 0 0.8em 0;
+  line-height: 1.8;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.page-indicator-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  font-size: 13px;
+  color: #999;
+  background: rgba(0,0,0,0.05);
+}
+.indicator-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+.indicator-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.indicator-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chapter-nav-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 10px;
+  cursor: pointer;
+  color: #666;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.chapter-nav-btn:hover:not(:disabled) { border-color: #1890ff; color: #1890ff; }
+.chapter-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.page-nav-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 10px;
+  cursor: pointer;
+  color: #666;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.page-nav-btn:hover:not(:disabled) { border-color: #1890ff; color: #1890ff; }
+.page-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.page-nav-wrapper {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.page-nav-wrapper:active { z-index: 11; }
+.page-nav-left-wrapper { left: 0; }
+.page-nav-right-wrapper { right: 0; }
+.page-nav-wrapper .page-nav-side {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  color: #666;
+  font-size: 16px;
+  position: static;
+  transform: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s;
+  z-index: 10;
+}
+.reader-page-mode:hover .page-nav-wrapper .page-nav-side {
+  opacity: 1;
+}
+.page-nav-wrapper:hover .page-nav-side {
+  border-color: #1890ff;
+  color: #1890ff;
+  background: rgba(24,144,255,0.1);
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(24,144,255,0.3);
+}
+.page-nav-side:hover:not(:disabled) { border-color: #1890ff; color: #1890ff; background: rgba(24,144,255,0.1); }
 .reader-content { max-width: 720px; margin: 0 auto; padding: 16px 20px 100px; }
 .reader-content :deep(img) {
   max-width: 100%; height: auto; display: block;
@@ -1921,6 +2338,15 @@ onBeforeUnmount(() => {
   background: #fff;
   border-left: 1px solid #eee;
 }
+.reader-right.hover-visible {
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+  background: transparent;
+  border-left: none;
+}
+.reader-right.hover-visible:hover {
+  opacity: 1;
+}
 .right-tools { 
   display: flex; 
   flex-direction: column; 
@@ -2231,7 +2657,8 @@ onBeforeUnmount(() => {
 .setting-value { font-size: 12px; color: #1890ff; font-weight: 500; width: 36px; text-align: right; }
 
 /* 段落高亮 - 朗读追踪 */
-.reader-content p.read-aloud-active {
+.reader-content p.read-aloud-active,
+.reader-page-mode p.read-aloud-active {
   background: rgba(24,144,255,0.12);
   border-left: 3px solid #1890ff;
   padding-left: 12px;
@@ -2239,7 +2666,8 @@ onBeforeUnmount(() => {
   transition: all 0.3s ease;
   box-shadow: inset 0 0 0 1px rgba(24,144,255,0.06);
 }
-.theme-dark .reader-content p.read-aloud-active {
+.theme-dark .reader-content p.read-aloud-active,
+.theme-dark .reader-page-mode p.read-aloud-active {
   background: rgba(24,144,255,0.2);
   border-left-color: #40a9ff;
   box-shadow: inset 0 0 0 1px rgba(64,169,255,0.1);
@@ -2431,8 +2859,8 @@ onBeforeUnmount(() => {
 .theme-green .fullscreen-btn-float { background: #fff; color: #3a5a3a; border-color: #c8e0c0; }
 .theme-green .fullscreen-btn-float:hover { background: #f4f9f0; color: #1e3a1e; }
 
-.theme-dark .reader-main { background: #1a1a1a; color: #d0d0d0; }
-.theme-green .reader-main { background: #e8f0e3; color: #3a3a3a; }
+.theme-dark .reader-main { background: #1a1a1a; color: #d0d0d0; border-color: #333; }
+.theme-green .reader-main { background: #e8f0e3; color: #3a3a3a; border-color: #d4e8c8; }
 .theme-green .zoom-btn { background: rgba(46,74,46,0.08); color: #3a5a3a; }
 .theme-green .zoom-btn:hover { background: rgba(90,158,66,0.12); color: #5a9e42; }
 .theme-green .zoom-slider { background: transparent; accent-color: #5a9e42; }
@@ -2497,7 +2925,7 @@ onBeforeUnmount(() => {
 .theme-parchment .danger-btn { border-color: #c04040; color: #c04040; }
 .theme-parchment .danger-btn:hover { background: #c04040; color: #fff; }
 .theme-parchment .nav-btn { background: rgba(255,255,255,0.3); color: #3d2a00; border-color: #c9b894; }
-.theme-parchment .reader-main { background: #f5e6c8; color: #3d2a00; }
+.theme-parchment .reader-main { background: #f5e6c8; color: #3d2a00; border-color: #d4c5a9; }
 .theme-parchment .pdf-zoom-controls { background: #fff; border-color: #ddd; }
 .theme-parchment .zoom-btn { background: rgba(0,0,0,0.06); color: #555; }
 .theme-parchment .zoom-btn:hover { background: rgba(24,144,255,0.15); color: #1890ff; }
@@ -2508,16 +2936,20 @@ onBeforeUnmount(() => {
 .theme-parchment .zoom-label { color: #555; }
 .theme-parchment .annotation-zoom-divider { background: rgba(0,0,0,0.1); }
 .theme-parchment .annotation-divider { background: rgba(0,0,0,0.1); }
-.theme-parchment .reader-content p.read-aloud-active {
+.theme-parchment .reader-content p.read-aloud-active,
+.theme-parchment .reader-page-mode p.read-aloud-active {
   background: rgba(139,105,20,0.12);
   border-left-color: #8b6914;
   box-shadow: inset 0 0 0 1px rgba(139,105,20,0.06);
 }
 .theme-green .turn-hint { color: rgba(58, 90, 58, 0.2); }
-.theme-green .reader-content p.read-aloud-active {
+.theme-green .reader-content p.read-aloud-active,
+.theme-green .reader-page-mode p.read-aloud-active {
   background: rgba(90,158,66,0.12);
   border-left-color: #5a9e42;
   box-shadow: inset 0 0 0 1px rgba(90,158,66,0.06);
 }
+.theme-dark .chapter-indicator { background: rgba(40,40,40,0.9); color: #ccc; border-color: rgba(255,255,255,0.1); }
+.theme-parchment .chapter-indicator { background: rgba(255,255,255,0.5); color: #3d2a00; border-color: #c9b894; }
 /* PDF 文本选中浮动工具栏 */
 </style>

@@ -520,6 +520,28 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 
 ## 📝 Changelog
 
+### v0.7.0 (2026-05-31)
+
+#### New Features
+- **Page Flip Mode Returns**: Reimplemented page-flip reading mode for TXT/EPUB/MD (non-PDF formats) with left-right dual-column CSS Grid layout
+- **Keyboard Shortcuts**: ArrowLeft/ArrowRight keys for page navigation
+- **Enhanced Read Aloud Tracking**: Current sentence highlighting during read-aloud in page-flip mode with theme adaptation
+- **Cross-Chapter Navigation**: Page flip buttons support chapter transitions (first page → previous chapter's last page, last page → next chapter's first page)
+- **Sidebar Theme Adaptation**: Left collapsed TOC panel hover background adapts to themes (dark/green/parchment)
+- **Info Bar Integration**: Bottom info bar combines time/word count/page number/chapter progress, auto-hides in fullscreen
+
+#### Improvements
+- **Highlight Stutter Fix**: `saveHighlight` and `deleteHighlight` use `nextTick()` to delay re-layout, reducing main thread blocking
+- **Oversized Paragraph Optimized**: `splitOversized` function supports HTML tags, highlight marks preserved during pagination
+- **Text Highlight Fix**: Text highlighting and notes work correctly in page-flip mode with immediate redraw
+- **Left Border Theme**: Left `.reader-main` border color adapts to themes, symmetric with right side
+- **Flip Button Interaction**: Side flip buttons hidden by default, visible on hover, with blue shadow and scale effect
+
+#### Technical Changes
+- Page data structure changed from `string[]` to `Array<{ html: string, idx: number }>` to preserve paragraph indices for read-aloud tracking
+- `recalcPages()` changed to async trigger to avoid synchronous UI blocking
+- Keyboard event listeners registered in `onMounted`, cleaned up in `onBeforeUnmount`
+
 ### v0.6.0 (2026-05-28)
 
 #### New Features
