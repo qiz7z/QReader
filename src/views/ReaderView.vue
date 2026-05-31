@@ -250,7 +250,7 @@
                 v-model.number="jumpInput"
                 @keyup.enter="confirmJump"
                 @blur="confirmJump"
-                ref="jumpInputRef"
+                ref="jumpInputRef1"
                 class="chapter-input"
                 min="1"
                 :max="book?.content?.length || 1"
@@ -263,28 +263,7 @@
       <div v-else class="loading">加载中...</div>
     </div>
 
-        <!-- 章节导航 -->
-        <div v-if="!isFullscreen && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-nav-cr">
-          <div class="nav-buttons">
-            <button class="nav-btn" @click="prevPage" :disabled="currentChapter <= 0">上一章</button>
-            <button class="nav-btn" @click="nextPage" :disabled="currentChapter >= (book?.content?.length || 1) - 1">下一章</button>
-          </div>
-          <div class="chapter-indicator" v-if="!isJumping" @click="startJump">
-            {{ currentChapter + 1 }} / {{ book?.content?.length || 0 }}
-          </div>
-          <div v-else class="chapter-jump-input-wrapper">
-            <input
-              type="number"
-              v-model.number="jumpInput"
-              @keyup.enter="confirmJump"
-              @blur="confirmJump"
-              ref="jumpInputRef"
-              class="chapter-input"
-              min="1"
-              :max="book?.content?.length || 1"
-            />
-          </div>
-        </div>
+        <!-- 翻页模式右下角翻章按钮已移除，章节跳转统一在底部功能栏 -->
 
         <!-- 悬浮全屏按钮 -->
         <button v-if="!isFullscreen" class="fullscreen-btn-float" @click="toggleFullscreen" title="全屏阅读">
@@ -294,11 +273,27 @@
           </svg>
         </button>
 
-        <!-- 左下角阅读信息 -->
+        <!-- 左下角阅读信息（滚动模式） -->
         <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-info-bar">
           <span class="info-time">{{ currentTime }}</span>
           <span class="info-divider">|</span>
           <span class="info-progress">{{ wordsRead }} / {{ totalWords }} 字</span>
+          <span class="info-divider">|</span>
+          <span class="chapter-indicator info-chapter" v-if="!isJumping" @click.stop="startJump">
+            {{ currentChapter + 1 }} / {{ book?.content?.length || 0 }}
+          </span>
+          <div v-else class="chapter-jump-input-wrapper info-chapter-input">
+            <input
+              type="number"
+              v-model.number="jumpInput"
+              @keyup.enter="confirmJump"
+              @blur="confirmJump"
+              ref="jumpInputRef2"
+              class="chapter-input"
+              min="1"
+              :max="book?.content?.length || 1"
+            />
+          </div>
         </div>
       </main>
 
@@ -886,9 +881,10 @@ const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | nu
 const showFullToc = ref(false)
 const showFullNav = ref(false) // 全屏导航显示状态
 let fullNavTimer: ReturnType<typeof setTimeout> | null = null
-const jumpInput = ref('')
+const jumpInput = ref(1)
 const isJumping = ref(false)
-const jumpInputRef = ref<HTMLInputElement | null>(null)
+const jumpInputRef1 = ref<HTMLInputElement | null>(null) // 底部功能栏
+const jumpInputRef2 = ref<HTMLInputElement | null>(null) // 右侧章节导航
 
 // 划线笔记
 const highlights = ref<NoteRecord[]>([])
@@ -1089,24 +1085,6 @@ function startResize() {
 
 function scrollToChapterStart() {
   if (mainRef.value) mainRef.value.scrollTop = 0
-}
-
-function prevPage() {
-  if (currentChapter.value > 0) {
-    pageTransition.value = 'page-back'
-    currentChapter.value--
-    pageNum.value = 1
-    scrollToChapterStart()
-  }
-}
-
-function nextPage() {
-  if (book.value && currentChapter.value < book.value.content.length - 1) {
-    pageTransition.value = 'page-forward'
-    currentChapter.value++
-    pageNum.value = 1
-    scrollToChapterStart()
-  }
 }
 
 async function loadShelf() {
@@ -1604,17 +1582,18 @@ function canvasToBlob(canvas: HTMLCanvasElement): Blob {
 }
 
 function startJump() {
-  jumpInput.value = String(currentChapter.value + 1)
+  jumpInput.value = currentChapter.value + 1
   isJumping.value = true
   setTimeout(() => {
-    jumpInputRef.value?.focus()
-    jumpInputRef.value?.select()
+    // 尝试聚焦当前可见的输入框
+    jumpInputRef1.value?.focus() || jumpInputRef2.value?.focus()
+    jumpInputRef1.value?.select() || jumpInputRef2.value?.select()
   }, 50)
 }
 
 function confirmJump() {
   const max = book.value?.content?.length || 1
-  const target = parseInt(jumpInput.value, 10)
+  const target = Number(jumpInput.value)
   if (!isNaN(target) && target >= 1 && target <= max) {
     currentChapter.value = target - 1
     scrollToChapterStart()
@@ -2062,11 +2041,9 @@ onBeforeUnmount(() => {
 .page-col-left p,
 .page-col-right p {
   margin: 0 0 0.8em 0;
-  line-height: 1.8;
 }
 .page-viewport p {
   margin: 0 0 0.8em 0;
-  line-height: 1.8;
   break-inside: avoid;
   page-break-inside: avoid;
 }
@@ -2093,6 +2070,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.page-indicator-text {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
 }
 .indicator-right {
   display: flex;
@@ -2137,19 +2120,21 @@ onBeforeUnmount(() => {
   position: absolute; left: 0; top: 0; bottom: 0;
   display: flex; align-items: center; gap: 4px;
   padding-left: 8px; z-index: 9;
+  pointer-events: none;
 }
 .page-nav-left-group::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-  width: 100px;
+  width: 80px; pointer-events: auto;
 }
 .page-nav-right-group {
   position: absolute; right: 0; top: 0; bottom: 0;
   display: flex; align-items: center; gap: 4px;
   padding-right: 8px; z-index: 9;
+  pointer-events: none;
 }
 .page-nav-right-group::before {
   content: ''; position: absolute; right: 0; top: 0; bottom: 0;
-  width: 100px;
+  width: 80px; pointer-events: auto;
 }
 .page-nav-wrapper .page-nav-side {
   background: transparent;
@@ -2215,7 +2200,7 @@ onBeforeUnmount(() => {
 }
 
 /* 右下角章节按钮 */
-.reader-nav-cr { position: fixed; right: 76px; bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 30; }
+.reader-nav-cr { position: fixed; right: 76px; bottom: 50px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 30; }
 .nav-buttons { display: flex; gap: 8px; }
 .nav-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.85); backdrop-filter: blur(4px); color: #333; cursor: pointer; font-size: 13px; font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
 .nav-btn:hover:not(:disabled) { background: rgba(24,144,255,0.1); border-color: #1890ff; color: #1890ff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(24,144,255,0.15); }
@@ -2236,6 +2221,8 @@ onBeforeUnmount(() => {
 .page-nav-right-group:hover .chapter-nav-btn { opacity: 1; pointer-events: auto; }
 .page-nav-left-group:hover .page-nav-wrapper,
 .page-nav-right-group:hover .page-nav-wrapper { pointer-events: auto; }
+.page-nav-left-group:hover .page-nav-side,
+.page-nav-right-group:hover .page-nav-side { pointer-events: auto; }
 .chapter-nav-btn:hover:not(:disabled) {
   border-color: #1890ff; color: #1890ff;
   background: rgba(24,144,255,0.08);
@@ -2292,10 +2279,24 @@ onBeforeUnmount(() => {
   color: #888;
   z-index: 50;
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
   font-family: 'Georgia', 'Times New Roman', serif;
   font-weight: 500;
   letter-spacing: 0.5px;
+}
+.info-chapter {
+  background: none;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+.info-chapter:hover {
+  color: #1890ff;
+  transform: none;
+  box-shadow: none;
+}
+.info-chapter-input {
+  width: 60px;
 }
 .info-time {
   font-weight: 500;
@@ -2813,7 +2814,7 @@ onBeforeUnmount(() => {
 /* 主题切换 */
 .theme-grid { display: flex; gap: 12px; }
 .theme-btn {
-  flex: 1; height: 44px; border: 2px solid transparent; border-radius: 12px;
+  flex: 1; height: 36px; border: 2px solid transparent; border-radius: 8px;
   cursor: pointer; font-size: 13px; font-weight: 500;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
