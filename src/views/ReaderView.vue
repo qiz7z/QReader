@@ -203,11 +203,35 @@
             </template>
           </div>
         </div>
-        <div class="page-nav-wrapper page-nav-left-wrapper" @click.stop="pagePrev">
-          <button class="page-nav-side page-nav-left" :disabled="pageNum <= 1 && currentChapter <= 0">◀</button>
+        <div class="page-nav-left-group">
+          <button class="chapter-nav-btn" @click.stop="prevChapter" :disabled="currentChapter <= 0" title="上一章" aria-label="上一章">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="11 17 6 12 11 7"></polyline>
+              <polyline points="18 17 13 12 18 7"></polyline>
+            </svg>
+          </button>
+          <div class="page-nav-wrapper" @click.stop="pagePrev">
+            <button class="page-nav-side page-nav-left" :disabled="pageNum <= 1" title="上一页" aria-label="上一页">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+          </div>
         </div>
-        <div class="page-nav-wrapper page-nav-right-wrapper" @click.stop="pageNext">
-          <button class="page-nav-side page-nav-right" :disabled="pageNum >= totalPageNum && currentChapter >= (book?.content?.length || 1) - 1">▶</button>
+        <div class="page-nav-right-group">
+          <div class="page-nav-wrapper" @click.stop="pageNext">
+            <button class="page-nav-side page-nav-right" :disabled="pageNum >= totalPageNum" title="下一页" aria-label="下一页">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+          <button class="chapter-nav-btn" @click.stop="nextChapter" :disabled="currentChapter >= (book?.content?.length || 1) - 1" title="下一章" aria-label="下一章">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="13 17 18 12 13 7"></polyline>
+              <polyline points="6 17 11 12 6 7"></polyline>
+            </svg>
+          </button>
         </div>
         <div v-if="!isFullscreen" class="page-indicator-bar">
           <div class="indicator-left">
@@ -497,8 +521,13 @@
 
     <!-- 全屏导航 - 鼠标靠近底部时显示 -->
     <div v-if="isFullscreen && bookFormat !== 'pdf'" class="fullnav" :class="{ visible: showFullNav }">
-      <button class="nav-btn" @click="prevPage" :disabled="currentChapter <= 0">上一章</button>
-      
+      <button class="nav-btn" @click="prevChapter" :disabled="currentChapter <= 0" title="上一章" aria-label="上一章">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="11 17 6 12 11 7"></polyline>
+          <polyline points="18 17 13 12 18 7"></polyline>
+        </svg>
+      </button>
+
       <div class="full-chapter-wrapper">
         <div class="chapter-indicator full-screen" v-if="!isJumping" @click="startJump">
           {{ currentChapter + 1 }} / {{ book?.content?.length || 0 }}
@@ -516,7 +545,12 @@
         </div>
       </div>
 
-      <button class="nav-btn" @click="nextPage" :disabled="currentChapter >= (book?.content?.length || 1) - 1">下一章</button>
+      <button class="nav-btn" @click="nextChapter" :disabled="currentChapter >= (book?.content?.length || 1) - 1" title="下一章" aria-label="下一章">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="13 17 18 12 13 7"></polyline>
+          <polyline points="6 17 11 12 6 7"></polyline>
+        </svg>
+      </button>
     </div>
 
     <div v-if="isFullscreen && showFullToc && book" class="full-toc-overlay" @click="showFullToc = false">
@@ -810,21 +844,29 @@ function recalcPages() {
 function pagePrev() {
   if (pageNum.value > 1) {
     pageNum.value--
-  } else if (currentChapter.value > 0) {
-    currentChapter.value--
-    pageNum.value = 1
-    pageTransition.value = 'page-back'
-    nextTick(() => recalcPages())
   }
 }
 
 function pageNext() {
   if (pageNum.value < totalPageNum.value) {
     pageNum.value++
-  } else if (book.value && currentChapter.value < book.value.content.length - 1) {
+  }
+}
+
+function prevChapter() {
+  if (currentChapter.value > 0) {
+    pageTransition.value = 'page-back'
+    currentChapter.value--
+    pageNum.value = 1
+    nextTick(() => recalcPages())
+  }
+}
+
+function nextChapter() {
+  if (book.value && currentChapter.value < book.value.content.length - 1) {
+    pageTransition.value = 'page-forward'
     currentChapter.value++
     pageNum.value = 1
-    pageTransition.value = 'page-forward'
     nextTick(() => recalcPages())
   }
 }
@@ -867,6 +909,10 @@ const speechRate = ref(1)
 const selectedVoiceName = ref('')
 let currentSentenceIndex = ref(0)
 let isAutoAdvancingChapter = false // 朗读自动跳章标记
+
+// TTS 代理服务器配置（用于非 Edge 浏览器）
+const TTS_PROXY_URL = 'http://localhost:3004/api/tts'
+let isProxyAvailable = ref<boolean | null>(null) // null 表示未检测
 const themes = [
   { l: '白天', v: 'light' as const },
   { l: '夜间', v: 'dark' as const },
@@ -1236,6 +1282,51 @@ async function loadEdgeTTSVoices() {
   }
 }
 
+// 检测代理服务器是否可用
+async function checkProxyAvailability(): Promise<boolean> {
+  try {
+    const response = await fetch(TTS_PROXY_URL.replace('/api/tts', '/api/health'), {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000) // 2秒超时
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+// 通过代理服务器朗读
+async function speakViaProxy(text: string, voice: string, rateStr: string): Promise<ArrayBuffer> {
+  const response = await fetch(TTS_PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text,
+      voice,
+      rate: rateStr,
+      volume: '+0%',
+      pitch: '+0Hz'
+    }),
+    signal: ttsAbort?.signal
+  })
+
+  if (!response.ok) {
+    throw new Error(`代理服务器错误: ${response.status}`)
+  }
+
+  return await response.arrayBuffer()
+}
+
+// 通过浏览器端 Edge TTS 朗读（仅 Edge 可用）
+async function speakViaBrowser(text: string, voice: string, rateStr: string): Promise<Blob> {
+  const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
+  const tts = new EdgeTTSBrowser(text, voice, { rate: rateStr, volume: '+0%', pitch: '+0Hz' })
+  const result = await tts.synthesize()
+  return result.audio
+}
+
 async function speakSentence(index: number) {
   if (!sentences.value[index]) return
 
@@ -1257,13 +1348,33 @@ async function speakSentence(index: number) {
 
   try {
     ttsAbort = new AbortController()
-    const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
-    const tts = new EdgeTTSBrowser(text, selectedVoiceName.value, { rate: rateStr, volume: '+0%', pitch: '+0Hz' })
-    const result = await tts.synthesize()
+
+    // 如果未检测过代理服务器可用性，先检测
+    if (isProxyAvailable.value === null) {
+      isProxyAvailable.value = await checkProxyAvailability()
+      console.log(`[TTS] 代理服务器${isProxyAvailable.value ? '可用' : '不可用'}`)
+    }
+
+    let audioBlob: Blob
+
+    // 优先使用代理服务器（所有浏览器都支持）
+    if (isProxyAvailable.value) {
+      try {
+        const arrayBuffer = await speakViaProxy(text, selectedVoiceName.value, rateStr)
+        audioBlob = new Blob([arrayBuffer], { type: 'audio/mpeg' })
+      } catch (proxyError) {
+        console.warn('[TTS] 代理服务器失败，降级到浏览器端:', proxyError)
+        // 降级到浏览器端 Edge TTS
+        audioBlob = await speakViaBrowser(text, selectedVoiceName.value, rateStr)
+      }
+    } else {
+      // 直接使用浏览器端 Edge TTS（仅 Edge 可用）
+      audioBlob = await speakViaBrowser(text, selectedVoiceName.value, rateStr)
+    }
 
     if (ttsAbort?.signal.aborted) return
 
-    const url = URL.createObjectURL(result.audio)
+    const url = URL.createObjectURL(audioBlob)
     const audio = new Audio(url)
     currentAudio = audio
     audio.volume = 1.0
@@ -2013,10 +2124,8 @@ onBeforeUnmount(() => {
 .page-nav-btn:hover:not(:disabled) { border-color: #1890ff; color: #1890ff; }
 .page-nav-btn:disabled { opacity: 0.3; cursor: default; }
 .page-nav-wrapper {
-  position: absolute;
-  top: 0;
-  bottom: 0;
   width: 60px;
+  height: 100%;
   z-index: 9;
   display: flex;
   align-items: center;
@@ -2024,34 +2133,56 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .page-nav-wrapper:active { z-index: 11; }
-.page-nav-left-wrapper { left: 0; }
-.page-nav-right-wrapper { right: 0; }
+.page-nav-left-group {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  display: flex; align-items: center; gap: 4px;
+  padding-left: 8px; z-index: 9;
+}
+.page-nav-left-group::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 100px;
+}
+.page-nav-right-group {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  display: flex; align-items: center; gap: 4px;
+  padding-right: 8px; z-index: 9;
+}
+.page-nav-right-group::before {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 0;
+  width: 100px;
+}
 .page-nav-wrapper .page-nav-side {
-  background: none;
-  border: 1px solid #ddd;
+  background: transparent;
+  border: 1.5px solid rgba(0,0,0,0.12);
   border-radius: 50%;
   width: 40px;
   height: 40px;
   color: #666;
-  font-size: 16px;
-  position: static;
-  transform: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
 }
-.reader-page-mode:hover .page-nav-wrapper .page-nav-side {
+.page-nav-left-group:hover .page-nav-side,
+.page-nav-right-group:hover .page-nav-side {
   opacity: 1;
 }
 .page-nav-wrapper:hover .page-nav-side {
-  border-color: #1890ff;
   color: #1890ff;
-  background: rgba(24,144,255,0.1);
   transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(24,144,255,0.3);
 }
-.page-nav-side:hover:not(:disabled) { border-color: #1890ff; color: #1890ff; background: rgba(24,144,255,0.1); }
+.page-nav-wrapper:active .page-nav-side {
+  transform: scale(0.9);
+}
+.page-nav-side:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 .reader-content { max-width: 720px; margin: 0 auto; padding: 16px 20px 100px; }
 .reader-content :deep(img) {
   max-width: 100%; height: auto; display: block;
@@ -2086,12 +2217,33 @@ onBeforeUnmount(() => {
 /* 右下角章节按钮 */
 .reader-nav-cr { position: fixed; right: 76px; bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 30; }
 .nav-buttons { display: flex; gap: 8px; }
-.nav-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.85); backdrop-filter: blur(4px); color: #333; cursor: pointer; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
+.nav-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.85); backdrop-filter: blur(4px); color: #333; cursor: pointer; font-size: 13px; font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
 .nav-btn:hover:not(:disabled) { background: rgba(24,144,255,0.1); border-color: #1890ff; color: #1890ff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(24,144,255,0.15); }
 .nav-btn:active:not(:disabled) { transform: translateY(0); }
 .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(240,240,240,0.5); }
 .chapter-indicator { background: rgba(255,255,255,0.9); padding: 4px 14px; border-radius: 14px; font-family: 'Georgia', 'Times New Roman', serif; font-size: 14px; font-weight: 500; color: #555; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.04); letter-spacing: 1px; cursor: pointer; transition: all 0.2s; }
 .chapter-indicator:hover { background: rgba(24,144,255,0.05); border-color: rgba(24,144,255,0.3); color: #1890ff; }
+.chapter-nav-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
+  color: #666; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0; pointer-events: none;
+}
+.page-nav-left-group:hover .chapter-nav-btn,
+.page-nav-right-group:hover .chapter-nav-btn { opacity: 1; pointer-events: auto; }
+.page-nav-left-group:hover .page-nav-wrapper,
+.page-nav-right-group:hover .page-nav-wrapper { pointer-events: auto; }
+.chapter-nav-btn:hover:not(:disabled) {
+  border-color: #1890ff; color: #1890ff;
+  background: rgba(24,144,255,0.08);
+  box-shadow: 0 4px 12px rgba(24,144,255,0.15);
+  transform: scale(1.1);
+}
+.chapter-nav-btn:active:not(:disabled) { transform: scale(0.95); background: rgba(24,144,255,0.12); }
+.chapter-nav-btn:disabled { opacity: 0.35 !important; cursor: not-allowed; pointer-events: none !important; }
 
 .chapter-jump-input-wrapper { position: relative; width: 80px; }
 .chapter-input { width: 100%; background: #fff; border: 1px solid #1890ff; border-radius: 14px; padding: 4px 8px; font-size: 14px; font-family: 'Georgia', serif; color: #333; text-align: center; outline: none; box-shadow: 0 2px 6px rgba(24,144,255,0.2); }
@@ -2585,80 +2737,145 @@ onBeforeUnmount(() => {
 .shelf-name { font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 设置面板 */
-.settings-panel { display: flex; flex-direction: column; gap: 20px; }
-.setting-group { display: flex; flex-direction: column; gap: 10px; }
-.group-label { font-size: 13px; color: #666; font-weight: 500; }
-.size-control { display: flex; align-items: center; gap: 10px; }
-.size-control button {
-  width: 32px; height: 32px; border: 1px solid #ddd; border-radius: 6px;
-  background: #fff; cursor: pointer; font-size: 16px; color: #333;
-  display: flex; align-items: center; justify-content: center;
+.settings-panel { display: flex; flex-direction: column; gap: 24px; }
+.setting-group { display: flex; flex-direction: column; gap: 12px; }
+.group-label {
+  font-size: 12px; color: #999; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
-.size-control button:hover { border-color: #1890ff; color: #1890ff; }
-.size-dots { flex: 1; display: flex; gap: 6px; justify-content: center; }
-.dot { width: 12px; height: 12px; border-radius: 3px; background: #e8e8e8; transition: background 0.2s; }
-.dot.active { background: #1890ff; }
+.setting-group { margin-bottom: 24px; }
+.setting-group:last-child { margin-bottom: 0; }
+
+/* +/- 控制按钮 */
+.size-control { display: flex; align-items: center; gap: 16px; }
+.size-control button {
+  width: 40px; height: 40px; border: 1.5px solid #e8e8e8; border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%); cursor: pointer;
+  font-size: 20px; font-weight: 400; color: #666;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.size-control button:hover {
+  border-color: #1890ff; color: #1890ff;
+  background: linear-gradient(180deg, #f0f7ff 0%, #e6f4ff 100%);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+.size-control button:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 2px rgba(24, 144, 255, 0.2);
+}
+.size-dots { flex: 1; display: flex; gap: 10px; justify-content: center; }
+.dot {
+  width: 16px; height: 16px; border-radius: 5px; background: #e8e8e8;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dot.active {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.35);
+  transform: scale(1.1);
+}
+
+/* 阅读方式切换 */
 .mode-switch {
   display: flex;
   gap: 0;
-  background: #f0f0f0;
-  border-radius: 8px;
-  padding: 3px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 4px;
   width: fit-content;
 }
 .mode-btn {
-  padding: 6px 18px;
+  padding: 10px 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: #888;
-  transition: all 0.2s;
+  color: #999;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
 }
 .mode-btn.active {
   background: #fff;
   color: #1890ff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   font-weight: 600;
 }
 .mode-btn:hover:not(.active) {
-  color: #555;
+  color: #666;
+  background: rgba(255,255,255,0.6);
 }
-.weight-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.weight-btn {
-  padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px;
-  background: #fff; cursor: pointer; font-size: 12px; color: #666;
-}
-.weight-btn.active { background: #1890ff; color: #fff; border-color: #1890ff; }
-.theme-grid { display: flex; gap: 8px; }
+
+/* 主题切换 */
+.theme-grid { display: flex; gap: 12px; }
 .theme-btn {
-  flex: 1; height: 44px; border: 2px solid transparent; border-radius: 10px;
+  flex: 1; height: 44px; border: 2px solid transparent; border-radius: 12px;
   cursor: pointer; font-size: 13px; font-weight: 500;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
 }
-.theme-grid .theme-btn:first-child { background: #fff; color: #333; border-color: #e0e0e0; }
-.theme-grid .theme-btn:first-child.active { border-color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.theme-grid .theme-btn:nth-child(2) { background: #2d2d2d; color: #fff; }
-.theme-grid .theme-btn:nth-child(2).active { border-color: #1890ff; box-shadow: 0 2px 8px rgba(24,144,255,0.3); }
-.theme-grid .theme-btn:nth-child(3) { background: #e8f0e3; color: #3a5a3a; }
-.theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; box-shadow: 0 2px 8px rgba(90,158,66,0.3); }
+.theme-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.theme-btn:active {
+  transform: scale(0.97);
+}
+.theme-grid .theme-btn:first-child { background: #fff; color: #333; border-color: #e8e8e8; }
+.theme-grid .theme-btn:first-child.active { border-color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+.theme-grid .theme-btn:nth-child(2) { background: #2d2d2d; color: #fff; border-color: #444; }
+.theme-grid .theme-btn:nth-child(2).active { border-color: #1890ff; box-shadow: 0 2px 10px rgba(24,144,255,0.35); }
+.theme-grid .theme-btn:nth-child(3) { background: #e8f0e3; color: #3a5a3a; border-color: #c8dba0; }
+.theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; box-shadow: 0 2px 10px rgba(90,158,66,0.3); }
 .theme-grid .theme-btn:nth-child(4) { background: #ede0c8; color: #3d2a00; border-color: #d4c5a9; }
-.theme-grid .theme-btn:nth-child(4).active { border-color: #8b6914; box-shadow: 0 2px 8px rgba(139,105,20,0.2); }
-.font-family-grid { display: flex; gap: 0; }
+.theme-grid .theme-btn:nth-child(4).active { border-color: #8b6914; box-shadow: 0 2px 10px rgba(139,105,20,0.25); }
+
+/* 字体风格 */
+.font-family-grid {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
 .font-btn {
-  flex: 1; padding: 8px 2px; border: none; border-bottom: 2px solid transparent;
-  background: transparent; cursor: pointer; font-size: 12px; color: #999;
-  text-align: center; transition: all 0.2s;
+  flex: 0 0 auto; padding: 5px 12px; border: 1.5px solid #e8e8e8; border-radius: 8px;
+  background: #fff; cursor: pointer; font-size: 13px; color: #666;
+  text-align: center; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
-.font-btn.active { color: #333; border-bottom-color: #1890ff; font-weight: 600; }
+.font-btn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+  background: #f0f7ff;
+}
+.font-btn.active {
+  border-color: #1890ff;
+  background: #e6f7ff;
+  color: #1890ff; font-weight: 600;
+  box-shadow: 0 1px 4px rgba(24,144,255,0.15);
+}
+
+/* 危险按钮 */
 .danger-btn {
-  padding: 8px 14px; border: 1px solid #ff4d4f; border-radius: 6px;
-  background: #fff; cursor: pointer; font-size: 13px; color: #ff4d4f;
+  width: 100%;
+  padding: 12px 16px; border: 1.5px solid #ffccc7; border-radius: 12px;
+  background: #fff2f0; cursor: pointer; font-size: 13px; color: #ff4d4f;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
 }
-.danger-btn:hover { background: #ff4d4f; color: #fff; }
+.danger-btn:hover {
+  background: #ff4d4f; color: #fff; border-color: #ff4d4f;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.35);
+  transform: translateY(-1px);
+}
+.danger-btn:active {
+  transform: scale(0.98);
+}
 
 /* 朗读面板 */
 .read-aloud-panel { display: flex; flex-direction: column; gap: 16px; }
@@ -2718,7 +2935,7 @@ onBeforeUnmount(() => {
 /* 全屏导航 - 底部悬浮，鼠标靠近底部时显示 */
 .fullnav { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; z-index: 100; padding: 6px; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
 .fullnav.visible { opacity: 1; pointer-events: auto; }
-.fullnav .nav-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15); color: #fff; cursor: pointer; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s; display: flex; align-items: center; }
+.fullnav .nav-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15); color: #fff; cursor: pointer; font-size: 14px; font-weight: 500; font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s; display: flex; align-items: center; }
 .fullnav .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.35); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); border-color: #fff; }
 .fullnav .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -2833,17 +3050,59 @@ onBeforeUnmount(() => {
 .theme-dark .theme-grid .theme-btn:nth-child(2).active { border-color: #1890ff; }
 .theme-dark .theme-grid .theme-btn:nth-child(3) { background: #3a4a3a; color: #b8d8b0; }
 .theme-dark .theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; }
-.theme-dark .size-control button { background: #3a3a3a; border-color: #555; color: #ccc; }
+.theme-dark .size-control button {
+  background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+  border-color: #555; color: #ccc;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.theme-dark .size-control button:hover {
+  background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+  border-color: #1890ff; color: #40a9ff;
+  box-shadow: 0 2px 8px rgba(24,144,255,0.25);
+}
 .theme-dark .dot { background: #555; }
-.theme-dark .dot.active { background: #1890ff; }
+.theme-dark .dot.active {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  box-shadow: 0 2px 6px rgba(24,144,255,0.4);
+}
 .theme-dark .mode-switch { background: #2a2a2a; }
-.theme-dark .mode-btn { color: #aaa; }
-.theme-dark .mode-btn.active { background: #3a3a3a; color: #40a9ff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-.theme-dark .font-btn { background: transparent; color: #888; }
-.theme-dark .font-btn.active { color: #fff; border-bottom-color: #1890ff; }
-.theme-dark .danger-btn { background: #3a3a3a; border-color: #ff4d4f; color: #ff4d4f; }
-.theme-dark .danger-btn:hover { background: #ff4d4f; color: #fff; }
-.theme-dark .nav-btn { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #eee; }
+.theme-dark .mode-btn { color: #888; }
+.theme-dark .mode-btn:hover:not(.active) { background: rgba(255,255,255,0.05); color: #aaa; }
+.theme-dark .mode-btn.active {
+  background: #3a3a3a; color: #40a9ff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.theme-dark .font-family-grid { background: transparent; }
+.theme-dark .font-btn { color: #777; background: #3a3a3a; border-color: #555; }
+.theme-dark .font-btn:hover { color: #aaa; border-color: #40a9ff; background: #444; }
+.theme-dark .font-btn.active {
+  background: #3a3a3a; color: #40a9ff; border-color: #40a9ff;
+  box-shadow: 0 1px 4px rgba(64,169,255,0.2);
+}
+.theme-dark .chapter-nav-btn {
+  background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); color: #999;
+}
+.theme-dark .chapter-nav-btn:hover:not(:disabled) {
+  border-color: #40a9ff; color: #40a9ff; background: rgba(64,169,255,0.15);
+  box-shadow: 0 4px 12px rgba(64,169,255,0.3);
+}
+.theme-dark .chapter-nav-btn:active:not(:disabled) { background: rgba(64,169,255,0.2); }
+.theme-dark .page-nav-side {
+  background: transparent; border-color: rgba(255,255,255,0.2); color: #999;
+}
+.theme-dark .page-nav-wrapper:hover .page-nav-side {
+  color: #40a9ff;
+}
+.theme-dark .page-nav-wrapper:active .page-nav-side { color: #40a9ff; }
+.theme-dark .danger-btn {
+  background: rgba(255,77,79,0.1); border-color: rgba(255,77,79,0.3);
+  color: #ff7875;
+}
+.theme-dark .danger-btn:hover {
+  background: #ff4d4f; color: #fff; border-color: #ff4d4f;
+  box-shadow: 0 4px 12px rgba(255,77,79,0.4);
+}
+.theme-dark .nav-btn { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #eee; font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif; }
 
 .theme-green { background: #e8f0e3; color: #3a5a3a; }
 .theme-green .reader-toolbar { background: #e8f0e3; border-color: #d4e8c8; }
@@ -2885,16 +3144,60 @@ onBeforeUnmount(() => {
 .theme-green .theme-grid .theme-btn:nth-child(2).active { border-color: #5a9e42; }
 .theme-green .theme-grid .theme-btn:nth-child(3) { background: #d8e8d0; color: #2d4a2d; }
 .theme-green .theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; }
-.theme-green .size-control button { background: #f0f7eb; border-color: #c8dba0; }
-.theme-green .font-btn { background: transparent; color: #8aaa80; }
-.theme-green .font-btn.active { color: #2d4a2d; border-bottom-color: #5a9e42; }
+.theme-green .size-control button {
+  background: linear-gradient(180deg, #f0f7eb 0%, #e8f0e3 100%);
+  border-color: #c8dba0; color: #5a7a4a;
+  box-shadow: 0 1px 2px rgba(90,158,66,0.1);
+}
+.theme-green .size-control button:hover {
+  background: linear-gradient(180deg, #e8f5e0 0%, #d8e8d0 100%);
+  border-color: #5a9e42; color: #3a7a2a;
+  box-shadow: 0 2px 8px rgba(90,158,66,0.2);
+}
+.theme-green .font-family-grid { background: transparent; }
+.theme-green .font-btn { color: #8aaa80; background: #e8f0e3; border-color: #c8dba0; }
+.theme-green .font-btn:hover { color: #5a9e42; border-color: #5a9e42; background: #e8f0e3; }
+.theme-green .font-btn.active {
+  background: #e8f0e3; color: #2d4a2d; border-color: #5a9e42;
+  box-shadow: 0 1px 4px rgba(90,158,66,0.15);
+}
 .theme-green .dot { background: #c8dba0; }
-.theme-green .dot.active { background: #5a9e42; }
+.theme-green .dot.active {
+  background: linear-gradient(135deg, #5a9e42 0%, #73d13d 100%);
+  box-shadow: 0 2px 6px rgba(90,158,66,0.35);
+}
 .theme-green .mode-switch { background: #d8e8d0; }
-.theme-green .mode-btn { color: #6a8a6a; }
-.theme-green .mode-btn.active { background: #f0f7eb; color: #5a9e42; box-shadow: 0 1px 4px rgba(90,158,66,0.1); }
+.theme-green .mode-btn { color: #8aaa80; }
+.theme-green .mode-btn:hover:not(.active) { background: rgba(255,255,255,0.5); color: #6a8a5a; }
+.theme-green .mode-btn.active {
+  background: #f0f7eb; color: #5a9e42;
+  box-shadow: 0 2px 8px rgba(90,158,66,0.15);
+}
+.theme-green .chapter-nav-btn {
+  background: rgba(232,240,227,0.9); border-color: #c8dba0; color: #5a7a4a;
+}
+.theme-green .chapter-nav-btn:hover:not(:disabled) {
+  border-color: #5a9e42; color: #3a7a2a; background: rgba(90,158,66,0.12);
+  box-shadow: 0 4px 12px rgba(90,158,66,0.25);
+}
+.theme-green .chapter-nav-btn:active:not(:disabled) { background: rgba(90,158,66,0.18); }
+.theme-green .page-nav-side {
+  background: transparent; border-color: #c8dba0; color: #5a7a4a;
+}
+.theme-green .page-nav-wrapper:hover .page-nav-side {
+  color: #3a7a2a;
+}
+.theme-green .page-nav-wrapper:active .page-nav-side { color: #3a7a2a; }
+.theme-green .danger-btn {
+  background: rgba(255,77,79,0.08); border-color: rgba(255,77,79,0.25);
+  color: #c04040;
+}
+.theme-green .danger-btn:hover {
+  background: #ff4d4f; color: #fff; border-color: #ff4d4f;
+  box-shadow: 0 4px 12px rgba(255,77,79,0.3);
+}
 .theme-green .resize-bar:hover { background: rgba(46,74,46,0.1); }
-.theme-green .nav-btn { background: #fff; color: #3a5a3a; border-color: #c8e0c0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-weight: 600; }
+.theme-green .nav-btn { background: #fff; color: #3a5a3a; border-color: #c8e0c0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-weight: 600; font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif; }
 .theme-green .nav-btn:hover:not(:disabled) { background: #f4f9f0; color: #1e3a1e; border-color: #a8c8a0; }
 .theme-green .chapter-indicator { background: #fff; color: #3a5a3a; border-color: #c8e0c0; font-weight: 600; }
 .theme-green .chapter-input { border-color: #c8e0c0; color: #1e3a1e; box-shadow: 0 2px 6px rgba(58,90,58,0.15); }
@@ -2961,12 +3264,28 @@ onBeforeUnmount(() => {
 .theme-parchment .mode-switch { background: #e0d0b0; }
 .theme-parchment .mode-btn { color: #7a6a4a; }
 .theme-parchment .mode-btn.active { background: #f0e6d0; color: #8b6914; box-shadow: 0 1px 4px rgba(139,105,20,0.1); }
-.theme-parchment .font-btn { background: transparent; color: #8a7a5a; }
-.theme-parchment .font-btn.active { color: #3d2a00; border-bottom-color: #8b6914; }
+.theme-parchment .font-btn { background: #ede0c8; color: #8a7a5a; border-color: #d4c5a9; }
+.theme-parchment .font-btn:hover { border-color: #8b6914; color: #3d2a00; }
+.theme-parchment .font-btn.active { background: #ede0c8; color: #3d2a00; border-color: #8b6914; }
+.theme-parchment .chapter-nav-btn {
+  background: rgba(237,224,200,0.9); border-color: #d4c5a9; color: #7a6a4a;
+}
+.theme-parchment .chapter-nav-btn:hover:not(:disabled) {
+  border-color: #8b6914; color: #3d2a00; background: rgba(139,105,20,0.1);
+  box-shadow: 0 4px 12px rgba(139,105,20,0.2);
+}
+.theme-parchment .chapter-nav-btn:active:not(:disabled) { background: rgba(139,105,20,0.15); }
+.theme-parchment .page-nav-side {
+  background: transparent; border-color: #d4c5a9; color: #7a6a4a;
+}
+.theme-parchment .page-nav-wrapper:hover .page-nav-side {
+  color: #3d2a00;
+}
+.theme-parchment .page-nav-wrapper:active .page-nav-side { color: #3d2a00; }
 .theme-parchment .close-btn { background: #d4c5a9; color: #3d2a00; }
 .theme-parchment .danger-btn { border-color: #c04040; color: #c04040; }
 .theme-parchment .danger-btn:hover { background: #c04040; color: #fff; }
-.theme-parchment .nav-btn { background: rgba(255,255,255,0.3); color: #3d2a00; border-color: #c9b894; }
+.theme-parchment .nav-btn { background: rgba(255,255,255,0.3); color: #3d2a00; border-color: #c9b894; font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif; }
 .theme-parchment .reader-main { background: #f5e6c8; color: #3d2a00; border-color: #d4c5a9; }
 .theme-parchment .pdf-zoom-controls { background: #fff; border-color: #ddd; }
 .theme-parchment .zoom-btn { background: rgba(0,0,0,0.06); color: #555; }

@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# WorkBuddy
+.workbuddy/
+
+test.mp3
