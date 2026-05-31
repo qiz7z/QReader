@@ -520,6 +520,15 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 
 ## 📝 Changelog
 
+### v0.7.1 (2026-05-31)
+
+#### Improvements
+- **UI Consistency**: Unified theme button height (36px) and border-radius (8px) to match other button styles
+- **Font Consistency**: Bottom page number and chapter number fonts unified to Georgia/Times New Roman serif font
+- **Chapter Navigation Simplified**: Removed duplicate prev/next chapter buttons in bottom-right corner; chapter jumping unified in bottom info bar
+- **Chapter Jump Fix**: Fixed chapter indicator click-to-input jumping issue in bottom info bar, unified ref references
+- **Code Cleanup**: Removed 6 temporary server files, keeping only http-server.js
+
 ### v0.7.0 (2026-05-31)
 
 #### New Features
