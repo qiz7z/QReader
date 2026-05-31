@@ -793,16 +793,6 @@ function handlePageKeydown(e: KeyboardEvent) {
   if (e.key === 'ArrowLeft') { e.preventDefault(); pagePrev() }
   else if (e.key === 'ArrowRight') { e.preventDefault(); pageNext() }
 }
-
-function handlePageClick(e: MouseEvent) {
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  const x = e.clientX - rect.left
-  if (x < rect.width / 2) {
-    if (pageNum.value > 1) pageNum.value--
-  } else {
-    if (pageNum.value < totalPageNum.value) pageNum.value++
-  }
-}
 const minW = 120
 const maxW = 400
 
