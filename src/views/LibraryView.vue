@@ -271,8 +271,7 @@ function formatReadingTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
   if (hours > 0) return `${hours}小时${minutes}分钟`
-  if (minutes > 0) return `${minutes}分钟`
-  return `${Math.floor(seconds)}秒`
+  return `${minutes}分钟`
 }
 </script>
 
