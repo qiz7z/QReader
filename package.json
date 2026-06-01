@@ -1,13 +1,51 @@
 {
-  "name": "ebook-reader-temp",
+  "name": "qreader",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.8.0",
+  "description": "Web-based ebook reader supporting TXT, PDF, EPUB, MOBI, DOCX, Markdown",
+  "author": "qiz7z",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "server": "node server/http-server.js"
+    "server": "node server/http-server.js",
+    "electron:dev": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder --win portable --config"
+  },
+  "build": {
+    "appId": "com.qreader.app",
+    "productName": "QReader",
+    "directories": {
+      "output": "releases"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "server/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "server/",
+        "to": "server/",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/qreader-icon-transparent.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "QReader-${version}.exe"
+    }
   },
   "dependencies": {
     "canvas": "^3.2.3",
@@ -28,6 +66,8 @@
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/tsconfig": "^0.9.1",
     "cors": "^2.8.6",
+    "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
     "express": "^5.2.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.12",

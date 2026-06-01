@@ -37,23 +37,32 @@
 
 ### 📚 书库管理
 - 上传本地电子书文件
-- 以网格/列表形式展示所有书籍
-- 显示书籍封面、标题、作者、文件大小、阅读时间
+- 以网格形式展示所有书籍
+- 显示书籍封面、标题、作者、文件大小
 - 支持删除书籍（级联删除书签和笔记）
 - **魔法学院风格 UI**: 首页和书架页沉浸式品牌视觉体验
 
 ### 📖 阅读体验
-- 多格式统一渲染
-- 翻页导航（上一页/下一页）
-- 阅读进度显示（百分比/页码）
-- **TXT 实时信息栏**: 左下角显示实时时间和阅读字数统计，全屏/普通模式均可见
-- 响应式布局，自适应窗口大小
+- **多格式统一渲染**: TXT、PDF、EPUB、MOBI、DOCX、Markdown
+- **滚动模式**: 滚动阅读，底部功能栏显示时间/字数/章节号
+- **翻页模式**: 左右双栏翻页，键盘方向键支持
+- **全屏阅读**: 右下角浮动按钮一键切换全屏模式
+- **响应式布局**: 自适应窗口大小，移动端友好
+
+### 🔊 朗读功能
+- **Node.js 代理 TTS**: edge-tts-universal 通过本地代理服务器运行，跨浏览器兼容
+- **6 个中文音色**: 晓晓、晓依、云健、云希、云夏、云扬
+- **语速调节**: 0.5x ~ 1.5x 可调
+- **单句预取**: 播放当前句时后台预取下一句，消除句子间停顿
+- **暂停/恢复**: 保存播放位置，精确到秒恢复
+- **自动跳章**: 读完一章自动跳到下一章
 
 ### ⚙️ 个性化设置
-- **字体调节**: 5 档字号切换
-- **字重调节**: 5 档字重切换（多层阴影堆叠模拟加粗，Windows 优化）
-- **主题切换**: 白天/夜间/护眼模式
-- **阅读设置**: 行间距、页边距、字体选择
+- **字体选择**: 12 种字体（默认、宋体、楷体、黑体、等宽、仿宋、魏碑、行楷、隶书、幼圆、琥珀、新宋）
+- **字号调节**: 5 档字号切换
+- **字重调节**: 5 档字重切换（多层阴影堆叠模拟加粗）
+- **行间距**: 5 档行间距调节
+- **主题切换**: 白天/夜间/护眼/羊皮卷 四种主题
 
 ### 🔖 书签管理
 - 任意位置添加书签
@@ -62,22 +71,26 @@
 
 ### 📝 笔记标注
 - 选中文本添加笔记
-- 文本高亮标记
+- 文本高亮标记（6 色可选）
 - 笔记列表管理
 - 点击笔记跳转原文
 
 ### 🖊️ PDF 功能
 - **画笔标注**: Canvas 叠加层绘制，6 色选择 + 0.5-10mm 笔触粗细
-- **荧光笔标注**: 半透明涂抹效果，4 种荧光色（黄、绿、粉、蓝），10-40px 笔触宽度
-- **线条擦除**: 鼠标划过标注线条即擦除（点到线段距离检测）
+- **荧光笔标注**: 半透明涂抹效果，4 种荧光色（黄、绿、粉、蓝）
+- **线条擦除**: 鼠标划过标注线条即擦除
 - **圈套擦除**: 画圈选区，射线法检测圈内标注并批量清除
-- **全屏阅读**: 右下角浮动按钮一键切换全屏模式
 - **标注数据本地持久化**: 收起工具栏后标注仍可见
 
 ### 💾 进度保存
 - 自动保存阅读进度
 - 下次打开自动跳转上次阅读位置
 - 每本书独立进度记录
+- 支持数据导出/导入（JSON 备份）
+
+### 🖥️ 桌面应用
+- **Electron 打包**: 可打包为 Windows 便携版 EXE，无需安装即可运行
+- **集成 TTS 服务器**: Electron 主进程内嵌 TTS 代理，无需额外启动
 
 ---
 
@@ -92,7 +105,10 @@
 | **状态管理** | Pinia | 3.x |
 | **UI 组件** | Element Plus | 2.14 |
 | **数据存储** | OPFS (IndexedDB 降级) | 原生 API |
-| **数据库库** | Dexie.js (可选降级) | 4.4.2 |
+| **数据库** | Dexie.js (可选降级) | 4.4.2 |
+| **TTS 引擎** | edge-tts-universal | 1.4 |
+| **桌面应用** | Electron | 42.3 |
+| **打包工具** | electron-builder | 26.8 |
 
 ### 格式解析库
 
@@ -118,7 +134,7 @@
 ### 安装依赖
 
 ```bash
-cd workspace
+cd QReader
 npm install
 ```
 
@@ -130,6 +146,16 @@ npm run dev
 
 启动后访问：`http://localhost:5173`
 
+### 启动朗读代理服务器
+
+朗读功能需要 TTS 代理服务器（提供跨浏览器兼容的 TTS 能力）：
+
+```bash
+npm run server
+```
+
+启动后 TTS 代理运行在 `http://localhost:3004`
+
 ### 生产构建
 
 ```bash
@@ -138,45 +164,29 @@ npm run build
 
 构建输出目录：`dist/`
 
-### 预览生产构建
+### 打包桌面应用 (Electron)
 
 ```bash
-npm run preview
+npm run electron:build
 ```
+
+输出：`releases/QReader-0.7.1.exe`（Windows 便携版，无需安装）
 
 ---
 
 ## 📁 项目结构
 
 ```
-ebook-reader/
-├── .monkeycode/              # 项目规格和文档
-│   ├── docs/                 # 项目文档
-│   │   ├── ARCHITECTURE.md   # 架构设计
-│   │   ├── INTERFACES.md     # 接口定义
-│   │   └── DEVELOPER_GUIDE.md # 开发者指南
-│   └── specs/                # 功能规格
-│       └── ebook-reader/
-│           ├── requirements.md # 需求文档
-│           ├── design.md     # 技术设计
-│           └── tasklist.md   # 任务清单
+QReader/
 ├── public/                   # 静态资源
-│   ├── favicon.svg
-│   └── icons.svg
+│   ├── qreader-icon-transparent.png
+│   └── ...
 ├── src/
-│   ├── assets/               # 资源文件 (图片、样式)
 │   ├── components/           # 可复用组件
-│   │   ├── AppLayout.vue     # 应用布局
 │   │   ├── BookGrid.vue      # 书籍网格
-│   │   ├── Pagination.vue    # 分页组件
 │   │   ├── ReaderCore.vue    # 阅读器核心
 │   │   ├── ReaderSidebar.vue # 阅读侧边栏
-│   │   ├── ReaderToolbar.vue # 阅读工具栏
-│   │   ├── SearchBar.vue     # 搜索框
-│   │   ├── Toast.vue         # 提示框
 │   │   └── UploadButton.vue  # 上传按钮
-│   ├── router/               # 路由配置
-│   │   └── index.ts
 │   ├── services/             # 业务服务层
 │   │   ├── parsers/          # 格式解析器
 │   │   │   ├── epubParser.ts
@@ -185,27 +195,29 @@ ebook-reader/
 │   │   │   ├── markdownParser.ts
 │   │   │   ├── txtParser.ts
 │   │   │   └── mobiParser.ts
-│   │   ├── db.ts             # 数据库实例
-│   │   ├── FormatParserService.ts # 解析服务
-│   │   └── StorageService.ts # 存储服务
-│   ├── stores/               # 状态管理
+│   │   ├── StorageService.ts # 存储服务 (OPFS/IndexedDB)
+│   │   └── db.ts             # 数据库实例
+│   ├── stores/               # Pinia 状态管理
 │   │   ├── library.ts        # 书库状态
 │   │   └── reader.ts         # 阅读状态
-│   ├── types/                # TypeScript 类型定义
-│   │   └── index.ts
-│   ├── utils/                # 工具函数
-│   │   └── settings.ts
 │   ├── views/                # 页面组件
 │   │   ├── LibraryView.vue   # 书库页面
-│   │   ├── ReaderView.vue    # 阅读页面
+│   │   ├── ReaderView.vue    # 阅读页面（含 TTS 朗读逻辑）
 │   │   └── SettingsView.vue  # 设置页面
-│   ├── App.vue               # 根组件
-│   ├── main.ts               # 应用入口
-│   └── style.css             # 全局样式
-├── index.html                # HTML 入口
-├── package.json              # 依赖配置
-├── tsconfig.json             # TypeScript 配置
-└── vite.config.ts            # Vite 配置
+│   ├── types/                # TypeScript 类型定义
+│   ├── utils/                # 工具函数
+│   ├── App.vue
+│   └── main.ts
+├── server/
+│   └── http-server.js        # TTS 代理服务器 (edge-tts-universal)
+├── electron/
+│   └── main.cjs              # Electron 主进程（含内嵌 TTS 服务器）
+├── releases/                 # 打包产物
+│   └── QReader-*.exe         # Windows 便携版
+├── index.html
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
 ```
 
 ---
@@ -444,18 +456,14 @@ npm run build
 
 ### 桌面应用 (Electron)
 
-后续可通过 Electron 打包为桌面应用：
-
 ```bash
-# 安装 Electron
-npm install -D electron electron-builder
-
-# 构建桌面应用
-npm run build
-electron-builder
+# 构建前端 + 打包 Electron 便携版
+npm run electron:build
 ```
 
-输出：`.exe` (Windows), `.dmg` (macOS), `.AppImage` (Linux)
+输出：`releases/QReader-0.7.1.exe`（Windows 便携版，122MB，无需安装）
+
+Electron 版本集成了 TTS 代理服务器，朗读功能开箱即用。
 
 ---
 
@@ -515,6 +523,18 @@ A: 设置页面 → 点击"导出数据"按钮 → 下载 JSON 备份文件。�
 ### Q: 我的浏览器支持 OPFS 吗？
 
 A: OPFS 支持 Chrome 102+、Edge 102+、Firefox 111+、Safari 17.4+。可以在设置页面查看当前使用的存储方式。不支持 OPFS 时会自动降级到 IndexedDB。
+
+### Q: 朗读功能如何使用？
+
+A: 朗读功能需要启动 TTS 代理服务器（`npm run server`），然后在阅读页面右侧面板点击朗读按钮。Electron 桌面版已集成 TTS 服务器，无需额外启动。
+
+### Q: 朗读支持哪些浏览器？
+
+A: 通过 Node.js 代理服务器，所有现代浏览器（Chrome、Edge、Firefox、Safari）均支持朗读功能。浏览器直连模式仅 Microsoft Edge 可用。
+
+### Q: Electron 打包后朗读功能正常吗？
+
+A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，朗读功能开箱即用。
 
 ---
 
