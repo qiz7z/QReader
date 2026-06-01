@@ -187,6 +187,22 @@
           :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
           v-html="paragraph"
         />
+        <!-- 章节末尾翻章按钮 -->
+        <div v-if="book && bookFormat !== 'pdf'" class="chapter-end-nav">
+          <button class="chapter-end-btn" @click="prevChapter" :disabled="currentChapter <= 0">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            <span>上一章</span>
+          </button>
+          <span class="chapter-end-divider"></span>
+          <button class="chapter-end-btn" @click="nextChapter" :disabled="currentChapter >= (book?.content?.length || 1) - 1">
+            <span>下一章</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- 翻页模式 -->
@@ -273,26 +289,29 @@
           </svg>
         </button>
 
-        <!-- 左下角阅读信息（滚动模式） -->
+        <!-- 底部阅读信息（滚动模式） -->
         <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-info-bar">
-          <span class="info-time">{{ currentTime }}</span>
-          <span class="info-divider">|</span>
-          <span class="info-progress">{{ wordsRead }} / {{ totalWords }} 字</span>
-          <span class="info-divider">|</span>
-          <span class="chapter-indicator info-chapter" v-if="!isJumping" @click.stop="startJump">
-            {{ currentChapter + 1 }} / {{ book?.content?.length || 0 }}
-          </span>
-          <div v-else class="chapter-jump-input-wrapper info-chapter-input">
-            <input
-              type="number"
-              v-model.number="jumpInput"
-              @keyup.enter="confirmJump"
-              @blur="confirmJump"
-              ref="jumpInputRef2"
-              class="chapter-input"
-              min="1"
-              :max="book?.content?.length || 1"
-            />
+          <div class="info-left">
+            <span class="info-time">{{ currentTime }}</span>
+            <span class="info-divider">|</span>
+            <span class="info-progress">{{ wordsRead }} / {{ totalWords }} 字</span>
+          </div>
+          <div class="info-right">
+            <span class="chapter-indicator" v-if="!isJumping" @click.stop="startJump">
+              {{ currentChapter + 1 }} / {{ book?.content?.length || 0 }}
+            </span>
+            <div v-else class="chapter-jump-input-wrapper">
+              <input
+                type="number"
+                v-model.number="jumpInput"
+                @keyup.enter="confirmJump"
+                @blur="confirmJump"
+                ref="jumpInputRef2"
+                class="chapter-input"
+                min="1"
+                :max="book?.content?.length || 1"
+              />
+            </div>
           </div>
         </div>
       </main>
@@ -907,8 +926,7 @@ let currentSentenceIndex = ref(0)
 let isAutoAdvancingChapter = false // 朗读自动跳章标记
 
 // TTS 代理服务器配置（用于非 Edge 浏览器）
-const TTS_PROXY_URL = 'http://localhost:3004/api/tts'
-let isProxyAvailable = ref<boolean | null>(null) // null 表示未检测
+let isProxyAvailable = ref<boolean | null>(null)
 const themes = [
   { l: '白天', v: 'light' as const },
   { l: '夜间', v: 'dark' as const },
@@ -1227,7 +1245,11 @@ const highlightedSentences = computed(() => {
 
 const allHighlights = computed(() => highlights.value)
 
-// 朗读功能 (edge-tts-universal 浏览器端)
+// =============================================================================
+// 朗读功能 — TTS 音频队列管理器
+// =============================================================================
+
+// 状态
 let isSpeechError = ref(false)
 let retryCount = ref(0)
 const MAX_RETRY = 3
@@ -1235,9 +1257,57 @@ const MAX_RETRY = 3
 // edge-tts 语音列表
 const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string }>>([])
 const isVoicesLoaded = ref(false)
+
+// TTS 代理服务器配置
+const TTS_PROXY_URL = 'http://localhost:3004/api/tts'
+
+// =============================================================================
+// TTS 音频队列 — 预缓冲 + 无缝切换 + 暂停恢复
+// =============================================================================
+
+// 浏览器自动播放解锁
+let audioUnlocked = false
+function unlockAudio() {
+  if (audioUnlocked) return
+  try {
+    const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=')
+    silent.volume = 0
+    silent.play().then(() => { audioUnlocked = true }).catch(() => {})
+  } catch {}
+}
+
+// 用户可见的错误提示
+let ttsToastTimer: number | null = null
+function showTtsToast(msg: string, duration = 3000) {
+  const existing = document.getElementById('tts-toast')
+  if (existing) existing.remove()
+  if (ttsToastTimer) { clearTimeout(ttsToastTimer); ttsToastTimer = null }
+
+  const el = document.createElement('div')
+  el.id = 'tts-toast'
+  el.textContent = msg
+  Object.assign(el.style, {
+    position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+    padding: '8px 20px', borderRadius: '20px', fontSize: '13px', color: '#fff',
+    background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', zIndex: '9999',
+    transition: 'opacity 0.3s', opacity: '1', pointerEvents: 'none'
+  })
+  document.body.appendChild(el)
+  ttsToastTimer = window.setTimeout(() => {
+    el.style.opacity = '0'
+    setTimeout(() => el.remove(), 300)
+  }, duration)
+}
+
+// 预取的下一句音频（提前合成，播完当前句后立即可用）
+let prefetchedAudio: { index: number; blob: Blob; url: string } | null = null
 let currentAudio: HTMLAudioElement | null = null
 let ttsAbort: AbortController | null = null
+let pausePosition = 0              // 暂停时的播放位置（秒）
+let isTtsPaused = false            // 是否处于暂停状态
+let proxyCheckTimer: number | null = null  // 代理定期检测定时器
 
+// 音色列表
 const EDGE_VOICES = [
   { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓', gender: '女', style: '温暖' },
   { id: 'zh-CN-XiaoyiNeural', name: '晓依', gender: '女', style: '活泼' },
@@ -1260,44 +1330,62 @@ async function loadEdgeTTSVoices() {
   }
 }
 
-// 检测代理服务器是否可用
+// =============================================================================
+// TTS 核心 — 逐句播放 + 单句预取
+// =============================================================================
+
+// 代理可用性检测
 async function checkProxyAvailability(): Promise<boolean> {
   try {
-    const response = await fetch(TTS_PROXY_URL.replace('/api/tts', '/api/health'), {
-      method: 'GET',
-      signal: AbortSignal.timeout(2000) // 2秒超时
+    const resp = await fetch(TTS_PROXY_URL.replace('/api/tts', '/api/health'), {
+      signal: AbortSignal.timeout(2000)
     })
-    return response.ok
+    return resp.ok
   } catch {
     return false
   }
 }
 
-// 通过代理服务器朗读
-async function speakViaProxy(text: string, voice: string, rateStr: string): Promise<ArrayBuffer> {
-  const response = await fetch(TTS_PROXY_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      text,
-      voice,
-      rate: rateStr,
-      volume: '+0%',
-      pitch: '+0Hz'
-    }),
-    signal: ttsAbort?.signal
-  })
-
-  if (!response.ok) {
-    throw new Error(`代理服务器错误: ${response.status}`)
+// 确保代理可用（含重检）
+async function ensureProxyAvailable(): Promise<boolean> {
+  if (isProxyAvailable.value === null || isProxyAvailable.value === false) {
+    isProxyAvailable.value = await checkProxyAvailability()
   }
-
-  return await response.arrayBuffer()
+  return isProxyAvailable.value
 }
 
-// 通过浏览器端 Edge TTS 朗读（仅 Edge 可用）
+// 定期代理健康检查
+function startProxyHealthCheck() {
+  stopProxyHealthCheck()
+  proxyCheckTimer = window.setInterval(async () => {
+    const available = await checkProxyAvailability()
+    if (isProxyAvailable.value !== available) {
+      isProxyAvailable.value = available
+    }
+  }, 30000)
+}
+
+function stopProxyHealthCheck() {
+  if (proxyCheckTimer !== null) {
+    clearInterval(proxyCheckTimer)
+    proxyCheckTimer = null
+  }
+}
+
+// 通过代理合成单句
+async function speakViaProxy(text: string, voice: string, rateStr: string): Promise<Blob> {
+  const resp = await fetch(TTS_PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice, rate: rateStr, volume: '+0%', pitch: '+0Hz' }),
+    signal: ttsAbort?.signal
+  })
+  if (!resp.ok) throw new Error(`代理错误: ${resp.status}`)
+  const ab = await resp.arrayBuffer()
+  return new Blob([ab], { type: 'audio/mpeg' })
+}
+
+// 通过浏览器端 Edge TTS
 async function speakViaBrowser(text: string, voice: string, rateStr: string): Promise<Blob> {
   const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
   const tts = new EdgeTTSBrowser(text, voice, { rate: rateStr, volume: '+0%', pitch: '+0Hz' })
@@ -1305,182 +1393,326 @@ async function speakViaBrowser(text: string, voice: string, rateStr: string): Pr
   return result.audio
 }
 
-async function speakSentence(index: number) {
-  if (!sentences.value[index]) return
+// 合成单个句子（含代理降级）
+async function synthesizeSentence(text: string, voice: string, rateStr: string): Promise<Blob> {
+  if (!text) throw new Error('空文本')
 
-  stopCurrentAudio()
-  currentSentenceIndex.value = index
-  const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
+  const proxyOk = await ensureProxyAvailable()
 
-  if (!text) {
-    if (index < sentences.value.length - 1) {
-      speakSentence(index + 1)
-    } else {
-      tryNextChapter()
+  if (proxyOk) {
+    try {
+      return await speakViaProxy(text, voice, rateStr)
+    } catch (err: any) {
+      if (err.name === 'AbortError') throw err
+      console.warn('[TTS] 代理失败，降级浏览器:', err.message)
     }
-    return
   }
 
-  const ratePercent = Math.round((speechRate.value - 1) * 100)
-  const rateStr = (ratePercent >= 0 ? '+' : '') + ratePercent + '%'
+  return await speakViaBrowser(text, voice, rateStr)
+}
+
+// 获取当前语速字符串
+function getRateStr(): string {
+  const pct = Math.round((speechRate.value - 1) * 100)
+  return (pct >= 0 ? '+' : '') + pct + '%'
+}
+
+// 预取下一句（单句）
+async function prefetchSentence(index: number) {
+  if (ttsAbort?.signal.aborted) return
+  if (index >= sentences.value.length) return
+
+  const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
+  if (!text) return
 
   try {
-    ttsAbort = new AbortController()
-
-    // 如果未检测过代理服务器可用性，先检测
-    if (isProxyAvailable.value === null) {
-      isProxyAvailable.value = await checkProxyAvailability()
-      console.log(`[TTS] 代理服务器${isProxyAvailable.value ? '可用' : '不可用'}`)
+    const blob = await synthesizeSentence(text, selectedVoiceName.value, getRateStr())
+    if (!ttsAbort?.signal.aborted && blob) {
+      const url = URL.createObjectURL(blob)
+      prefetchedAudio = { index, blob, url }
     }
-
-    let audioBlob: Blob
-
-    // 优先使用代理服务器（所有浏览器都支持）
-    if (isProxyAvailable.value) {
-      try {
-        const arrayBuffer = await speakViaProxy(text, selectedVoiceName.value, rateStr)
-        audioBlob = new Blob([arrayBuffer], { type: 'audio/mpeg' })
-      } catch (proxyError) {
-        console.warn('[TTS] 代理服务器失败，降级到浏览器端:', proxyError)
-        // 降级到浏览器端 Edge TTS
-        audioBlob = await speakViaBrowser(text, selectedVoiceName.value, rateStr)
-      }
-    } else {
-      // 直接使用浏览器端 Edge TTS（仅 Edge 可用）
-      audioBlob = await speakViaBrowser(text, selectedVoiceName.value, rateStr)
-    }
-
-    if (ttsAbort?.signal.aborted) return
-
-    const url = URL.createObjectURL(audioBlob)
-    const audio = new Audio(url)
-    currentAudio = audio
-    audio.volume = 1.0
-
-    audio.onplay = () => {
-      isSpeechError.value = false
-      retryCount.value = 0
-      isReadAloudPlaying.value = true
-      scrollToSentence(index)
-    }
-
-    audio.onended = () => {
-      URL.revokeObjectURL(url)
-      currentAudio = null
-      if (isSpeechError.value) return
-      if (index < sentences.value.length - 1) {
-        speakSentence(index + 1)
-      } else {
-        tryNextChapter()
-      }
-    }
-
-    audio.onerror = () => {
-      URL.revokeObjectURL(url)
-      currentAudio = null
-      handleError(index)
-    }
-
-    await audio.play()
   } catch (err: any) {
-    if (err.name === 'AbortError') return
-    console.error('[TTS] Error:', err)
-    handleError(index)
+    if (err.name !== 'AbortError') {
+      console.warn(`[TTS] 预取失败:`, err.message)
+    }
   }
 }
 
+// 释放预取的音频
+function clearPrefetched() {
+  if (prefetchedAudio) {
+    URL.revokeObjectURL(prefetchedAudio.url)
+    prefetchedAudio = null
+  }
+}
+
+// 释放当前音频
+function releaseCurrentAudio() {
+  if (currentAudio) {
+    currentAudio.onplay = null
+    currentAudio.onended = null
+    currentAudio.onerror = null
+    currentAudio.onpause = null
+    currentAudio.pause()
+    if (currentAudio.src && currentAudio.src.startsWith('blob:')) {
+      URL.revokeObjectURL(currentAudio.src)
+    }
+    currentAudio.src = ''
+    currentAudio = null
+  }
+}
+
+// 播放一个句子
+async function playSentence(index: number) {
+  if (ttsAbort?.signal.aborted) return
+  if (index >= sentences.value.length) {
+    tryNextChapter()
+    return
+  }
+
+  const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
+
+  // 空句子跳过
+  if (!text) {
+    advanceToNext(index)
+    return
+  }
+
+  // 先释放旧的音频元素
+  releaseCurrentAudio()
+
+  let audio: HTMLAudioElement
+  let url: string
+
+  // 检查是否有预取的音频
+  if (prefetchedAudio && prefetchedAudio.index === index) {
+    url = prefetchedAudio.url
+    // 不 revoke，转移所有权
+    prefetchedAudio = null
+    audio = new Audio(url)
+  } else {
+    // 现场合成
+    try {
+      const blob = await synthesizeSentence(text, selectedVoiceName.value, getRateStr())
+      if (ttsAbort?.signal.aborted) return
+      url = URL.createObjectURL(blob)
+      audio = new Audio(url)
+    } catch (err: any) {
+      if (err.name === 'AbortError') return
+      console.error('[TTS] 合成失败:', err.message)
+      handleError(index)
+      return
+    }
+  }
+
+  currentAudio = audio
+  audio.volume = 1.0
+
+  // 恢复暂停位置
+  if (isTtsPaused && pausePosition > 0) {
+    audio.currentTime = pausePosition
+    isTtsPaused = false
+  }
+
+  audio.onplay = () => {
+    isSpeechError.value = false
+    retryCount.value = 0
+    isReadAloudPlaying.value = true
+    currentSentenceIndex.value = index
+    scrollToSentence(index)
+    if (index === 0) showTtsToast('开始朗读', 1500)
+  }
+
+  audio.onended = () => {
+    // 播放完成，释放 URL
+    URL.revokeObjectURL(url)
+    currentAudio = null
+    advanceToNext(index)
+  }
+
+  audio.onerror = () => {
+    console.error('[TTS] audio错误:', audio.error?.message)
+    URL.revokeObjectURL(url)
+    currentAudio = null
+    handleError(index)
+  }
+
+  audio.onpause = () => {
+    if (!audio.ended && !isTtsPaused) {
+      pausePosition = audio.currentTime
+    }
+  }
+
+  audio.play().catch(err => {
+    if (err.name === 'AbortError') return
+    console.error('[TTS] play失败:', err.message)
+    URL.revokeObjectURL(url)
+    currentAudio = null
+    handleError(index)
+  })
+}
+
+// 推进到下一句
+function advanceToNext(currentIdx: number) {
+  if (currentIdx < sentences.value.length - 1) {
+    const next = currentIdx + 1
+    // 预取第 next+1 句，覆盖当前句的播放时间
+    prefetchSentence(next + 1)
+    playSentence(next)
+  } else {
+    tryNextChapter()
+  }
+}
+
+// 错误处理（指数退避）
 function handleError(index: number) {
   isSpeechError.value = true
   if (retryCount.value < MAX_RETRY) {
     retryCount.value++
+    const delay = 500 * Math.pow(2, retryCount.value - 1)
+    console.warn(`[TTS] 第${retryCount.value}次重试 (${delay}ms后)`)
     setTimeout(() => {
       isSpeechError.value = false
-      speakSentence(index)
-    }, 500 * retryCount.value)
+      playSentence(index)
+    }, delay)
   } else {
+    console.error(`[TTS] 重试${MAX_RETRY}次后放弃`)
+    showTtsToast('朗读失败，请检查网络连接后重试')
     stopReadAloud()
   }
 }
 
+// 自动跳章
 function tryNextChapter() {
   if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
     isAutoAdvancingChapter = true
     currentChapter.value++
     setTimeout(() => {
       isAutoAdvancingChapter = false
-      speakSentence(0)
+      startReadAloud(0)
     }, 300)
   } else {
     stopReadAloud()
   }
 }
 
-// 滚动到当前朗读的句子
+// 完全停止朗读
+function stopReadAloud() {
+  ttsAbort?.abort()
+  ttsAbort = null
+  releaseCurrentAudio()
+  clearPrefetched()
+  isReadAloudPlaying.value = false
+  isSpeechError.value = false
+  retryCount.value = 0
+  pausePosition = 0
+  isTtsPaused = false
+}
+
+// 开始朗读
+async function startReadAloud(startIndex: number) {
+  unlockAudio()
+  await loadEdgeTTSVoices()
+
+  // 检测代理是否可用
+  const proxyOk = await ensureProxyAvailable()
+  if (!proxyOk) {
+    // 尝试用浏览器端 TTS
+    try {
+      const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
+      if (!EdgeTTSBrowser) throw new Error('no browser tts')
+    } catch {
+      showTtsToast('朗读需要启动代理服务器，请运行 npm run server')
+      console.error('[TTS] 代理不可用，浏览器端也不支持 TTS')
+      return
+    }
+  }
+
+  startProxyHealthCheck()
+  stopReadAloud() // 清理上次状态
+  ttsAbort = new AbortController()
+
+  showTtsToast('正在开始朗读...')
+  playSentence(startIndex)
+  // 后台预取下一句
+  prefetchSentence(startIndex + 1)
+}
+
+// 暂停朗读
+function pauseReadAloud() {
+  if (currentAudio && !currentAudio.paused) {
+    pausePosition = currentAudio.currentTime
+    currentAudio.pause()
+    isTtsPaused = true
+  }
+  isReadAloudPlaying.value = false
+}
+
+// 恢复朗读
+function resumeReadAloud() {
+  if (!currentAudio) {
+    startReadAloud(currentSentenceIndex.value)
+    return
+  }
+  if (isTtsPaused) {
+    currentAudio.currentTime = pausePosition
+    isTtsPaused = false
+    currentAudio.play().catch(err => {
+      console.error('[TTS] 恢复失败:', err.message)
+      handleError(currentSentenceIndex.value)
+    })
+    isReadAloudPlaying.value = true
+  }
+}
+
+// 切换朗读
+function toggleReadAloud() {
+  unlockAudio()
+  if (isReadAloudPlaying.value && currentAudio && !currentAudio.paused) {
+    pauseReadAloud()
+  } else if (isTtsPaused || (currentAudio && currentAudio.paused)) {
+    resumeReadAloud()
+  } else {
+    startReadAloud(currentSentenceIndex.value)
+  }
+}
+
+// 音色切换
+function onVoiceChange() {
+  try { localStorage.setItem('reader-voice', selectedVoiceName.value) } catch {}
+  if (isReadAloudPlaying.value || isTtsPaused) {
+    const idx = currentSentenceIndex.value
+    stopReadAloud()
+    setTimeout(() => startReadAloud(idx), 200)
+  }
+}
+
+// 语速调整
+function updateSettings() {
+  try { localStorage.setItem('reader-speech-rate', String(speechRate.value)) } catch {}
+  if (isReadAloudPlaying.value || isTtsPaused) {
+    const idx = currentSentenceIndex.value
+    stopReadAloud()
+    setTimeout(() => startReadAloud(idx), 200)
+  }
+}
+
+// 滚动到高亮句子
 function scrollToSentence(index: number) {
   const el = sentenceRefs.value[index]
   const container = mainRef.value
   if (!el || !container) return
-  
-  // 计算元素相对于容器的位置
+
   const containerRect = container.getBoundingClientRect()
   const elRect = el.getBoundingClientRect()
-  
-  // 如果元素不在可见范围内，或距离底部/顶部太近，则滚动
+
   const topGap = elRect.top - containerRect.top
   const bottomGap = elRect.bottom - containerRect.bottom
-  
+
   if (topGap < 80 || bottomGap > -80) {
     const scrollTarget = container.scrollTop + (elRect.top - containerRect.top) - containerRect.height / 3
     container.scrollTo({ top: scrollTarget, behavior: 'smooth' })
   }
-}
-
-function stopCurrentAudio() {
-  ttsAbort?.abort()
-  ttsAbort = null
-  if (currentAudio) {
-    currentAudio.onended = null
-    currentAudio.onerror = null
-    currentAudio.onplay = null
-    currentAudio.pause()
-    currentAudio.src = ''
-    currentAudio = null
-  }
-}
-
-function stopReadAloud() {
-  stopCurrentAudio()
-  isReadAloudPlaying.value = false
-  isSpeechError.value = false
-  retryCount.value = 0
-  currentSentenceIndex.value = 0
-}
-
-function toggleReadAloud() {
-  if (currentAudio) {
-    stopCurrentAudio()
-    isReadAloudPlaying.value = false
-  } else {
-    speakSentence(currentSentenceIndex.value)
-  }
-}
-
-function onVoiceChange() {
-  try {
-    localStorage.setItem('reader-voice', selectedVoiceName.value)
-  } catch {}
-  if (isReadAloudPlaying.value) {
-    const idx = currentSentenceIndex.value
-    stopCurrentAudio()
-    isReadAloudPlaying.value = false
-    speakSentence(idx)
-  }
-}
-
-function updateSettings() {
-  try {
-    localStorage.setItem('reader-speech-rate', String(speechRate.value))
-  } catch {}
 }
 
 // 生成文件名封面（已移除，使用公共函数）
@@ -2173,6 +2405,50 @@ onBeforeUnmount(() => {
   max-width: 100%; height: auto; display: block;
   margin: 1em auto; border-radius: 4px;
 }
+.chapter-end-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin: 48px 0 32px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.chapter-end-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.15);
+  background: linear-gradient(180deg, #fff 0%, #f0f0f0 100%);
+  cursor: pointer;
+  color: #555;
+  font-size: 14px;
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+}
+.chapter-end-btn:hover:not(:disabled) {
+  border-color: #1890ff;
+  color: #1890ff;
+  background: linear-gradient(180deg, #fff 0%, #e6f4ff 100%);
+  box-shadow: 0 3px 0 rgba(24,144,255,0.3), 0 4px 12px rgba(24,144,255,0.15);
+}
+.chapter-end-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+}
+.chapter-end-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.chapter-end-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(0,0,0,0.1);
+}
 .loading { text-align: center; padding: 40px; color: #999; }
 
 /* 翻页过渡动画 */
@@ -2208,6 +2484,36 @@ onBeforeUnmount(() => {
 .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(240,240,240,0.5); }
 .chapter-indicator { background: rgba(255,255,255,0.9); padding: 4px 14px; border-radius: 14px; font-family: 'Georgia', 'Times New Roman', serif; font-size: 14px; font-weight: 500; color: #555; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.04); letter-spacing: 1px; cursor: pointer; transition: all 0.2s; }
 .chapter-indicator:hover { background: rgba(24,144,255,0.05); border-color: rgba(24,144,255,0.3); color: #1890ff; }
+
+/* 滚动模式底部栏翻章小按钮 */
+.info-chapter-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.6);
+  cursor: pointer;
+  color: #888;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.info-chapter-btn:hover:not(:disabled) {
+  background: rgba(24,144,255,0.1);
+  border-color: #1890ff;
+  color: #1890ff;
+}
+.info-chapter-btn:active:not(:disabled) {
+  transform: scale(0.9);
+  background: rgba(24,144,255,0.15);
+}
+.info-chapter-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 .chapter-nav-btn {
   width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.08);
   background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
@@ -2262,19 +2568,19 @@ onBeforeUnmount(() => {
   transform: translateY(-1px);
 }
 
-/* 左下角阅读信息 */
+/* 底部阅读信息 */
 .reader-info-bar {
   position: fixed;
   bottom: 14px;
   left: 80px;
+  right: 80px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  background: rgba(255,255,255,0.8);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 20px;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   font-size: 14px;
   color: #888;
   z-index: 50;
@@ -2282,6 +2588,29 @@ onBeforeUnmount(() => {
   font-family: 'Georgia', 'Times New Roman', serif;
   font-weight: 500;
   letter-spacing: 0.5px;
+}
+.info-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.info-right {
+  display: flex;
+  align-items: center;
+}
+.reader-chapter-bar {
+  position: fixed;
+  bottom: 22px;
+  right: 70px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 20px;
+  z-index: 50;
 }
 .info-chapter {
   background: none;
@@ -2298,6 +2627,27 @@ onBeforeUnmount(() => {
 .info-chapter-input {
   width: 60px;
 }
+.info-right .chapter-indicator {
+  background: none;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  font-size: 14px;
+  color: inherit;
+}
+.info-right .chapter-indicator:hover {
+  color: #1890ff;
+  transform: none;
+  box-shadow: none;
+}
+.info-right .chapter-jump-input-wrapper {
+  width: 60px;
+}
+.info-right .chapter-input {
+  border-color: rgba(0,0,0,0.15);
+  box-shadow: none;
+  background: transparent;
+}
 .info-time {
   font-weight: 500;
 }
@@ -2309,19 +2659,62 @@ onBeforeUnmount(() => {
 }
 
 .theme-dark .reader-info-bar {
-  background: rgba(40,40,40,0.8);
-  border-color: rgba(255,255,255,0.08);
+  background: transparent;
+  border: none;
   color: #999;
 }
+.theme-dark .info-right .chapter-input {
+  background: transparent;
+  border-color: rgba(255,255,255,0.2);
+  color: #ddd;
+}
+.theme-dark .info-right .chapter-indicator {
+  color: #999;
+}
+.theme-dark .info-right .chapter-indicator:hover {
+  color: #1890ff;
+}
+.theme-dark .reader-chapter-bar {
+  background: rgba(40,40,40,0.8);
+  border-color: rgba(255,255,255,0.08);
+}
 .theme-green .reader-info-bar {
-  background: rgba(232,240,227,0.85);
-  border-color: rgba(74,122,74,0.15);
+  background: transparent;
+  border: none;
   color: #5a7a5a;
 }
+.theme-green .reader-chapter-bar {
+  background: rgba(232,240,227,0.85);
+  border-color: rgba(74,122,74,0.15);
+}
+.theme-green .info-right .chapter-input {
+  background: transparent;
+  border-color: #c8e0c0;
+}
+.theme-green .info-right .chapter-indicator {
+  color: #5a7a5a;
+}
+.theme-green .info-right .chapter-indicator:hover {
+  color: #3a5a3a;
+}
 .theme-parchment .reader-info-bar {
+  background: transparent;
+  border: none;
+  color: #7a6a4a;
+}
+.theme-parchment .reader-chapter-bar {
   background: rgba(240,226,200,0.85);
   border-color: rgba(180,160,120,0.2);
+}
+.theme-parchment .info-right .chapter-input {
+  background: transparent;
+  border-color: #c9b894;
+}
+.theme-parchment .info-right .chapter-indicator {
   color: #7a6a4a;
+}
+.theme-parchment .info-right .chapter-indicator:hover {
+  color: #5a4a2a;
 }
 
 /* PDF 控件条 - 集成标注和缩放 */
@@ -2554,11 +2947,16 @@ onBeforeUnmount(() => {
 .tool-divider { width: 24px; height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; }
 .theme-dark .tool-divider { background: rgba(255,255,255,0.1); }
 .tool-icon { width: 20px; height: 20px; }
-.tool-btn { width: 52px; height: 52px; border: none; background: rgba(0,0,0,0.06); cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; }
-.tool-btn svg { width: 20px; height: 20px; }
+.tool-btn { width: 52px; height: 52px; border: none; background: rgba(0,0,0,0.06); cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; border-radius: 10px; flex-shrink: 0; color: #666; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+.tool-btn svg { width: 20px; height: 20px; transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.tool-btn::after { content: ''; position: absolute; inset: 0; border-radius: 10px; background: radial-gradient(circle at center, rgba(24,144,255,0.15) 0%, transparent 70%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.tool-btn:hover { background: rgba(0,0,0,0.1); color: #333; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.tool-btn:hover svg { transform: scale(1.1); }
+.tool-btn:hover::after { opacity: 1; }
+.tool-btn:active { transform: translateY(0) scale(0.95); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.tool-btn.active { background: rgba(24,144,255,0.15); color: #1890ff; box-shadow: 0 2px 8px rgba(24,144,255,0.2); }
+.tool-btn.active:hover { background: rgba(24,144,255,0.22); box-shadow: 0 4px 16px rgba(24,144,255,0.3); }
 .bottom-fullscreen-btn { margin-top: auto; }
-.tool-btn:hover { background: rgba(0,0,0,0.12); }
-.tool-btn.active { background: rgba(24,144,255,0.15); color: #1890ff; }
 
 /* 划线笔记浮动工具栏 */
 .hl-toolbar {
@@ -2821,11 +3219,12 @@ onBeforeUnmount(() => {
   font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
 }
 .theme-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
 }
 .theme-btn:active {
-  transform: scale(0.97);
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 .theme-grid .theme-btn:first-child { background: #fff; color: #333; border-color: #e8e8e8; }
 .theme-grid .theme-btn:first-child.active { border-color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
@@ -2886,16 +3285,18 @@ onBeforeUnmount(() => {
 .read-aloud-status.playing { color: #1890ff; }
 .read-aloud-controls { display: flex; gap: 8px; justify-content: center; }
 .control-btn {
-  width: 48px; height: 48px; border: none; border-radius: 8px;
+  width: 48px; height: 48px; border: none; border-radius: 10px;
   background: #f5f5f5; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: #666; transition: all 0.2s;
+  color: #666; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
 }
-.control-btn:hover { background: #e8e8e8; }
+.control-btn:hover { background: #e8e8e8; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.control-btn:active { transform: translateY(0) scale(0.95); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 .control-btn.primary {
-  width: 56px; height: 56px; background: #1890ff; color: #fff;
-  box-shadow: 0 4px 12px rgba(24,144,255,0.3);
+  width: 56px; height: 56px; background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%); color: #fff;
+  box-shadow: 0 4px 16px rgba(24,144,255,0.35); border-radius: 14px;
 }
-.control-btn.primary:hover { background: #40a9ff; transform: translateY(-1px); }
+.control-btn.primary:hover { background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(24,144,255,0.45); }
+.control-btn.primary:active { transform: translateY(0) scale(0.96); box-shadow: 0 2px 8px rgba(24,144,255,0.3); }
 .read-aloud-settings { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
 .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .setting-row.voice-row { flex-direction: column; gap: 8px; align-items: center; }
@@ -2931,6 +3332,28 @@ onBeforeUnmount(() => {
   background: rgba(24,144,255,0.2);
   border-left-color: #40a9ff;
   box-shadow: inset 0 0 0 1px rgba(64,169,255,0.1);
+}
+.theme-dark .chapter-end-nav {
+  border-top-color: rgba(255,255,255,0.08);
+}
+.theme-dark .chapter-end-btn {
+  background: linear-gradient(180deg, rgba(60,60,60,0.8) 0%, rgba(40,40,40,0.8) 100%);
+  border-color: rgba(255,255,255,0.15);
+  color: #aaa;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.2);
+}
+.theme-dark .chapter-end-btn:hover:not(:disabled) {
+  border-color: #40a9ff;
+  color: #40a9ff;
+  background: linear-gradient(180deg, rgba(64,169,255,0.15) 0%, rgba(64,169,255,0.08) 100%);
+  box-shadow: 0 3px 0 rgba(64,169,255,0.4), 0 4px 12px rgba(64,169,255,0.2);
+}
+.theme-dark .chapter-end-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
+}
+.theme-dark .chapter-end-divider {
+  background: rgba(255,255,255,0.1);
 }
 
 /* 全屏导航 - 底部悬浮，鼠标靠近底部时显示 */
@@ -3023,6 +3446,12 @@ onBeforeUnmount(() => {
 .theme-dark .tool-btn:hover {
   background: rgba(255,255,255,0.15);
   color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.theme-dark .tool-btn:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 .theme-dark .tool-btn.active {
   background: rgba(24,144,255,0.2);
@@ -3088,6 +3517,16 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 12px rgba(64,169,255,0.3);
 }
 .theme-dark .chapter-nav-btn:active:not(:disabled) { background: rgba(64,169,255,0.2); }
+.theme-dark .info-chapter-btn {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  color: #888;
+}
+.theme-dark .info-chapter-btn:hover:not(:disabled) {
+  background: rgba(64,169,255,0.15);
+  border-color: #40a9ff;
+  color: #40a9ff;
+}
 .theme-dark .page-nav-side {
   background: transparent; border-color: rgba(255,255,255,0.2); color: #999;
 }
@@ -3182,6 +3621,16 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 12px rgba(90,158,66,0.25);
 }
 .theme-green .chapter-nav-btn:active:not(:disabled) { background: rgba(90,158,66,0.18); }
+.theme-green .info-chapter-btn {
+  background: rgba(90,158,66,0.1);
+  border-color: rgba(200,219,160,0.6);
+  color: #5a7a4a;
+}
+.theme-green .info-chapter-btn:hover:not(:disabled) {
+  background: rgba(90,158,66,0.2);
+  border-color: #5a9e42;
+  color: #3a7a2a;
+}
 .theme-green .page-nav-side {
   background: transparent; border-color: #c8dba0; color: #5a7a4a;
 }
@@ -3276,6 +3725,16 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 12px rgba(139,105,20,0.2);
 }
 .theme-parchment .chapter-nav-btn:active:not(:disabled) { background: rgba(139,105,20,0.15); }
+.theme-parchment .info-chapter-btn {
+  background: rgba(139,105,20,0.08);
+  border-color: rgba(212,197,169,0.6);
+  color: #7a6a4a;
+}
+.theme-parchment .info-chapter-btn:hover:not(:disabled) {
+  background: rgba(139,105,20,0.15);
+  border-color: #8b6914;
+  color: #3d2a00;
+}
 .theme-parchment .page-nav-side {
   background: transparent; border-color: #d4c5a9; color: #7a6a4a;
 }
@@ -3311,7 +3770,51 @@ onBeforeUnmount(() => {
   border-left-color: #5a9e42;
   box-shadow: inset 0 0 0 1px rgba(90,158,66,0.06);
 }
+.theme-green .chapter-end-nav {
+  border-top-color: rgba(90,158,66,0.15);
+}
+.theme-green .chapter-end-btn {
+  background: linear-gradient(180deg, rgba(232,240,227,0.9) 0%, rgba(200,219,160,0.6) 100%);
+  border-color: rgba(200,219,160,0.8);
+  color: #5a7a4a;
+  box-shadow: 0 3px 0 rgba(90,122,90,0.2), 0 2px 6px rgba(90,122,90,0.1);
+}
+.theme-green .chapter-end-btn:hover:not(:disabled) {
+  border-color: #5a9e42;
+  color: #3a7a2a;
+  background: linear-gradient(180deg, rgba(232,240,227,1) 0%, rgba(90,158,66,0.12) 100%);
+  box-shadow: 0 3px 0 rgba(90,158,66,0.4), 0 4px 12px rgba(90,158,66,0.2);
+}
+.theme-green .chapter-end-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(90,122,90,0.2), 0 1px 3px rgba(90,122,90,0.1);
+}
+.theme-green .chapter-end-divider {
+  background: rgba(90,158,66,0.2);
+}
 .theme-dark .chapter-indicator { background: rgba(40,40,40,0.9); color: #ccc; border-color: rgba(255,255,255,0.1); }
 .theme-parchment .chapter-indicator { background: rgba(255,255,255,0.5); color: #3d2a00; border-color: #c9b894; }
+.theme-parchment .chapter-end-nav {
+  border-top-color: rgba(180,160,120,0.2);
+}
+.theme-parchment .chapter-end-btn {
+  background: linear-gradient(180deg, rgba(250,240,220,0.9) 0%, rgba(240,226,200,0.6) 100%);
+  border-color: rgba(212,197,169,0.8);
+  color: #7a6a4a;
+  box-shadow: 0 3px 0 rgba(120,100,70,0.2), 0 2px 6px rgba(120,100,70,0.1);
+}
+.theme-parchment .chapter-end-btn:hover:not(:disabled) {
+  border-color: #8b6914;
+  color: #3d2a00;
+  background: linear-gradient(180deg, rgba(250,240,220,1) 0%, rgba(139,105,20,0.1) 100%);
+  box-shadow: 0 3px 0 rgba(139,105,20,0.4), 0 4px 12px rgba(139,105,20,0.2);
+}
+.theme-parchment .chapter-end-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(120,100,70,0.2), 0 1px 3px rgba(120,100,70,0.1);
+}
+.theme-parchment .chapter-end-divider {
+  background: rgba(139,105,20,0.2);
+}
 /* PDF 文本选中浮动工具栏 */
 </style>

@@ -2,9 +2,10 @@ import http from 'http';
 import { EdgeTTS } from 'edge-tts-universal';
 
 const PORT = 3004;
+const REQUEST_TIMEOUT = 60000; // 60s 超时
 
 const server = http.createServer(async (req, res) => {
-  // 处理 CORS
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -22,12 +23,59 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // TTS 端点
+  // TTS 批量合成（一次请求合成多句，减少连接开销）
+  if (req.url === '/api/tts/batch' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+
+    req.on('end', async () => {
+      try {
+        const { sentences, voice = 'zh-CN-XiaoxiaoNeural', rate = '+0%', volume = '+0%', pitch = '+0Hz' } = JSON.parse(body);
+
+        if (!sentences || !Array.isArray(sentences) || sentences.length === 0) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: '缺少 sentences 参数或为空数组' }));
+          return;
+        }
+
+        // 拼接所有句子
+        const combinedText = sentences
+          .map(s => typeof s === 'string' ? s.replace(/<[^>]*>/g, ' ').trim() : '')
+          .filter(s => s.length > 0)
+          .join('\n');
+
+        if (!combinedText) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: '所有句子均为空' }));
+          return;
+        }
+
+        console.log(`[TTS] 批量请求: ${sentences.length}句, voice=${voice}, rate=${rate}, total=${combinedText.length}字`);
+
+        const tts = new EdgeTTS(combinedText, voice, { rate, volume, pitch });
+        const result = await tts.synthesize();
+        const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+
+        res.writeHead(200, {
+          'Content-Type': 'audio/mpeg',
+          'Content-Length': audioBuffer.length,
+          'Cache-Control': 'no-cache'
+        });
+        res.end(audioBuffer);
+        console.log(`[TTS] 批量完成: ${audioBuffer.length} bytes`);
+      } catch (error) {
+        console.error('[TTS Batch] 错误:', error.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'TTS 合成失败', message: error.message }));
+      }
+    });
+    return;
+  }
+
+  // TTS 单句合成（兼容旧版本）
   if (req.url === '/api/tts' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
+    req.on('data', chunk => { body += chunk.toString(); });
 
     req.on('end', async () => {
       try {
@@ -48,13 +96,14 @@ const server = http.createServer(async (req, res) => {
 
         console.log(`[TTS] 请求: voice=${voice}, rate=${rate}, text="${cleanText.substring(0, 50)}..."`);
 
-        const tts = new EdgeTTS(cleanText, voice, {
-          rate,
-          volume,
-          pitch
-        });
+        const tts = new EdgeTTS(cleanText, voice, { rate, volume, pitch });
 
-        const result = await tts.synthesize();
+        // 设置合成超时
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('TTS 合成超时')), REQUEST_TIMEOUT)
+        );
+
+        const result = await Promise.race([tts.synthesize(), timeout]);
         const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
 
         res.writeHead(200, {
@@ -62,16 +111,13 @@ const server = http.createServer(async (req, res) => {
           'Content-Length': audioBuffer.length,
           'Cache-Control': 'no-cache'
         });
-
         res.end(audioBuffer);
         console.log(`[TTS] 完成: ${audioBuffer.length} bytes`);
       } catch (error) {
-        console.error('[TTS] 错误:', error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          error: 'TTS 合成失败',
-          message: error.message 
-        }));
+        console.error('[TTS] 错误:', error.message);
+        const statusCode = error.message === 'TTS 合成超时' ? 504 : 500;
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'TTS 合成失败', message: error.message }));
       }
     });
     return;
@@ -84,25 +130,21 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[TTS Server] 运行在 http://localhost:${PORT}`);
-  console.log(`[TTS Server] TTS 端点: POST http://localhost:${PORT}/api/tts`);
+  console.log(`[TTS Server] 单句端点: POST http://localhost:${PORT}/api/tts`);
+  console.log(`[TTS Server] 批量端点: POST http://localhost:${PORT}/api/tts/batch`);
 });
 
-// 保持进程运行
+// 优雅退出
 process.on('SIGINT', () => {
-  console.log('Shutting down...');
-  server.close(() => {
-    process.exit(0);
-  });
+  console.log('[TTS Server] 正在关闭...');
+  server.close(() => process.exit(0));
 });
 
-// 防止进程退出
-setInterval(() => {}, 1000 * 60 * 60);
-
-// 未捕获异常处理
+// 未捕获异常
 process.on('uncaughtException', (err) => {
-  console.error('[Uncaught Exception]', err);
+  console.error('[Uncaught Exception]', err.message);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('[Unhandled Rejection]', reason);
 });

@@ -520,6 +520,30 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 
 ## 📝 Changelog
 
+### v0.8.0 (2026-06-01)
+
+#### New Features
+- **TTS Refactor**: Migrated from browser-side edge-tts-universal to Node.js proxy server with browser fallback
+- **Sentence Prefetching**: Background prefetch of next sentence while current one plays, eliminating gaps
+- **Pause/Resume**: Saves playback position, resumes from exact second
+- **Batch Synthesis Endpoint**: Server-side POST /api/tts/batch for multi-sentence synthesis
+- **Synthesis Timeout**: 60s timeout with automatic 504 response
+- **TTS Error Toasts**: User-visible notifications (proxy unavailable, synthesis failed, etc.)
+
+#### Improvements
+- **Default Font**: KaiTi (楷体) as default on first open
+- **Bottom Bar**: Transparent background, chapter indicator restored, theme-adaptive
+- **Chapter-End Buttons**: 3D effect with gradient background + bottom shadow + press feedback
+- **Right Panel Hover Effects**: Float + shadow + scale feedback, theme-adaptive
+- **Periodic Proxy Health Check**: Every 30s, automatic path switching
+- **Exponential Backoff Retry**: 500ms → 1s → 2s
+
+#### Technical Changes
+- Added server/http-server.js TTS proxy server
+- New /api/tts/batch batch synthesis endpoint
+- Simplified TTS from queue-based to sequential playback + single prefetch
+- Synced Electron main process TTS service
+
 ### v0.7.1 (2026-05-31)
 
 #### Improvements
