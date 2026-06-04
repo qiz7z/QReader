@@ -979,66 +979,16 @@ function setSentenceRef(el: HTMLElement | Element | null, idx: number) {
 }
 
 function getFontWeightStyle(fw: number) {
-  // Windows 优化：用多层阴影堆叠模拟真实加粗效果
-  if (fw === 1) return { 
-    fontWeight: 300,
-    textShadow: 'none',
-    fontSynthesis: 'none'
+  // 5 档字体粗细：font-weight 真实递进 + -webkit-text-stroke 辅助加粗
+  // 避免使用 text-shadow 堆叠，消除边缘重影和模糊
+  const map: Record<number, { fontWeight: number; textShadow: string; webkitTextStroke: string; fontSynthesis: string }> = {
+    1: { fontWeight: 400, textShadow: 'none', webkitTextStroke: '0px', fontSynthesis: 'none' },
+    2: { fontWeight: 500, textShadow: 'none', webkitTextStroke: '0.2px', fontSynthesis: 'none' },
+    3: { fontWeight: 600, textShadow: 'none', webkitTextStroke: '0.3px', fontSynthesis: 'none' },
+    4: { fontWeight: 700, textShadow: 'none', webkitTextStroke: '0.5px', fontSynthesis: 'none' },
+    5: { fontWeight: 800, textShadow: 'none', webkitTextStroke: '0.7px', fontSynthesis: 'none' },
   }
-  if (fw === 2) return { 
-    fontWeight: 400,
-    textShadow: `
-      -0.3px -0.3px 0 currentColor,
-      0.3px -0.3px 0 currentColor,
-      -0.3px 0.3px 0 currentColor,
-      0.3px 0.3px 0 currentColor
-    `,
-    fontSynthesis: 'weight'
-  }
-  if (fw === 3) return { 
-    fontWeight: 400,
-    textShadow: `
-      -0.5px -0.5px 0 currentColor,
-      0.5px -0.5px 0 currentColor,
-      -0.5px 0.5px 0 currentColor,
-      0.5px 0.5px 0 currentColor,
-      0 -0.5px 0 currentColor,
-      0 0.5px 0 currentColor
-    `,
-    fontSynthesis: 'weight'
-  }
-  if (fw === 4) return { 
-    fontWeight: 500,
-    textShadow: `
-      -0.8px -0.8px 0 currentColor,
-      0.8px -0.8px 0 currentColor,
-      -0.8px 0.8px 0 currentColor,
-      0.8px 0.8px 0 currentColor,
-      -0.8px 0 0 currentColor,
-      0.8px 0 0 currentColor,
-      0 -0.8px 0 currentColor,
-      0 0.8px 0 currentColor
-    `,
-    fontSynthesis: 'weight'
-  }
-  return { 
-    fontWeight: 700,
-    textShadow: `
-      -1px -1px 0 currentColor,
-      1px -1px 0 currentColor,
-      -1px 1px 0 currentColor,
-      1px 1px 0 currentColor,
-      -1px 0 0 currentColor,
-      1px 0 0 currentColor,
-      0 -1px 0 currentColor,
-      0 1px 0 currentColor,
-      -0.5px -0.5px 0 currentColor,
-      0.5px -0.5px 0 currentColor,
-      -0.5px 0.5px 0 currentColor,
-      0.5px 0.5px 0 currentColor
-    `,
-    fontSynthesis: 'weight'
-  }
+  return map[fw] || map[3]
 }
 
 const contentStyle = computed(() => ({
@@ -1336,57 +1286,13 @@ function stopProxyHealthCheck() {
 
 // ---- 音色加载：合并系统语音 + Edge 增强 ----
 async function loadAllVoices() {
-  const systemVoices: Array<{ id: string; name: string; gender: string; style: string; engine: 'system' }> = []
+  // Edge TTS 音色
+  voiceCache.value = EDGE_VOICES.map(v => ({ ...v, engine: 'edge' as const, id: 'edge:' + v.id }))
 
-  // 1. 加载浏览器内置中文语音
-  const getVoices = (): SpeechSynthesisVoice[] => {
-    const v = speechSynthesis.getVoices()
-    // Chrome 异步加载 voices，需要轮询
-    if (v.length === 0) return v
-
-    return v.filter(vo =>
-      vo.lang.startsWith('zh-') || vo.lang.startsWith('zh_') || vo.lang.startsWith('cmn')
-    )
-  }
-
-  let voices = getVoices()
-  if (voices.length === 0) {
-    // Chrome 首次需要等待 voiceschanged 事件
-    await new Promise<void>(resolve => {
-      const handler = () => { speechSynthesis.removeEventListener('voiceschanged', handler); resolve() }
-      speechSynthesis.addEventListener('voiceschanged', handler)
-      setTimeout(() => resolve(), 3000) // 超时保护
-    })
-    voices = getVoices()
-  }
-
-  systemVoices.push(...voices.map(v => ({
-    id: v.voiceURI,
-    name: v.name.replace(/^Microsoft\s+/i, '').replace(/\s*-\s*.*$/, ''),
-    gender: v.name.includes('Female') || v.name.includes('女') ? '女' : '男',
-    style: v.lang,
-    engine: 'system' as const
-  })))
-
-  // 去重（按 name）
-  const seen = new Set<string>()
-  const deduped = systemVoices.filter(v => {
-    const key = v.name
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-
-  // 2. 检查 Edge TTS 代理
+  // 检测代理
   isProxyAvailable.value = await checkProxyAvailability()
 
-  // 3. 合并音色列表
-  voiceCache.value = [
-    ...deduped.map(v => ({ ...v, id: 'system:' + v.id, style: '系统' })),
-    ...(isProxyAvailable.value ? EDGE_VOICES.map(v => ({ ...v, engine: 'edge' as const, id: 'edge:' + v.id })) : []),
-  ]
-
-  // 4. 恢复偏好或选默认
+  // 恢复偏好或选默认
   const saved = localStorage.getItem('reader-voice')
   if (saved && voiceCache.value.some(v => v.id === saved)) {
     selectedVoiceName.value = saved
@@ -1398,19 +1304,9 @@ async function loadAllVoices() {
 }
 
 // ---- 判断当前语音属于哪个引擎 ----
-function voiceIsEdge(): boolean {
-  return selectedVoiceName.value.startsWith('edge:')
-}
-
 // ---- SpeechSynthesis 引擎 ----
-let currentUtterance: SpeechSynthesisUtterance | null = null
-let synthPaused = false
-
-function cancelSynth() {
-  speechSynthesis.cancel() // 同时清空队列和停止当前
-  currentUtterance = null
-  synthPaused = false
-}
+let ttsState: 'idle' | 'playing' | 'paused' = 'idle'
+let ttsGeneration = 0  // 每 start/stop 递增，用于打断幽灵链
 
 function speakWithSynth(text: string, voiceURI: string, rate: number): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -1429,16 +1325,16 @@ function speakWithSynth(text: string, voiceURI: string, rate: number): Promise<v
     utter.onstart = () => {
       isSpeechError.value = false
       isReadAloudPlaying.value = true
+      ttsState = 'playing'
     }
     utter.onend = () => { resolve() }
     utter.onerror = (e) => {
       if (e.error === 'canceled' || e.error === 'interrupted') {
-        resolve() // 正常中断不算错误
+        reject(new Error('canceled'))  // 中断=reject，打断幽灵链
       } else {
         reject(new Error(e.error || 'speech error'))
       }
     }
-    currentUtterance = utter
     speechSynthesis.speak(utter)
   })
 }
@@ -1508,6 +1404,7 @@ async function prefetchEdge(index: number) {
 }
 
 async function playEdgeSentence(index: number) {
+  const gen = ttsGeneration
   if (ttsAbort?.signal.aborted) return
   if (index >= sentences.value.length) { tryNextChapter(); return }
 
@@ -1524,13 +1421,14 @@ async function playEdgeSentence(index: number) {
     try {
       const voice = selectedVoiceName.value.replace('edge:', '')
       const blob = await synthesizeViaEdge(text, voice)
-      if (ttsAbort?.signal.aborted) return
+      if (gen !== ttsGeneration) return
       url = URL.createObjectURL(blob)
     } catch (err: any) {
       if (err.name === 'AbortError') return
+      if (gen !== ttsGeneration) return
       // Edge TTS 失败 → 降级到 SpeechSynthesis
       console.warn('[TTS] Edge失败，降级 SpeechSynthesis')
-      showTtsToast('已切换到系统语音', 2000)
+      showTtsToast('Edge TTS 不可用，已切换系统语音', 3000)
       activeEngine = 'synth'
       playSynthSentence(index)
       return
@@ -1542,21 +1440,24 @@ async function playEdgeSentence(index: number) {
 
   audio.onplay = () => {
     isReadAloudPlaying.value = true
+    ttsState = 'playing'
     currentSentenceIndex.value = index
     scrollToSentence(index)
   }
   audio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; advanceToNext(index) }
   audio.onerror = () => {
+    if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
     // Edge 失败 → SpeechSynthesis
     console.warn('[TTS] Audio播放失败，降级 SpeechSynthesis')
-    showTtsToast('已切换到系统语音', 2000)
+    showTtsToast('Edge TTS 不可用，已切换系统语音', 3000)
     activeEngine = 'synth'
     playSynthSentence(index)
   }
 
   audio.play().catch(() => {
+    if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
     activeEngine = 'synth'
@@ -1566,6 +1467,7 @@ async function playEdgeSentence(index: number) {
 
 // ---- SpeechSynthesis 逐句播放 ----
 async function playSynthSentence(index: number) {
+  const gen = ttsGeneration  // 捕获当前 generation
   if (ttsAbort?.signal.aborted) return
   if (index >= sentences.value.length) { tryNextChapter(); return }
 
@@ -1577,10 +1479,11 @@ async function playSynthSentence(index: number) {
 
   try {
     await speakWithSynth(text, selectedVoiceName.value.replace('system:', ''), speechRate.value)
-    if (ttsAbort?.signal.aborted) return
+    // 检查 generation 是否变化（stopReadAloud 后旧链必须停下）
+    if (gen !== ttsGeneration) return
     advanceToNextSynth(index)
   } catch (err: any) {
-    if (err.message === 'abort') return
+    if (err.message === 'abort' || err.message === 'canceled') return
     console.error('[Synth] 播放失败:', err.message)
     handleSynthError(index)
   }
@@ -1622,6 +1525,8 @@ function advanceToNext(currentIdx: number) {
 
 // ---- 自动跳章 ----
 function tryNextChapter() {
+  // 防止幽灵链在 setTimeout 触发前完成了当前句，导致重复跳章
+  if (isAutoAdvancingChapter) return
   if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
     isAutoAdvancingChapter = true
     currentChapter.value++
@@ -1639,76 +1544,74 @@ function tryNextChapter() {
 
 // ---- 生命周期 ----
 function stopReadAloud() {
+  ttsGeneration++
   ttsAbort?.abort()
   ttsAbort = null
-  cancelSynth()
+  speechSynthesis.cancel()
   releaseCurrentAudio()
   clearPrefetched()
   isReadAloudPlaying.value = false
   isSpeechError.value = false
   retryCount.value = 0
+  ttsState = 'idle'
 }
 
-async function startReadAloud(startIndex: number) {
+async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
   stopReadAloud()
-  await loadAllVoices()
 
-  if (voiceCache.value.length === 0) {
-    showTtsToast('未找到可用语音')
-    return
+  if (!skipVoiceLoad) {
+    await loadAllVoices()
+    if (voiceCache.value.length === 0) {
+      showTtsToast('未找到可用语音')
+      return
+    }
+    if (!isProxyAvailable.value) {
+      showTtsToast('Edge TTS 代理未启动，将使用系统语音')
+    }
   }
 
   ttsAbort = new AbortController()
   startProxyHealthCheck()
 
-  // 选择引擎
-  activeEngine = voiceIsEdge() ? 'edge' : 'synth'
-
+  activeEngine = 'edge'
   showTtsToast('开始朗读', 1500)
 
-  if (activeEngine === 'edge') {
-    playEdgeSentence(startIndex)
-    prefetchEdge(startIndex + 1)
-  } else {
-    playSynthSentence(startIndex)
-  }
+  playEdgeSentence(startIndex)
+  prefetchEdge(startIndex + 1)
 }
 
 function pauseReadAloud() {
+  ttsState = 'paused'
+  isReadAloudPlaying.value = false
+  // 彻底取消当前语音，不依赖不可靠的 speechSynthesis.pause()
   if (activeEngine === 'synth') {
-    speechSynthesis.pause()
-    synthPaused = true
+    speechSynthesis.cancel()
   } else if (currentAudio && !currentAudio.paused) {
     currentAudio.pause()
   }
-  isReadAloudPlaying.value = false
 }
 
 function resumeReadAloud() {
-  if (activeEngine === 'synth') {
-    if (synthPaused) {
-      speechSynthesis.resume()
-      synthPaused = false
-    } else {
-      // 队列已清空，重新开始当前句
-      playSynthSentence(currentSentenceIndex.value)
-    }
-    isReadAloudPlaying.value = true
-  } else if (currentAudio?.paused) {
+  const idx = currentSentenceIndex.value
+  if (activeEngine === 'edge' && currentAudio && currentAudio.paused) {
     currentAudio.play().catch(() => {
       activeEngine = 'synth'
-      playSynthSentence(currentSentenceIndex.value)
+      playSynthSentence(idx)
     })
-    isReadAloudPlaying.value = true
-  } else if (!currentAudio) {
-    startReadAloud(currentSentenceIndex.value)
+  } else {
+    // 均重新开始当前句（最可靠的恢复方式）
+    if (activeEngine === 'edge') {
+      playEdgeSentence(idx)
+    } else {
+      playSynthSentence(idx)
+    }
   }
 }
 
 function toggleReadAloud() {
-  if (isReadAloudPlaying.value) {
+  if (ttsState === 'playing') {
     pauseReadAloud()
-  } else if ((activeEngine === 'synth' && synthPaused) || (activeEngine === 'edge' && currentAudio?.paused) || !isReadAloudPlaying.value) {
+  } else if (ttsState === 'paused') {
     resumeReadAloud()
   } else {
     startReadAloud(currentSentenceIndex.value)
@@ -1718,22 +1621,20 @@ function toggleReadAloud() {
 // 音色切换
 function onVoiceChange() {
   try { localStorage.setItem('reader-voice', selectedVoiceName.value) } catch {}
-  const wasPlaying = isReadAloudPlaying.value || synthPaused || (currentAudio && currentAudio.paused)
-  if (wasPlaying) {
+  if (ttsState !== 'idle') {
     const idx = currentSentenceIndex.value
     stopReadAloud()
-    setTimeout(() => startReadAloud(idx), 200)
+    startReadAloud(idx, true) // 跳过 loadAllVoices，直接用当前列表+新音色
   }
 }
 
 // 语速调整
 function updateSettings() {
   try { localStorage.setItem('reader-speech-rate', String(speechRate.value)) } catch {}
-  const wasPlaying = isReadAloudPlaying.value || synthPaused || (currentAudio && currentAudio.paused)
-  if (wasPlaying) {
+  if (ttsState !== 'idle') {
     const idx = currentSentenceIndex.value
     stopReadAloud()
-    setTimeout(() => startReadAloud(idx), 200)
+    startReadAloud(idx, true)
   }
 }
 

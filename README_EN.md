@@ -555,19 +555,22 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 ### v0.8.1 (2026-06-04)
 
 #### New Features
-- **Dual-Engine TTS**: SpeechSynthesis (browser built-in, primary) + Edge TTS proxy (enhancement)
-- **Zero-Config Read Aloud**: SpeechSynthesis works out of the box, no server required
-- **Edge Automatic Enhancement**: Background proxy health check; auto-surfaces and switches to high-quality voices
-- **Merged Voice List**: System Chinese voices + Edge enhanced voices in a unified picker
-- **Seamless Fallback**: Automatic switch to system voice when Edge TTS fails, without interrupting playback
+- **Edge TTS Read Aloud**: 6 Edge Chinese neural voices (Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang), requires proxy server
+- **TTS Proxy Server**: Built-in TTS proxy with `npm run server:proxy` for proxy-aware startup
 
 #### Improvements
-- Removed hard dependency on TTS proxy server, lowering entry barrier
-- Proxy health check interval extended from 30s to 60s
-- Edge TTS retries reduced from 3 to 2 for faster fallback
+- Font weight default adjusted to level 3 (font-weight 600) for better reading comfort
+- Font weight rendering switched to `-webkit-text-stroke`, eliminating text-shadow artifacts
+- Electron icon embedded using standard ICO file (16/32/48/256), cleaner display at all sizes
+- Icon file guaranteed accessible in packaged app via `extraResources`
 
 #### Bug Fixes
-- Fixed Read Aloud being completely unavailable when TTS proxy is not running
+- **TTS Ghost Chain**: Fixed ghost async chain running after `stopReadAloud()` causing sentence jumping (added `ttsGeneration` counter)
+- **Double Chapter Jump**: Fixed `tryNextChapter()` missing re-entry guard causing chapters to be skipped
+- **Pause Failure**: Fixed `toggleReadAloud` logic flaw and unreliable `speechSynthesis.pause()`
+- **Voice Switch Jumping**: Fixed `loadAllVoices()` overwriting user's voice selection mid-playback
+- **404 Error**: Fixed `vite.config.ts` `base: './'` causing broken resource paths in production builds
+- **Desktop Icon**: Fixed Electron packaged app showing default icon (switched to ICO + extraResources)
 
 ### v0.8.0 (2026-06-01)
 

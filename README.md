@@ -545,19 +545,22 @@ A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时
 ### v0.8.1 (2026-06-04)
 
 #### 新增功能
-- **TTS 双引擎架构**: SpeechSynthesis 浏览器内置引擎做主引擎 + Edge TTS 代理做增强
-- **零配置朗读**: SpeechSynthesis 开箱即用，无需启动任何服务器
-- **Edge 自动增强**: 后台静默检测代理可用性，可用时自动展示并切换到高质量音色
-- **音色列表合并**: 系统中文语音 + Edge 增强音色统一列表，按引擎分组展示
-- **无缝降级**: Edge TTS 播放失败时自动切换至系统语音，不中断朗读
+- **Edge TTS 朗读**: 集成 6 个 Edge 中文神经音色（晓晓、晓依、云健、云希、云夏、云扬），需代理服务器支持
+- **代理服务器**: 内置 TTS 代理，支持 `npm run server:proxy` 带代理启动
 
 #### 优化改进
-- 移除朗读对代理服务器的强依赖，降低使用门槛
-- 代理健康检查间隔从 30s 延长到 60s，减少网络开销
-- Edge TTS 合成失败重试从 3 次减少到 2 次，降级更及时
+- 字体粗细默认值调整为第 3 档（font-weight 600），阅读体验更舒适
+- 字体粗细渲染改用 `-webkit-text-stroke`，消除 text-shadow 重影
+- Electron 图标嵌入改用标准 ICO 文件（16/32/48/256），图标显示更清晰
+- 通过 `extraResources` 确保图标文件在打包后可访问
 
 #### 问题修复
-- 修复 Edge TTS 代理未启动时朗读功能完全不可用的问题
+- **TTS 幽灵链**: 修复 `stopReadAloud()` 后旧异步链仍在运行导致段落乱跳的问题（引入 `ttsGeneration` 计数器）
+- **重复跳章**: 修复 `tryNextChapter()` 缺少防重入保护导致连跳两章的问题
+- **暂停失效**: 修复 `toggleReadAloud` 逻辑缺陷和 `speechSynthesis.pause()` 不可靠的问题
+- **音色切换乱跳**: 修复 `startReadAloud()` 内部 `loadAllVoices()` 覆盖用户选择的问题
+- **404 报错**: 修复 `vite.config.ts` 中 `base: './'` 导致构建产物资源引用错误的问题
+- **桌面图标**: 修复 Electron 打包后 Windows 显示默认图标的问题（改用 ICO + extraResources）
 
 ### v0.8.0 (2026-06-01)
 

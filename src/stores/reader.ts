@@ -6,7 +6,7 @@ export const useReaderStore = defineStore('reader', {
   state: () => ({
     fontSize: 3,
     theme: 'parchment' as 'light' | 'dark' | 'green' | 'parchment',
-    fontWeight: 1,
+    fontWeight: 3,
     fontFamily: 2, // 默认楷体
     lineHeight: 3, // index into LINE_HEIGHTS (1‑based, stored as 1‑5)
     readerMode: 'scroll' as 'scroll' | 'page',

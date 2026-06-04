@@ -253,10 +253,8 @@ function createSplashWindow() {
 }
 
 function createWindow() {
-  // 获取图标路径：打包后在 resources/app.asar 内，开发时在项目根目录
-  const iconPath = path.join(__dirname, '..', 'public', 'qreader-icon-transparent.png')
-  const iconDevPath = path.join(process.cwd(), 'public', 'qreader-icon-transparent.png')
-  const finalIcon = fs.existsSync(iconPath) ? iconPath : iconDevPath
+  // 图标路径：extraResources 确保图标文件始终可访问
+  const finalIcon = path.join(process.resourcesPath, 'icon.png')
 
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -297,14 +295,6 @@ function createWindow() {
 // ==================== 应用生命周期 ====================
 
 app.whenReady().then(() => {
-  // 设置应用图标（Windows 任务栏）
-  const iconPath = path.join(__dirname, '..', 'public', 'qreader-icon-transparent.png')
-  const iconDevPath = path.join(process.cwd(), 'public', 'qreader-icon-transparent.png')
-  const finalIcon = fs.existsSync(iconPath) ? iconPath : iconDevPath
-  if (process.platform === 'win32' && fs.existsSync(finalIcon)) {
-    app.setIcon(finalIcon)
-  }
-
   // 先显示启动画面
   createSplashWindow()
   // 启动服务

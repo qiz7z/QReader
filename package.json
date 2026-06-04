@@ -11,6 +11,7 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "server": "node server/http-server.js",
+    "server:proxy": "set HTTPS_PROXY=http://127.0.0.1:10809 && node server/http-server.js",
     "electron:dev": "npm run build && electron .",
     "electron:build": "npm run build && electron-builder --win --config",
     "electron:build:nsis": "npm run build && electron-builder --win nsis --config",
@@ -36,6 +37,10 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "public/qreader-icon-transparent.png",
+        "to": "icon.png"
       }
     ],
     "win": {
@@ -53,7 +58,7 @@
           ]
         }
       ],
-      "icon": "public/qreader-icon-transparent.png",
+      "icon": "public/qreader-icon.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
