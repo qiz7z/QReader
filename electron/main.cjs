@@ -233,13 +233,38 @@ function stopTTSServer() {
 
 // ==================== Electron 窗口 ====================
 
+let splashWindow = null
+
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 320,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: { nodeIntegration: false, contextIsolation: true }
+  })
+
+  const splashPath = path.join(__dirname, 'splash.html')
+  splashWindow.loadFile(splashPath)
+  splashWindow.on('closed', () => { splashWindow = null })
+}
+
 function createWindow() {
+  // 获取图标路径：打包后在 resources/app.asar 内，开发时在项目根目录
+  const iconPath = path.join(__dirname, '..', 'public', 'qreader-icon-transparent.png')
+  const iconDevPath = path.join(process.cwd(), 'public', 'qreader-icon-transparent.png')
+  const finalIcon = fs.existsSync(iconPath) ? iconPath : iconDevPath
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     title: 'QReader - 电子书阅读器',
+    icon: finalIcon,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
@@ -257,6 +282,11 @@ function createWindow() {
   })
 
   mainWindow.once('ready-to-show', () => {
+    // 关闭启动画面，显示主窗口
+    if (splashWindow) {
+      splashWindow.close()
+      splashWindow = null
+    }
     mainWindow.show()
     mainWindow.maximize()
   })
@@ -267,8 +297,20 @@ function createWindow() {
 // ==================== 应用生命周期 ====================
 
 app.whenReady().then(() => {
+  // 设置应用图标（Windows 任务栏）
+  const iconPath = path.join(__dirname, '..', 'public', 'qreader-icon-transparent.png')
+  const iconDevPath = path.join(process.cwd(), 'public', 'qreader-icon-transparent.png')
+  const finalIcon = fs.existsSync(iconPath) ? iconPath : iconDevPath
+  if (process.platform === 'win32' && fs.existsSync(finalIcon)) {
+    app.setIcon(finalIcon)
+  }
+
+  // 先显示启动画面
+  createSplashWindow()
+  // 启动服务
   startStaticServer()
   startTTSServer()
+  // 创建主窗口（后台加载，不显示）
   createWindow()
 })
 

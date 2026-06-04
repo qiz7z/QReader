@@ -60,6 +60,20 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Quick jump from bookmark list
 - Customizable bookmark titles
 
+### 🔊 Read Aloud
+- **Dual-Engine Architecture**: SpeechSynthesis (browser built-in, primary) + Edge TTS proxy (enhancement)
+- **Zero-Config**: SpeechSynthesis works out of the box, no server required
+- **Edge Enhanced Voices**: Auto-detects proxy availability, surfaces Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang
+- **Seamless Fallback**: Gracefully switches to system voice when Edge TTS fails
+- **System Chinese Voices**: Dynamically loads browser-native Chinese speech voices
+- **Speed Control**: 0.5x ~ 1.5x adjustable
+- **Pause/Resume**: Precise position save and restore
+- **Auto Chapter Advance**: Automatically continues to next chapter
+
+### 🖥️ Desktop App
+- **Electron Packaging**: Dual output — NSIS installer + Portable EXE, with built-in TTS proxy
+- **Splash Screen**: Branded QReader loading animation on startup
+
 ### 📝 Notes & Highlights
 - Select text to add notes
 - Text highlighting
@@ -93,6 +107,8 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 | **UI Components** | Element Plus | 2.14 |
 | **Data Storage** | OPFS (IndexedDB Fallback) | Native API |
 | **Database Library** | Dexie.js (Fallback) | 4.4.2 |
+| **TTS Engine** | SpeechSynthesis + edge-tts-universal | Native + 1.4 |
+| **Desktop App** | Electron + electron-builder | 42.3 + 26.8 |
 
 ### Format Parsing Libraries
 
@@ -138,11 +154,15 @@ npm run build
 
 Build output directory: `dist/`
 
-### Preview Production Build
+### Read Aloud (Optional Enhancement)
+
+Read Aloud defaults to the browser's built-in SpeechSynthesis engine — no configuration needed. For higher-quality Edge TTS voices, optionally start the proxy server:
 
 ```bash
-npm run preview
+npm run server
 ```
+
+The proxy runs at `http://localhost:3004` and the frontend will auto-detect and switch.
 
 ---
 
@@ -444,18 +464,18 @@ Build output `dist/` can be deployed to any static hosting:
 
 ### Desktop App (Electron)
 
-Package as desktop app via Electron:
-
 ```bash
-# Install Electron
-npm install -D electron electron-builder
+# Build NSIS installer + Portable EXE
+npm run electron:build
 
-# Build desktop app
-npm run build
-electron-builder
+# Or build separately
+npm run electron:build:nsis       # Installer only
+npm run electron:build:portable   # Portable only
 ```
 
-Output: `.exe` (Windows), `.dmg` (macOS), `.AppImage` (Linux)
+Output: `releases/QReader-0.8.0-Setup.exe` (NSIS installer, 141MB) and `releases/QReader-0.8.0.exe` (Portable, 122MB)
+
+The Electron version has built-in TTS proxy, plus falls back to system voice.
 
 ---
 
@@ -516,9 +536,38 @@ A: Settings page → Click "Export Data" button → Download JSON backup file. T
 
 A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can check the current storage method in the Settings page. Falls back to IndexedDB automatically if OPFS is unsupported.
 
+### Q: How does Read Aloud work?
+
+A: Read Aloud uses the browser's built-in SpeechSynthesis engine by default — just open the Read Aloud panel in any book. No server setup required. For higher-quality Edge TTS voices (Xiaoxiao, Yunxi, etc.), optionally start the proxy server (`npm run server`) and the app will auto-detect and switch.
+
+### Q: Which browsers support Read Aloud?
+
+A: SpeechSynthesis is supported in all major browsers (Chrome, Edge, Firefox, Safari). Edge TTS enhanced voices require the proxy server and work across all modern browsers.
+
+### Q: Does Read Aloud work in the Electron version?
+
+A: Yes. The Electron version has built-in TTS proxy, plus falls back to system voice.
+
 ---
 
 ## 📝 Changelog
+
+### v0.8.1 (2026-06-04)
+
+#### New Features
+- **Dual-Engine TTS**: SpeechSynthesis (browser built-in, primary) + Edge TTS proxy (enhancement)
+- **Zero-Config Read Aloud**: SpeechSynthesis works out of the box, no server required
+- **Edge Automatic Enhancement**: Background proxy health check; auto-surfaces and switches to high-quality voices
+- **Merged Voice List**: System Chinese voices + Edge enhanced voices in a unified picker
+- **Seamless Fallback**: Automatic switch to system voice when Edge TTS fails, without interrupting playback
+
+#### Improvements
+- Removed hard dependency on TTS proxy server, lowering entry barrier
+- Proxy health check interval extended from 30s to 60s
+- Edge TTS retries reduced from 3 to 2 for faster fallback
+
+#### Bug Fixes
+- Fixed Read Aloud being completely unavailable when TTS proxy is not running
 
 ### v0.8.0 (2026-06-01)
 

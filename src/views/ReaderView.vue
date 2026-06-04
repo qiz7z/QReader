@@ -872,6 +872,7 @@ function prevChapter() {
     pageTransition.value = 'page-back'
     currentChapter.value--
     pageNum.value = 1
+    scrollToChapterStart()
     nextTick(() => recalcPages())
   }
 }
@@ -881,6 +882,7 @@ function nextChapter() {
     pageTransition.value = 'page-forward'
     currentChapter.value++
     pageNum.value = 1
+    scrollToChapterStart()
     nextTick(() => recalcPages())
   }
 }
@@ -1246,43 +1248,47 @@ const highlightedSentences = computed(() => {
 const allHighlights = computed(() => highlights.value)
 
 // =============================================================================
-// 朗读功能 — TTS 音频队列管理器
 // =============================================================================
+// 朗读功能 — 双引擎 TTS（SpeechSynthesis 主力 + Edge TTS 增强）
+// =============================================================================
+// 设计原则：
+//   1. SpeechSynthesis API 浏览器内置，零依赖、永远可用，做主引擎
+//   2. Edge TTS 代理后台静默检测，可用时自动切换到高质量音色
+//   3. 引擎切换对用户透明，不弹错误提示，不要求手动启动服务
 
-// 状态
+// ---- 状态 ----
 let isSpeechError = ref(false)
 let retryCount = ref(0)
-const MAX_RETRY = 3
+const MAX_RETRY = 2
 
-// edge-tts 语音列表
-const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string }>>([])
+// 音色列表（合并系统语音和 Edge 增强语音）
+const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string; engine: 'system' | 'edge' }>>([])
 const isVoicesLoaded = ref(false)
 
-// TTS 代理服务器配置
+// 当前使用的引擎
+let activeEngine: 'synth' | 'edge' = 'synth'
+let ttsAbort: AbortController | null = null
+
+// ---- Edge TTS 配置 ----
 const TTS_PROXY_URL = 'http://localhost:3004/api/tts'
+let proxyCheckTimer: number | null = null
 
-// =============================================================================
-// TTS 音频队列 — 预缓冲 + 无缝切换 + 暂停恢复
-// =============================================================================
+// Edge 增强音色（仅代理可用时展示）
+const EDGE_VOICES = [
+  { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓', gender: '女', style: '温暖' },
+  { id: 'zh-CN-XiaoyiNeural', name: '晓依', gender: '女', style: '活泼' },
+  { id: 'zh-CN-YunjianNeural', name: '云健', gender: '男', style: '激情' },
+  { id: 'zh-CN-YunxiNeural', name: '云希', gender: '男', style: '阳光' },
+  { id: 'zh-CN-YunxiaNeural', name: '云夏', gender: '男', style: '可爱' },
+  { id: 'zh-CN-YunyangNeural', name: '云扬', gender: '男', style: '专业' },
+]
 
-// 浏览器自动播放解锁
-let audioUnlocked = false
-function unlockAudio() {
-  if (audioUnlocked) return
-  try {
-    const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=')
-    silent.volume = 0
-    silent.play().then(() => { audioUnlocked = true }).catch(() => {})
-  } catch {}
-}
-
-// 用户可见的错误提示
+// ---- Toast 提示 ----
 let ttsToastTimer: number | null = null
 function showTtsToast(msg: string, duration = 3000) {
   const existing = document.getElementById('tts-toast')
   if (existing) existing.remove()
   if (ttsToastTimer) { clearTimeout(ttsToastTimer); ttsToastTimer = null }
-
   const el = document.createElement('div')
   el.id = 'tts-toast'
   el.textContent = msg
@@ -1299,70 +1305,26 @@ function showTtsToast(msg: string, duration = 3000) {
   }, duration)
 }
 
-// 预取的下一句音频（提前合成，播完当前句后立即可用）
-let prefetchedAudio: { index: number; blob: Blob; url: string } | null = null
-let currentAudio: HTMLAudioElement | null = null
-let ttsAbort: AbortController | null = null
-let pausePosition = 0              // 暂停时的播放位置（秒）
-let isTtsPaused = false            // 是否处于暂停状态
-let proxyCheckTimer: number | null = null  // 代理定期检测定时器
-
-// 音色列表
-const EDGE_VOICES = [
-  { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓', gender: '女', style: '温暖' },
-  { id: 'zh-CN-XiaoyiNeural', name: '晓依', gender: '女', style: '活泼' },
-  { id: 'zh-CN-YunjianNeural', name: '云健', gender: '男', style: '激情' },
-  { id: 'zh-CN-YunxiNeural', name: '云希', gender: '男', style: '阳光' },
-  { id: 'zh-CN-YunxiaNeural', name: '云夏', gender: '男', style: '可爱' },
-  { id: 'zh-CN-YunyangNeural', name: '云扬', gender: '男', style: '专业' },
-]
-
-async function loadEdgeTTSVoices() {
-  if (isVoicesLoaded.value) return
-  voiceCache.value = EDGE_VOICES
-  isVoicesLoaded.value = true
-
-  const saved = localStorage.getItem('reader-voice')
-  if (saved && EDGE_VOICES.find(v => v.id === saved)) {
-    selectedVoiceName.value = saved
-  } else {
-    selectedVoiceName.value = EDGE_VOICES[0].id
-  }
-}
-
-// =============================================================================
-// TTS 核心 — 逐句播放 + 单句预取
-// =============================================================================
-
-// 代理可用性检测
+// ---- 代理检测 ----
 async function checkProxyAvailability(): Promise<boolean> {
   try {
     const resp = await fetch(TTS_PROXY_URL.replace('/api/tts', '/api/health'), {
-      signal: AbortSignal.timeout(2000)
+      signal: AbortSignal.timeout(1500)
     })
     return resp.ok
-  } catch {
-    return false
-  }
+  } catch { return false }
 }
 
-// 确保代理可用（含重检）
-async function ensureProxyAvailable(): Promise<boolean> {
-  if (isProxyAvailable.value === null || isProxyAvailable.value === false) {
-    isProxyAvailable.value = await checkProxyAvailability()
-  }
-  return isProxyAvailable.value
-}
-
-// 定期代理健康检查
 function startProxyHealthCheck() {
   stopProxyHealthCheck()
   proxyCheckTimer = window.setInterval(async () => {
     const available = await checkProxyAvailability()
     if (isProxyAvailable.value !== available) {
       isProxyAvailable.value = available
+      // 代理恢复时，后台更新音色列表
+      if (available) await loadAllVoices()
     }
-  }, 30000)
+  }, 60000) // 每分钟检查一次
 }
 
 function stopProxyHealthCheck() {
@@ -1372,223 +1334,302 @@ function stopProxyHealthCheck() {
   }
 }
 
-// 通过代理合成单句
-async function speakViaProxy(text: string, voice: string, rateStr: string): Promise<Blob> {
-  const resp = await fetch(TTS_PROXY_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, voice, rate: rateStr, volume: '+0%', pitch: '+0Hz' }),
-    signal: ttsAbort?.signal
+// ---- 音色加载：合并系统语音 + Edge 增强 ----
+async function loadAllVoices() {
+  const systemVoices: Array<{ id: string; name: string; gender: string; style: string; engine: 'system' }> = []
+
+  // 1. 加载浏览器内置中文语音
+  const getVoices = (): SpeechSynthesisVoice[] => {
+    const v = speechSynthesis.getVoices()
+    // Chrome 异步加载 voices，需要轮询
+    if (v.length === 0) return v
+
+    return v.filter(vo =>
+      vo.lang.startsWith('zh-') || vo.lang.startsWith('zh_') || vo.lang.startsWith('cmn')
+    )
+  }
+
+  let voices = getVoices()
+  if (voices.length === 0) {
+    // Chrome 首次需要等待 voiceschanged 事件
+    await new Promise<void>(resolve => {
+      const handler = () => { speechSynthesis.removeEventListener('voiceschanged', handler); resolve() }
+      speechSynthesis.addEventListener('voiceschanged', handler)
+      setTimeout(() => resolve(), 3000) // 超时保护
+    })
+    voices = getVoices()
+  }
+
+  systemVoices.push(...voices.map(v => ({
+    id: v.voiceURI,
+    name: v.name.replace(/^Microsoft\s+/i, '').replace(/\s*-\s*.*$/, ''),
+    gender: v.name.includes('Female') || v.name.includes('女') ? '女' : '男',
+    style: v.lang,
+    engine: 'system' as const
+  })))
+
+  // 去重（按 name）
+  const seen = new Set<string>()
+  const deduped = systemVoices.filter(v => {
+    const key = v.name
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
   })
-  if (!resp.ok) throw new Error(`代理错误: ${resp.status}`)
-  const ab = await resp.arrayBuffer()
-  return new Blob([ab], { type: 'audio/mpeg' })
-}
 
-// 通过浏览器端 Edge TTS
-async function speakViaBrowser(text: string, voice: string, rateStr: string): Promise<Blob> {
-  const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
-  const tts = new EdgeTTSBrowser(text, voice, { rate: rateStr, volume: '+0%', pitch: '+0Hz' })
-  const result = await tts.synthesize()
-  return result.audio
-}
+  // 2. 检查 Edge TTS 代理
+  isProxyAvailable.value = await checkProxyAvailability()
 
-// 合成单个句子（含代理降级）
-async function synthesizeSentence(text: string, voice: string, rateStr: string): Promise<Blob> {
-  if (!text) throw new Error('空文本')
+  // 3. 合并音色列表
+  voiceCache.value = [
+    ...deduped.map(v => ({ ...v, id: 'system:' + v.id, style: '系统' })),
+    ...(isProxyAvailable.value ? EDGE_VOICES.map(v => ({ ...v, engine: 'edge' as const, id: 'edge:' + v.id })) : []),
+  ]
 
-  const proxyOk = await ensureProxyAvailable()
-
-  if (proxyOk) {
-    try {
-      return await speakViaProxy(text, voice, rateStr)
-    } catch (err: any) {
-      if (err.name === 'AbortError') throw err
-      console.warn('[TTS] 代理失败，降级浏览器:', err.message)
-    }
+  // 4. 恢复偏好或选默认
+  const saved = localStorage.getItem('reader-voice')
+  if (saved && voiceCache.value.some(v => v.id === saved)) {
+    selectedVoiceName.value = saved
+  } else {
+    selectedVoiceName.value = voiceCache.value[0]?.id || ''
   }
 
-  return await speakViaBrowser(text, voice, rateStr)
+  isVoicesLoaded.value = true
 }
 
-// 获取当前语速字符串
-function getRateStr(): string {
-  const pct = Math.round((speechRate.value - 1) * 100)
-  return (pct >= 0 ? '+' : '') + pct + '%'
+// ---- 判断当前语音属于哪个引擎 ----
+function voiceIsEdge(): boolean {
+  return selectedVoiceName.value.startsWith('edge:')
 }
 
-// 预取下一句（单句）
-async function prefetchSentence(index: number) {
-  if (ttsAbort?.signal.aborted) return
-  if (index >= sentences.value.length) return
+// ---- SpeechSynthesis 引擎 ----
+let currentUtterance: SpeechSynthesisUtterance | null = null
+let synthPaused = false
 
-  const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
-  if (!text) return
+function cancelSynth() {
+  speechSynthesis.cancel() // 同时清空队列和停止当前
+  currentUtterance = null
+  synthPaused = false
+}
 
-  try {
-    const blob = await synthesizeSentence(text, selectedVoiceName.value, getRateStr())
-    if (!ttsAbort?.signal.aborted && blob) {
-      const url = URL.createObjectURL(blob)
-      prefetchedAudio = { index, blob, url }
+function speakWithSynth(text: string, voiceURI: string, rate: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (ttsAbort?.signal.aborted) { reject(new Error('abort')); return }
+
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.rate = rate
+    utter.volume = 1.0
+
+    // 匹配语音
+    const rawId = voiceURI.replace('system:', '')
+    const voice = speechSynthesis.getVoices().find(v => v.voiceURI === rawId)
+      || speechSynthesis.getVoices().find(v => v.lang.startsWith('zh') || v.lang.startsWith('cmn'))
+    if (voice) utter.voice = voice
+
+    utter.onstart = () => {
+      isSpeechError.value = false
+      isReadAloudPlaying.value = true
     }
-  } catch (err: any) {
-    if (err.name !== 'AbortError') {
-      console.warn(`[TTS] 预取失败:`, err.message)
+    utter.onend = () => { resolve() }
+    utter.onerror = (e) => {
+      if (e.error === 'canceled' || e.error === 'interrupted') {
+        resolve() // 正常中断不算错误
+      } else {
+        reject(new Error(e.error || 'speech error'))
+      }
     }
-  }
+    currentUtterance = utter
+    speechSynthesis.speak(utter)
+  })
 }
 
-// 释放预取的音频
-function clearPrefetched() {
-  if (prefetchedAudio) {
-    URL.revokeObjectURL(prefetchedAudio.url)
-    prefetchedAudio = null
-  }
-}
+// ---- Edge TTS 引擎（简化版：复用现有能力） ----
 
-// 释放当前音频
+let prefetchedAudio: { index: number; blob: Blob; url: string } | null = null
+let currentAudio: HTMLAudioElement | null = null
+
 function releaseCurrentAudio() {
   if (currentAudio) {
     currentAudio.onplay = null
     currentAudio.onended = null
     currentAudio.onerror = null
-    currentAudio.onpause = null
     currentAudio.pause()
-    if (currentAudio.src && currentAudio.src.startsWith('blob:')) {
-      URL.revokeObjectURL(currentAudio.src)
-    }
+    if (currentAudio.src?.startsWith('blob:')) URL.revokeObjectURL(currentAudio.src)
     currentAudio.src = ''
     currentAudio = null
   }
 }
+function clearPrefetched() {
+  if (prefetchedAudio) { URL.revokeObjectURL(prefetchedAudio.url); prefetchedAudio = null }
+}
 
-// 播放一个句子
-async function playSentence(index: number) {
-  if (ttsAbort?.signal.aborted) return
-  if (index >= sentences.value.length) {
-    tryNextChapter()
-    return
+function getRateStr(): string {
+  const pct = Math.round((speechRate.value - 1) * 100)
+  return (pct >= 0 ? '+' : '') + pct + '%'
+}
+
+async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
+  // 先走代理
+  try {
+    const resp = await fetch(TTS_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice, rate: getRateStr(), volume: '+0%', pitch: '+0Hz' }),
+      signal: ttsAbort?.signal
+    })
+    if (resp.ok) {
+      const ab = await resp.arrayBuffer()
+      return new Blob([ab], { type: 'audio/mpeg' })
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') throw err
   }
+  // 降级浏览器端
+  const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
+  const tts = new EdgeTTSBrowser(text, voice, { rate: getRateStr(), volume: '+0%', pitch: '+0Hz' })
+  const result = await tts.synthesize()
+  return result.audio
+}
+
+async function prefetchEdge(index: number) {
+  if (ttsAbort?.signal.aborted) return
+  if (index >= sentences.value.length) return
+  const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
+  if (!text) return
+  try {
+    const voice = selectedVoiceName.value.replace('edge:', '')
+    const blob = await synthesizeViaEdge(text, voice)
+    if (!ttsAbort?.signal.aborted && blob) {
+      prefetchedAudio = { index, blob, url: URL.createObjectURL(blob) }
+    }
+  } catch (err: any) {
+    if (err.name !== 'AbortError') console.warn('[Edge] 预取失败:', err.message)
+  }
+}
+
+async function playEdgeSentence(index: number) {
+  if (ttsAbort?.signal.aborted) return
+  if (index >= sentences.value.length) { tryNextChapter(); return }
 
   const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
+  if (!text) { advanceToNext(index); return }
 
-  // 空句子跳过
-  if (!text) {
-    advanceToNext(index)
-    return
-  }
-
-  // 先释放旧的音频元素
   releaseCurrentAudio()
 
-  let audio: HTMLAudioElement
   let url: string
-
-  // 检查是否有预取的音频
-  if (prefetchedAudio && prefetchedAudio.index === index) {
+  if (prefetchedAudio?.index === index) {
     url = prefetchedAudio.url
-    // 不 revoke，转移所有权
     prefetchedAudio = null
-    audio = new Audio(url)
   } else {
-    // 现场合成
     try {
-      const blob = await synthesizeSentence(text, selectedVoiceName.value, getRateStr())
+      const voice = selectedVoiceName.value.replace('edge:', '')
+      const blob = await synthesizeViaEdge(text, voice)
       if (ttsAbort?.signal.aborted) return
       url = URL.createObjectURL(blob)
-      audio = new Audio(url)
     } catch (err: any) {
       if (err.name === 'AbortError') return
-      console.error('[TTS] 合成失败:', err.message)
-      handleError(index)
+      // Edge TTS 失败 → 降级到 SpeechSynthesis
+      console.warn('[TTS] Edge失败，降级 SpeechSynthesis')
+      showTtsToast('已切换到系统语音', 2000)
+      activeEngine = 'synth'
+      playSynthSentence(index)
       return
     }
   }
 
+  const audio = new Audio(url)
   currentAudio = audio
-  audio.volume = 1.0
-
-  // 恢复暂停位置
-  if (isTtsPaused && pausePosition > 0) {
-    audio.currentTime = pausePosition
-    isTtsPaused = false
-  }
 
   audio.onplay = () => {
-    isSpeechError.value = false
-    retryCount.value = 0
     isReadAloudPlaying.value = true
     currentSentenceIndex.value = index
     scrollToSentence(index)
-    if (index === 0) showTtsToast('开始朗读', 1500)
   }
-
-  audio.onended = () => {
-    // 播放完成，释放 URL
-    URL.revokeObjectURL(url)
-    currentAudio = null
-    advanceToNext(index)
-  }
-
+  audio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; advanceToNext(index) }
   audio.onerror = () => {
-    console.error('[TTS] audio错误:', audio.error?.message)
     URL.revokeObjectURL(url)
     currentAudio = null
-    handleError(index)
+    // Edge 失败 → SpeechSynthesis
+    console.warn('[TTS] Audio播放失败，降级 SpeechSynthesis')
+    showTtsToast('已切换到系统语音', 2000)
+    activeEngine = 'synth'
+    playSynthSentence(index)
   }
 
-  audio.onpause = () => {
-    if (!audio.ended && !isTtsPaused) {
-      pausePosition = audio.currentTime
-    }
-  }
-
-  audio.play().catch(err => {
-    if (err.name === 'AbortError') return
-    console.error('[TTS] play失败:', err.message)
+  audio.play().catch(() => {
     URL.revokeObjectURL(url)
     currentAudio = null
-    handleError(index)
+    activeEngine = 'synth'
+    playSynthSentence(index)
   })
 }
 
-// 推进到下一句
-function advanceToNext(currentIdx: number) {
+// ---- SpeechSynthesis 逐句播放 ----
+async function playSynthSentence(index: number) {
+  if (ttsAbort?.signal.aborted) return
+  if (index >= sentences.value.length) { tryNextChapter(); return }
+
+  const text = sentences.value[index].replace(/<[^>]*>/g, ' ')
+  if (!text.trim()) { advanceToNextSynth(index); return }
+
+  currentSentenceIndex.value = index
+  scrollToSentence(index)
+
+  try {
+    await speakWithSynth(text, selectedVoiceName.value.replace('system:', ''), speechRate.value)
+    if (ttsAbort?.signal.aborted) return
+    advanceToNextSynth(index)
+  } catch (err: any) {
+    if (err.message === 'abort') return
+    console.error('[Synth] 播放失败:', err.message)
+    handleSynthError(index)
+  }
+}
+
+function advanceToNextSynth(currentIdx: number) {
   if (currentIdx < sentences.value.length - 1) {
-    const next = currentIdx + 1
-    // 预取第 next+1 句，覆盖当前句的播放时间
-    prefetchSentence(next + 1)
-    playSentence(next)
+    playSynthSentence(currentIdx + 1)
   } else {
     tryNextChapter()
   }
 }
 
-// 错误处理（指数退避）
-function handleError(index: number) {
+function handleSynthError(index: number) {
   isSpeechError.value = true
-  if (retryCount.value < MAX_RETRY) {
-    retryCount.value++
-    const delay = 500 * Math.pow(2, retryCount.value - 1)
-    console.warn(`[TTS] 第${retryCount.value}次重试 (${delay}ms后)`)
-    setTimeout(() => {
-      isSpeechError.value = false
-      playSentence(index)
-    }, delay)
+  retryCount.value++
+  if (retryCount.value <= MAX_RETRY) {
+    setTimeout(() => { isSpeechError.value = false; playSynthSentence(index) }, 1000)
   } else {
-    console.error(`[TTS] 重试${MAX_RETRY}次后放弃`)
-    showTtsToast('朗读失败，请检查网络连接后重试')
+    showTtsToast('朗读失败，请重试')
     stopReadAloud()
   }
 }
 
-// 自动跳章
+// ---- 统一推进 ----
+function advanceToNext(currentIdx: number) {
+  if (currentIdx < sentences.value.length - 1) {
+    const next = currentIdx + 1
+    if (activeEngine === 'edge') {
+      prefetchEdge(next + 1)
+      playEdgeSentence(next)
+    } else {
+      playSynthSentence(next)
+    }
+  } else {
+    tryNextChapter()
+  }
+}
+
+// ---- 自动跳章 ----
 function tryNextChapter() {
   if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
     isAutoAdvancingChapter = true
     currentChapter.value++
     setTimeout(() => {
       isAutoAdvancingChapter = false
+      const engine = activeEngine // 保持当前引擎
+      stopReadAloud()
+      activeEngine = engine
       startReadAloud(0)
     }, 300)
   } else {
@@ -1596,81 +1637,78 @@ function tryNextChapter() {
   }
 }
 
-// 完全停止朗读
+// ---- 生命周期 ----
 function stopReadAloud() {
   ttsAbort?.abort()
   ttsAbort = null
+  cancelSynth()
   releaseCurrentAudio()
   clearPrefetched()
   isReadAloudPlaying.value = false
   isSpeechError.value = false
   retryCount.value = 0
-  pausePosition = 0
-  isTtsPaused = false
 }
 
-// 开始朗读
 async function startReadAloud(startIndex: number) {
-  unlockAudio()
-  await loadEdgeTTSVoices()
+  stopReadAloud()
+  await loadAllVoices()
 
-  // 检测代理是否可用
-  const proxyOk = await ensureProxyAvailable()
-  if (!proxyOk) {
-    // 尝试用浏览器端 TTS
-    try {
-      const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
-      if (!EdgeTTSBrowser) throw new Error('no browser tts')
-    } catch {
-      showTtsToast('朗读需要启动代理服务器，请运行 npm run server')
-      console.error('[TTS] 代理不可用，浏览器端也不支持 TTS')
-      return
-    }
+  if (voiceCache.value.length === 0) {
+    showTtsToast('未找到可用语音')
+    return
   }
 
-  startProxyHealthCheck()
-  stopReadAloud() // 清理上次状态
   ttsAbort = new AbortController()
+  startProxyHealthCheck()
 
-  showTtsToast('正在开始朗读...')
-  playSentence(startIndex)
-  // 后台预取下一句
-  prefetchSentence(startIndex + 1)
+  // 选择引擎
+  activeEngine = voiceIsEdge() ? 'edge' : 'synth'
+
+  showTtsToast('开始朗读', 1500)
+
+  if (activeEngine === 'edge') {
+    playEdgeSentence(startIndex)
+    prefetchEdge(startIndex + 1)
+  } else {
+    playSynthSentence(startIndex)
+  }
 }
 
-// 暂停朗读
 function pauseReadAloud() {
-  if (currentAudio && !currentAudio.paused) {
-    pausePosition = currentAudio.currentTime
+  if (activeEngine === 'synth') {
+    speechSynthesis.pause()
+    synthPaused = true
+  } else if (currentAudio && !currentAudio.paused) {
     currentAudio.pause()
-    isTtsPaused = true
   }
   isReadAloudPlaying.value = false
 }
 
-// 恢复朗读
 function resumeReadAloud() {
-  if (!currentAudio) {
-    startReadAloud(currentSentenceIndex.value)
-    return
-  }
-  if (isTtsPaused) {
-    currentAudio.currentTime = pausePosition
-    isTtsPaused = false
-    currentAudio.play().catch(err => {
-      console.error('[TTS] 恢复失败:', err.message)
-      handleError(currentSentenceIndex.value)
+  if (activeEngine === 'synth') {
+    if (synthPaused) {
+      speechSynthesis.resume()
+      synthPaused = false
+    } else {
+      // 队列已清空，重新开始当前句
+      playSynthSentence(currentSentenceIndex.value)
+    }
+    isReadAloudPlaying.value = true
+  } else if (currentAudio?.paused) {
+    currentAudio.play().catch(() => {
+      activeEngine = 'synth'
+      playSynthSentence(currentSentenceIndex.value)
     })
     isReadAloudPlaying.value = true
+  } else if (!currentAudio) {
+    startReadAloud(currentSentenceIndex.value)
   }
 }
 
-// 切换朗读
 function toggleReadAloud() {
-  unlockAudio()
-  if (isReadAloudPlaying.value && currentAudio && !currentAudio.paused) {
+  if (isReadAloudPlaying.value) {
     pauseReadAloud()
-  } else if (isTtsPaused || (currentAudio && currentAudio.paused)) {
+  } else if ((activeEngine === 'synth' && synthPaused) || (activeEngine === 'edge' && currentAudio?.paused) || !isReadAloudPlaying.value) {
     resumeReadAloud()
   } else {
     startReadAloud(currentSentenceIndex.value)
@@ -1680,7 +1718,8 @@ function toggleReadAloud() {
 // 音色切换
 function onVoiceChange() {
   try { localStorage.setItem('reader-voice', selectedVoiceName.value) } catch {}
-  if (isReadAloudPlaying.value || isTtsPaused) {
+  const wasPlaying = isReadAloudPlaying.value || synthPaused || (currentAudio && currentAudio.paused)
+  if (wasPlaying) {
     const idx = currentSentenceIndex.value
     stopReadAloud()
     setTimeout(() => startReadAloud(idx), 200)
@@ -1690,7 +1729,8 @@ function onVoiceChange() {
 // 语速调整
 function updateSettings() {
   try { localStorage.setItem('reader-speech-rate', String(speechRate.value)) } catch {}
-  if (isReadAloudPlaying.value || isTtsPaused) {
+  const wasPlaying = isReadAloudPlaying.value || synthPaused || (currentAudio && currentAudio.paused)
+  if (wasPlaying) {
     const idx = currentSentenceIndex.value
     stopReadAloud()
     setTimeout(() => startReadAloud(idx), 200)
@@ -1925,7 +1965,7 @@ onMounted(async () => {
     if (rate) speechRate.value = parseFloat(rate)
   } catch {}
   
-  loadEdgeTTSVoices()
+  loadAllVoices()
   await loadShelf()
   await loadBook(bookId.value)
   document.addEventListener('fullscreenchange', onFs)

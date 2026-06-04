@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "server": "node server/http-server.js",
     "electron:dev": "npm run build && electron .",
-    "electron:build": "npm run build && electron-builder --win portable --config"
+    "electron:build": "npm run build && electron-builder --win --config",
+    "electron:build:nsis": "npm run build && electron-builder --win nsis --config",
+    "electron:build:portable": "npm run build && electron-builder --win portable --config"
   },
   "build": {
     "appId": "com.qreader.app",
@@ -24,24 +26,43 @@
       "electron/**/*",
       "dist/**/*",
       "server/**/*",
+      "public/**/*",
       "node_modules/**/*"
     ],
     "extraResources": [
       {
         "from": "server/",
         "to": "server/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
       "target": [
         {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/qreader-icon-transparent.png",
       "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "QReader",
+      "artifactName": "QReader-${version}-Setup.exe"
     },
     "portable": {
       "artifactName": "QReader-${version}.exe"

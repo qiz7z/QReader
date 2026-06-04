@@ -50,11 +50,13 @@
 - **响应式布局**: 自适应窗口大小，移动端友好
 
 ### 🔊 朗读功能
-- **Node.js 代理 TTS**: edge-tts-universal 通过本地代理服务器运行，跨浏览器兼容
-- **6 个中文音色**: 晓晓、晓依、云健、云希、云夏、云扬
+- **双引擎架构**: SpeechSynthesis 浏览器内置引擎（主力）+ Edge TTS 代理（增强）
+- **零配置可用**: SpeechSynthesis 开箱即用，无需启动任何服务器，永远可用
+- **Edge 增强音色**: 代理可用时自动展示晓晓、晓依、云健、云希、云夏、云扬等高质量音色
+- **自动降级**: Edge TTS 播放失败时无缝切换至系统语音，不中断朗读
+- **系统中文音色**: 自动加载浏览器内置中文语音，音色列表动态获取
 - **语速调节**: 0.5x ~ 1.5x 可调
-- **单句预取**: 播放当前句时后台预取下一句，消除句子间停顿
-- **暂停/恢复**: 保存播放位置，精确到秒恢复
+- **暂停/恢复**: 支持暂停和精确恢复
 - **自动跳章**: 读完一章自动跳到下一章
 
 ### ⚙️ 个性化设置
@@ -89,8 +91,8 @@
 - 支持数据导出/导入（JSON 备份）
 
 ### 🖥️ 桌面应用
-- **Electron 打包**: 可打包为 Windows 便携版 EXE，无需安装即可运行
-- **集成 TTS 服务器**: Electron 主进程内嵌 TTS 代理，无需额外启动
+- **Electron 打包**: 双版本输出 — NSIS 安装版 + Portable 便携版，集成 TTS 代理
+- **启动画面**: Electron 版启动时显示 QReader 品牌加载动画
 
 ---
 
@@ -146,15 +148,15 @@ npm run dev
 
 启动后访问：`http://localhost:5173`
 
-### 启动朗读代理服务器
+### 朗读功能（可选增强）
 
-朗读功能需要 TTS 代理服务器（提供跨浏览器兼容的 TTS 能力）：
+朗读功能默认使用浏览器内置 SpeechSynthesis 引擎，无需额外配置即可使用。如需更高音质的 Edge TTS 增强音色，可选项启动代理服务器：
 
 ```bash
 npm run server
 ```
 
-启动后 TTS 代理运行在 `http://localhost:3004`
+代理运行在 `http://localhost:3004`，前端会自动检测并切换至增强音色。
 
 ### 生产构建
 
@@ -170,7 +172,7 @@ npm run build
 npm run electron:build
 ```
 
-输出：`releases/QReader-0.7.1.exe`（Windows 便携版，无需安装）
+输出：`releases/QReader-0.8.0-Setup.exe`（NSIS 安装版，141MB）和 `releases/QReader-0.8.0.exe`（便携版，122MB）
 
 ---
 
@@ -461,7 +463,7 @@ npm run build
 npm run electron:build
 ```
 
-输出：`releases/QReader-0.7.1.exe`（Windows 便携版，122MB，无需安装）
+输出：`releases/QReader-0.8.0-Setup.exe`（NSIS 安装版，141MB）和 `releases/QReader-0.8.0.exe`（便携版，122MB）
 
 Electron 版本集成了 TTS 代理服务器，朗读功能开箱即用。
 
@@ -526,19 +528,36 @@ A: OPFS 支持 Chrome 102+、Edge 102+、Firefox 111+、Safari 17.4+。可以在
 
 ### Q: 朗读功能如何使用？
 
-A: 朗读功能需要启动 TTS 代理服务器（`npm run server`），然后在阅读页面右侧面板点击朗读按钮。Electron 桌面版已集成 TTS 服务器，无需额外启动。
+A: 朗读功能默认使用浏览器内置 SpeechSynthesis 引擎，打开任意书籍后点击右侧朗读面板即可开始，无需任何配置。如需更高质量的 Edge TTS 音色（晓晓、云希等），可选项启动代理服务器（`npm run server`），前端会自动检测并切换。
 
 ### Q: 朗读支持哪些浏览器？
 
-A: 通过 Node.js 代理服务器，所有现代浏览器（Chrome、Edge、Firefox、Safari）均支持朗读功能。浏览器直连模式仅 Microsoft Edge 可用。
+A: SpeechSynthesis 引擎在 Chrome、Edge、Firefox、Safari 等所有主流浏览器上均可用。Edge TTS 增强音色需要通过代理服务器，所有现代浏览器均支持。
 
 ### Q: Electron 打包后朗读功能正常吗？
 
-A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，朗读功能开箱即用。
+A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时也可以使用系统内置语音作为后备。
 
 ---
 
 ## 📝 更新日志
+
+### v0.8.1 (2026-06-04)
+
+#### 新增功能
+- **TTS 双引擎架构**: SpeechSynthesis 浏览器内置引擎做主引擎 + Edge TTS 代理做增强
+- **零配置朗读**: SpeechSynthesis 开箱即用，无需启动任何服务器
+- **Edge 自动增强**: 后台静默检测代理可用性，可用时自动展示并切换到高质量音色
+- **音色列表合并**: 系统中文语音 + Edge 增强音色统一列表，按引擎分组展示
+- **无缝降级**: Edge TTS 播放失败时自动切换至系统语音，不中断朗读
+
+#### 优化改进
+- 移除朗读对代理服务器的强依赖，降低使用门槛
+- 代理健康检查间隔从 30s 延长到 60s，减少网络开销
+- Edge TTS 合成失败重试从 3 次减少到 2 次，降级更及时
+
+#### 问题修复
+- 修复 Edge TTS 代理未启动时朗读功能完全不可用的问题
 
 ### v0.8.0 (2026-06-01)
 
