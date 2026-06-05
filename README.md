@@ -28,14 +28,14 @@
 - **完全离线**: 所有数据本地存储，无需联网
 - **多格式支持**: 覆盖主流电子书格式
 - **功能完整**: 书签、笔记、高亮、进度管理
+- **轻量快速**: 基于 Vite 构建，启动秒开
+- **可扩展**: 支持后续打包为桌面应用
 
 ### 🎬 演示视频
 
-https://github.com/user-attachments/assets/demo.mp4
+> 点击下方链接观看完整演示视频 👇
 
-<video src="./public/demo.mp4" controls width="100%" preload="metadata"></video>
-- **轻量快速**: 基于 Vite 构建，启动秒开
-- **可扩展**: 支持后续打包为桌面应用
+[▶️ 观看演示视频](https://github.com/qiz7z/QReader/releases/download/v0.8.1/demo.mp4)
 
 ---
 
