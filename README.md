@@ -33,9 +33,9 @@
 
 ### 🎬 演示视频
 
-> 点击下方链接观看完整演示视频 👇
+> 点击播放观看完整演示 👇
 
-[▶️ 观看演示视频](https://github.com/qiz7z/QReader/releases/download/v0.8.1/demo.mp4)
+<video src="https://github.com/qiz7z/QReader/releases/download/v0.8.1/demo.mp4" controls width="100%" preload="metadata"></video>
 
 ---
 
