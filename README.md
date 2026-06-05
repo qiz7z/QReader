@@ -32,8 +32,8 @@
 - **可扩展**: 支持后续打包为桌面应用
 
 ### 🎬 演示视频
-微信演示视频：https://mp.weixin.qq.com/s/zxb2C2zxtIEOKfjRW1zQ9A
-https://github.com/qiz7z/QReader/tree/QReader/public/demo.mp4
+- 微信演示视频：https://mp.weixin.qq.com/s/zxb2C2zxtIEOKfjRW1zQ9A
+- https://github.com/qiz7z/QReader/tree/QReader/public/demo.mp4
 ---
 
 ## ✨ 功能特性
