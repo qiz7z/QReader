@@ -33,7 +33,7 @@
 
 ### 🎬 演示视频
 
-`https://github.com/qiz7z/QReader/tree/QReader/public/demo.mp4`
+https://github.com/qiz7z/QReader/tree/QReader/public/demo.mp4
 ---
 
 ## ✨ 功能特性
