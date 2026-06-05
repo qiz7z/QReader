@@ -28,6 +28,12 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - **Fully Offline**: All data stored locally, no internet required
 - **Multi-Format Support**: Covers mainstream ebook formats
 - **Complete Features**: Bookmarks, notes, highlights, progress tracking
+
+### 🎬 Demo Video
+
+https://github.com/user-attachments/assets/demo.mp4
+
+<video src="./public/demo.mp4" controls width="100%" preload="metadata"></video>
 - **Lightweight & Fast**: Vite-powered, instant startup
 - **Extensible**: Supports future desktop app packaging
 

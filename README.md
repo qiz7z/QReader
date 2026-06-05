@@ -28,6 +28,12 @@
 - **完全离线**: 所有数据本地存储，无需联网
 - **多格式支持**: 覆盖主流电子书格式
 - **功能完整**: 书签、笔记、高亮、进度管理
+
+### 🎬 演示视频
+
+https://github.com/user-attachments/assets/demo.mp4
+
+<video src="./public/demo.mp4" controls width="100%" preload="metadata"></video>
 - **轻量快速**: 基于 Vite 构建，启动秒开
 - **可扩展**: 支持后续打包为桌面应用
 
