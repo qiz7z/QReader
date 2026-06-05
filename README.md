@@ -33,10 +33,6 @@
 
 ### 🎬 演示视频
 
-> 点击播放观看完整演示 👇
-
-<video src="https://github.com/qiz7z/QReader/releases/download/v0.8.1/demo.mp4" controls width="100%" preload="metadata"></video>
-
 ---
 
 ## ✨ 功能特性

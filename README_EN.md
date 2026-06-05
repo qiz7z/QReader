@@ -33,10 +33,6 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 
 ### 🎬 Demo Video
 
-> Click to watch the full demo 👇
-
-<video src="https://github.com/qiz7z/QReader/releases/download/v0.8.1/demo.mp4" controls width="100%" preload="metadata"></video>
-
 ---
 
 ## ✨ Features
