@@ -1306,13 +1306,27 @@ function showTtsToast(msg: string, duration = 3000) {
 // ---- 代理检测 + 系统语音预检 ----
 async function checkProxyAvailability(): Promise<boolean> {
   try {
+    // 先快速检查健康端点
     const healthUrl = TTS_PROXY_URL.replace('/api/tts', '/api/health')
-    console.log('[TTS] 检测代理:', healthUrl)
-    const resp = await fetch(healthUrl, {
-      signal: AbortSignal.timeout(1500)
+    const resp = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) })
+    if (!resp.ok) return false
+    
+    // 真实合成测试：发一个极短的文本验证 Edge TTS 能工作
+    const testUrl = TTS_PROXY_URL
+    const testResp = await fetch(testUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '测试', voice: 'zh-CN-XiaoxiaoNeural' }),
+      signal: AbortSignal.timeout(12000)  // 12s 超时
     })
-    const available = resp.ok
-    console.log('[TTS] 代理状态:', available, '状态码:', resp.status)
+    if (!testResp.ok) {
+      console.log('[TTS] Edge 合成测试失败（可能需要代理），状态码:', testResp.status)
+      return false
+    }
+    // 确认返回的是音频数据
+    const contentType = testResp.headers.get('content-type') || ''
+    const available = contentType.startsWith('audio/')
+    console.log('[TTS] Edge 合成测试:', available ? '成功' : '失败（返回类型:', contentType + '）')
     return available
   } catch (error: any) {
     console.log('[TTS] 代理检测失败:', error.message)
@@ -1426,8 +1440,11 @@ async function loadAllVoices() {
   isVoicesLoaded.value = true
   
   // 显示可用引擎信息
-  const engineType = currentProxyAvailable ? 'Edge TTS' : '系统语音'
-  showTtsToast(`朗读引擎已就绪（${engineType}）`, 2000)
+  if (currentProxyAvailable) {
+    showTtsToast('朗读引擎已就绪（Edge TTS）', 2000)
+  } else {
+    showTtsToast('Edge TTS 不可用（需代理），已切换到系统语音', 4000)
+  }
 }
 
 // ---- 判断当前语音属于哪个引擎 ----
@@ -1707,9 +1724,9 @@ async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
     prefetchEdge(startIndex + 1)
   } else {
     if (currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
-      showTtsToast('Edge TTS 当前不可用，已使用系统语音', 3000)
+      showTtsToast('Edge TTS 合成失败，已切换到系统语音', 3000)
     } else if (!currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
-      showTtsToast('Edge TTS 代理未启动，已切换到系统语音', 3000)
+      showTtsToast('Edge TTS 需要代理！请启动代理（127.0.0.1:10809），暂时使用系统语音', 5000)
     } else {
       showTtsToast('开始朗读（系统语音）', 1500)
     }

@@ -2,7 +2,7 @@ import http from 'http';
 import { EdgeTTS } from 'edge-tts-universal';
 
 const PORT = 3004;
-const REQUEST_TIMEOUT = 60000; // 60s 超时
+const REQUEST_TIMEOUT = 10000; // 10s 超时（国内直连基本不通，10s够判断了）
 
 // 代理配置（国内访问微软 TTS 服务需要）
 // 可通过环境变量 TTS_PROXY 设置，格式如: http://127.0.0.1:10809
