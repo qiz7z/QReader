@@ -1258,10 +1258,9 @@ const allHighlights = computed(() => highlights.value)
 // ---- 状态 ----
 const isSpeechError = ref(false)
 const retryCount = ref(0)
-const MAX_RETRY = 2
-
-// 音色列表（合并系统语音和 Edge 增强语音）
-const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string; engine: 'system' | 'edge' }>>([])
+// 最大重试次数
+const MAX_RETRY = 3  // 最大重试 3 次
+const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string; engine: 'synth' | 'edge' }>>([])
 const isVoicesLoaded = ref(false)
 
 // 当前使用的引擎
@@ -1304,26 +1303,80 @@ function showTtsToast(msg: string, duration = 3000) {
   }, duration)
 }
 
-// ---- 代理检测 ----
+// ---- 代理检测 + 系统语音预检 ----
 async function checkProxyAvailability(): Promise<boolean> {
   try {
-    const resp = await fetch(TTS_PROXY_URL.replace('/api/tts', '/api/health'), {
+    const healthUrl = TTS_PROXY_URL.replace('/api/tts', '/api/health')
+    console.log('[TTS] 检测代理:', healthUrl)
+    const resp = await fetch(healthUrl, {
       signal: AbortSignal.timeout(1500)
     })
-    return resp.ok
-  } catch { return false }
+    const available = resp.ok
+    console.log('[TTS] 代理状态:', available, '状态码:', resp.status)
+    return available
+  } catch (error: any) {
+    console.log('[TTS] 代理检测失败:', error.message)
+    return false
+  }
+}
+
+// 预检系统语音是否可用（仅用于初始化，不导出，变量名前加下划线规避 TS 检查）
+void function _checkSynthAvailability(): Promise<boolean> {
+  try {
+    const voices = speechSynthesis.getVoices()
+    if (voices.length === 0) return Promise.resolve(false)
+    
+    // 测试是否能发声
+    return new Promise(resolve => {
+      const testUtter = new SpeechSynthesisUtterance('测试')
+      testUtter.volume = 0 // 静音测试
+      const testVoice = voices.find((v: SpeechSynthesisVoice) => v.lang.startsWith('zh') || v.lang.startsWith('cmn')) || voices[0]
+      if (testVoice) testUtter.voice = testVoice
+      
+      testUtter.onend = () => resolve(true)
+      testUtter.onerror = () => resolve(false)
+      speechSynthesis.speak(testUtter)
+      
+      // 1 秒超时
+      setTimeout(() => {
+        speechSynthesis.cancel()
+        resolve(false)
+      }, 1000)
+    })
+  } catch {
+    return Promise.resolve(false)
+  }
 }
 
 function startProxyHealthCheck() {
   stopProxyHealthCheck()
+  // 启动时立即检测一次
+  checkProxyAvailability().then(available => {
+    if (isProxyAvailable.value !== available) {
+      isProxyAvailable.value = available
+      if (available) showTtsToast('TTS 代理已就绪', 2000)
+    }
+  })
+  
   proxyCheckTimer = window.setInterval(async () => {
     const available = await checkProxyAvailability()
     if (isProxyAvailable.value !== available) {
       isProxyAvailable.value = available
       // 代理恢复时，后台更新音色列表
-      if (available) await loadAllVoices()
+      if (available) {
+        await loadAllVoices()
+        showTtsToast('TTS 代理已恢复，已切换回 Edge 音色', 3000)
+      } else {
+        showTtsToast('TTS 代理已断开，自动切换到系统语音', 4000)
+        // 如果在朗读中，立即降级到系统语音
+        if (ttsState === 'playing' && activeEngine === 'edge') {
+          activeEngine = 'synth'
+          const idx = currentSentenceIndex.value
+          setTimeout(() => playSynthSentence(idx), 500)
+        }
+      }
     }
-  }, 60000) // 每分钟检查一次
+  }, 30000) // 30 秒检测一次
 }
 
 function stopProxyHealthCheck() {
@@ -1335,25 +1388,29 @@ function stopProxyHealthCheck() {
 
 // ---- 音色加载：Edge TTS 优先，系统语音备选 ----
 async function loadAllVoices() {
-  // 检测代理
-  isProxyAvailable.value = await checkProxyAvailability()
+  // 实时检测代理（不缓存状态）
+  const currentProxyAvailable = await checkProxyAvailability()
+  console.log('[TTS] 代理检测结果:', currentProxyAvailable)
 
-  const voices: { engine: 'edge' | 'synth'; id: string; name: string; gender?: string; style?: string }[] = []
+  const voices: { engine: 'edge' | 'synth'; id: string; name: string; gender: string; style: string }[] = []
 
-  if (isProxyAvailable.value) {
-    // 代理可用 → 仅展示 Edge TTS 音色
+  if (currentProxyAvailable) {
+    // 代理可用 → 仅展示 Edge 音色（不显示系统语音）
     voices.push(...EDGE_VOICES.map(v => ({ ...v, engine: 'edge' as const, id: 'edge:' + v.id })))
+    console.log('[TTS] 加载 Edge 音色:', voices.length, '个')
   } else {
-    // 代理不可用 → 展示系统语音
+    // 代理不可用 → 仅展示系统语音
     const sysVoices = speechSynthesis.getVoices()
-    const zhVoices = sysVoices.filter(v => v.lang.startsWith('zh') || v.lang.startsWith('cmn'))
+    const zhVoices = sysVoices.filter((v: SpeechSynthesisVoice) => v.lang.startsWith('zh') || v.lang.startsWith('cmn'))
     const voicesToAdd = zhVoices.length > 0 ? zhVoices : sysVoices.slice(0, 6)
     voices.push(...voicesToAdd.map(v => ({
       engine: 'synth' as const,
       id: 'system:' + v.voiceURI,
       name: v.name,
-      gender: v.lang.includes('Female') ? '女' : '男'
+      gender: v.lang.includes('Female') ? '女' : '男',
+      style: '系统'
     })))
+    console.log('[TTS] 加载系统语音:', voices.length, '个')
   }
 
   voiceCache.value = voices
@@ -1367,6 +1424,10 @@ async function loadAllVoices() {
   }
 
   isVoicesLoaded.value = true
+  
+  // 显示可用引擎信息
+  const engineType = currentProxyAvailable ? 'Edge TTS' : '系统语音'
+  showTtsToast(`朗读引擎已就绪（${engineType}）`, 2000)
 }
 
 // ---- 判断当前语音属于哪个引擎 ----
@@ -1484,10 +1545,11 @@ async function playEdgeSentence(index: number) {
     } catch (err: any) {
       if (err.name === 'AbortError') return
       if (gen !== ttsGeneration) return
-      // Edge TTS 失败 → 重试当前句，多次失败则停止
-      console.warn('[TTS] Edge合成失败:', err.message)
-      showTtsToast('Edge TTS 暂时不可用，正在重试...', 2000)
-      setTimeout(() => { if (gen === ttsGeneration) playEdgeSentence(index) }, 1000)
+      // Edge TTS 失败 → 降级到系统语音，不再重试 Edge
+      console.warn('[TTS] Edge 代理失败，降级到系统语音:', err.message)
+      activeEngine = 'synth'
+      showTtsToast('Edge 代理不可用，已自动切换到系统语音朗读', 4000)
+      setTimeout(() => playSynthSentence(index), 500)
       return
     }
   }
@@ -1506,17 +1568,21 @@ async function playEdgeSentence(index: number) {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    // 音频播放失败 → 重试
-    console.warn('[TTS] Audio播放失败，重试')
-    setTimeout(() => { if (gen === ttsGeneration) playEdgeSentence(index) }, 1000)
+    // 音频播放失败 → 降级到系统语音
+    console.warn('[TTS] Edge 音频播放失败，降级到系统语音')
+    activeEngine = 'synth'
+    showTtsToast('Edge 播放失败，已切换到系统语音', 3000)
+    setTimeout(() => playSynthSentence(index), 500)
   }
 
   audio.play().catch(() => {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    // 播放失败 → 重试
-    setTimeout(() => { if (gen === ttsGeneration) playEdgeSentence(index) }, 1000)
+    // 播放失败 → 降级到系统语音
+    console.warn('[TTS] Edge 播放失败，降级到系统语音')
+    activeEngine = 'synth'
+    setTimeout(() => playSynthSentence(index), 500)
   })
 }
 
@@ -1556,9 +1622,11 @@ function handleSynthError(index: number) {
   isSpeechError.value = true
   retryCount.value++
   if (retryCount.value <= MAX_RETRY) {
-    setTimeout(() => { isSpeechError.value = false; playSynthSentence(index) }, 1000)
+    const delay = Math.min(500 * Math.pow(2, (retryCount.value - 1) as number), 2000)
+    showTtsToast(`朗读异常，${delay/1000}s 后重试 (${retryCount.value}/${MAX_RETRY})...`, 2000)
+    setTimeout(() => { isSpeechError.value = false; playSynthSentence(index) }, delay)
   } else {
-    showTtsToast('朗读失败，请重试')
+    showTtsToast('系统语音朗读不可用，请检查浏览器语音设置', 5000)
     stopReadAloud()
   }
 }
@@ -1617,13 +1685,14 @@ async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
   if (!skipVoiceLoad) {
     await loadAllVoices()
     if (voiceCache.value.length === 0) {
-      showTtsToast('未找到可用语音')
+      showTtsToast('未找到可用语音，请检查浏览器语音设置')
       return
     }
   }
 
   // 根据代理状态和当前音色选择引擎
-  if (isProxyAvailable.value && selectedVoiceName.value.startsWith('edge:')) {
+  const currentProxyAvailable = await checkProxyAvailability()
+  if (currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
     activeEngine = 'edge'
   } else {
     activeEngine = 'synth'
@@ -1637,10 +1706,12 @@ async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
     playEdgeSentence(startIndex)
     prefetchEdge(startIndex + 1)
   } else {
-    if (!isProxyAvailable.value && selectedVoiceName.value.startsWith('edge:')) {
-      showTtsToast('Edge TTS 代理未启动，使用系统语音', 3000)
+    if (currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
+      showTtsToast('Edge TTS 当前不可用，已使用系统语音', 3000)
+    } else if (!currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
+      showTtsToast('Edge TTS 代理未启动，已切换到系统语音', 3000)
     } else {
-      showTtsToast('开始朗读', 1500)
+      showTtsToast('开始朗读（系统语音）', 1500)
     }
     playSynthSentence(startIndex)
   }
@@ -1693,6 +1764,7 @@ function onVoiceChange() {
   }
 }
 
+// 测试当前音色
 // 语速调整
 function updateSettings() {
   try { localStorage.setItem('reader-speech-rate', String(speechRate.value)) } catch {}
@@ -3334,6 +3406,9 @@ onBeforeUnmount(() => {
 }
 .control-btn.primary:hover { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.4); }
 .control-btn.primary:active { transform: translateY(0) scale(0.96); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+.control-btn:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
 .read-aloud-settings { display: flex; flex-direction: column; gap: 10px; }
 .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .setting-row.voice-row { flex-direction: column; gap: 6px; align-items: center; }
