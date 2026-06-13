@@ -556,204 +556,157 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 
 ## 📝 Changelog
 
-### v0.8.1 (2026-06-04)
+> Below is the complete changelog since the project's creation on 2026-05-13, organized by feature category.
+>
+> Full Git history: [GitHub Commits](https://github.com/qiz7z/reader_v0/commits)
+
+### ✨ Read Aloud (TTS)
 
 #### New Features
-- **Edge TTS Read Aloud**: 6 Edge Chinese neural voices (Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang), requires proxy server
-- **TTS Proxy Server**: Built-in TTS proxy with `npm run server:proxy` for proxy-aware startup
-
-#### Improvements
-- Font weight default adjusted to level 3 (font-weight 600) for better reading comfort
-- Font weight rendering switched to `-webkit-text-stroke`, eliminating text-shadow artifacts
-- Electron icon embedded using standard ICO file (16/32/48/256), cleaner display at all sizes
-- Icon file guaranteed accessible in packaged app via `extraResources`
+- **Edge TTS Support**: 6 Edge Chinese neural voices (Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang)
+- **TTS Proxy Server**: Node.js proxy on port 3004, start with `npm run server`
+- **Auto-scroll During Read Aloud**: Automatically tracks and scrolls to the current sentence position
+- **Enhanced Read Aloud Highlighting**: Current sentence highlight with rounded corners and shadow effects, theme-adaptive
+- **Auto Chapter Advance**: Automatically continues to next chapter when reaching chapter end
+- **TTS Error Toasts**: User-visible notifications (proxy unavailable, synthesis failed, etc.)
+- **Sentence Prefetching**: Background prefetch of next sentence while current one plays, eliminating gaps
+- **Pause/Resume**: Saves playback position, resumes from exact second
 
 #### Bug Fixes
-- **TTS Ghost Chain**: Fixed ghost async chain running after `stopReadAloud()` causing sentence jumping (added `ttsGeneration` counter)
+- **TTS Ghost Chain**: Fixed ghost async chain running after `stopReadAloud()` causing sentence jumping (`ttsGeneration` counter)
 - **Double Chapter Jump**: Fixed `tryNextChapter()` missing re-entry guard causing chapters to be skipped
 - **Pause Failure**: Fixed `toggleReadAloud` logic flaw and unreliable `speechSynthesis.pause()`
 - **Voice Switch Jumping**: Fixed `loadAllVoices()` overwriting user's voice selection mid-playback
-- **404 Error**: Fixed `vite.config.ts` `base: './'` causing broken resource paths in production builds
-- **Desktop Icon**: Fixed Electron packaged app showing default icon (switched to ICO + extraResources)
+- **Audio Timeout**: Proxy server added request timeout protection to prevent infinite waiting
 
-### v0.8.0 (2026-06-01)
+### 🎨 UI / Theme
 
 #### New Features
-- **TTS Refactor**: Migrated from browser-side edge-tts-universal to Node.js proxy server with browser fallback
-- **Sentence Prefetching**: Background prefetch of next sentence while current one plays, eliminating gaps
-- **Pause/Resume**: Saves playback position, resumes from exact second
-- **Batch Synthesis Endpoint**: Server-side POST /api/tts/batch for multi-sentence synthesis
-- **Synthesis Timeout**: 60s timeout with automatic 504 response
-- **TTS Error Toasts**: User-visible notifications (proxy unavailable, synthesis failed, etc.)
+- **Magic Academy UI**: Redesigned Home and Library pages with magic academy theme
+- **QReader Rebrand**: Horizontal logo + brand name layout, transparent background, blue icon
+- **PDF Fullscreen**: Fullscreen reading mode with bottom-right floating toggle button
+- **Reading Info Bar**: Floating bottom-left info bar with real-time clock and word count
+- **Library Reading Time Stats**: Total reading time displayed on Library page
+- **Right Panel Redesign**: 5 functional buttons (Read Aloud, Library, Settings, Annotations, Bookmarks) fully redesigned
+- **Glassmorphism Effect**: Right panel with `backdrop-filter: blur(16px)` frosted glass effect
+- **Lucide SVG Icons**: All functional buttons replaced with vector SVG icons
+- **Card-style Settings**: Settings panel organized into card groups
 
 #### Improvements
-- **Default Font**: KaiTi (楷体) as default on first open
+- **Unified Color Scheme**: Primary color changed to Tailwind Blue (`#3b82f6`)
+- **Font Weight Default**: Adjusted to level 3 (font-weight 600) for better reading comfort
+- **Font Weight Rendering**: Switched to `-webkit-text-stroke`, eliminating text-shadow artifacts
 - **Bottom Bar**: Transparent background, chapter indicator restored, theme-adaptive
 - **Chapter-End Buttons**: 3D effect with gradient background + bottom shadow + press feedback
-- **Right Panel Hover Effects**: Float + shadow + scale feedback, theme-adaptive
-- **Periodic Proxy Health Check**: Every 30s, automatic path switching
-- **Exponential Backoff Retry**: 500ms → 1s → 2s
-
-#### Technical Changes
-- Added server/http-server.js TTS proxy server
-- New /api/tts/batch batch synthesis endpoint
-- Simplified TTS from queue-based to sequential playback + single prefetch
-- Synced Electron main process TTS service
-
-### v0.7.1 (2026-05-31)
-
-#### Improvements
-- **UI Consistency**: Unified theme button height (36px) and border-radius (8px) to match other button styles
-- **Font Consistency**: Bottom page number and chapter number fonts unified to Georgia/Times New Roman serif font
-- **Chapter Navigation Simplified**: Removed duplicate prev/next chapter buttons in bottom-right corner; chapter jumping unified in bottom info bar
-- **Chapter Jump Fix**: Fixed chapter indicator click-to-input jumping issue in bottom info bar, unified ref references
-- **Code Cleanup**: Removed 6 temporary server files, keeping only http-server.js
-
-### v0.7.0 (2026-05-31)
-
-#### New Features
-- **Page Flip Mode Returns**: Reimplemented page-flip reading mode for TXT/EPUB/MD (non-PDF formats) with left-right dual-column CSS Grid layout
-- **Keyboard Shortcuts**: ArrowLeft/ArrowRight keys for page navigation
-- **Enhanced Read Aloud Tracking**: Current sentence highlighting during read-aloud in page-flip mode with theme adaptation
-- **Cross-Chapter Navigation**: Page flip buttons support chapter transitions (first page → previous chapter's last page, last page → next chapter's first page)
-- **Sidebar Theme Adaptation**: Left collapsed TOC panel hover background adapts to themes (dark/green/parchment)
-- **Info Bar Integration**: Bottom info bar combines time/word count/page number/chapter progress, auto-hides in fullscreen
-
-#### Improvements
-- **Highlight Stutter Fix**: `saveHighlight` and `deleteHighlight` use `nextTick()` to delay re-layout, reducing main thread blocking
-- **Oversized Paragraph Optimized**: `splitOversized` function supports HTML tags, highlight marks preserved during pagination
-- **Text Highlight Fix**: Text highlighting and notes work correctly in page-flip mode with immediate redraw
-- **Left Border Theme**: Left `.reader-main` border color adapts to themes, symmetric with right side
-- **Flip Button Interaction**: Side flip buttons hidden by default, visible on hover, with blue shadow and scale effect
-
-#### Technical Changes
-- Page data structure changed from `string[]` to `Array<{ html: string, idx: number }>` to preserve paragraph indices for read-aloud tracking
-- `recalcPages()` changed to async trigger to avoid synchronous UI blocking
-- Keyboard event listeners registered in `onMounted`, cleaned up in `onBeforeUnmount`
-
-### v0.6.0 (2026-05-28)
-
-#### New Features
-- **edge-tts-universal TTS Engine**: Migrated from browser SpeechSynthesis API to edge-tts-universal with WebSocket connection to Microsoft TTS service, no backend required
-- **6 Chinese Voices**: Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang with natural and fluent audio quality
-- **Auto-scroll During Read Aloud**: Automatically tracks and scrolls to the current sentence position during reading
-- **Enhanced Read Aloud Highlighting**: Current sentence highlight now includes rounded corners and shadow effects with theme adaptation
-
-#### Improvements
-- **TTS Pause Fix**: Clear audio callbacks before pausing to prevent auto-advancing to next sentence
-- **Page Flip Mode Removed**: Removed page-flip reading mode, unified to scroll mode with only "Scroll" option in settings
-- **Settings Panel Cleanup**: Removed line height text labels ("Super Wide"/"Standard" etc.) for cleaner interface
+- **Button Hover Effects**: Float + shadow + scale feedback with cubic-bezier easing
+- **Panel Transition**: Right panel expand/collapse uses 0.3s cubic-bezier transition
+- **Theme Button Consistency**: Unified height (36px) and border-radius (8px)
+- **Font Consistency**: Bottom page/chapter numbers unified to Georgia/Times New Roman serif
+- **Info Bar Integration**: Combines time/word count/page/chapter progress, auto-hides in fullscreen
+- **Font Weight 5-Level**: Multi-layer shadow stacking, Windows Microsoft YaHei optimized
+- **Toolbar Compact Size**: Buttons, icons, color dots unified to smaller sizes
+- **Default Font**: KaiTi (楷体) as default on first open
 - **Favicon Update**: Replaced with transparent icon (no white border)
+
+#### Bug Fixes
 - **Theme Switch Fix**: Fixed CSS duplicate blocks causing theme switching issues
-- **Auto Chapter Advance**: Read aloud automatically continues to next chapter when reaching chapter end
+- **Fullscreen Button Visibility**: Fixed fullscreen button blending into background in dark mode
+- **Zoom Control Styles**: Fixed parchment mode white background, removed yellow box and divider
+- **PDF Range Slider**: Fixed WebKit/Firefox style override
+- **Compilation Error**: Fixed extra div closing tag
+- **Chapter Indicator**: Fixed click-to-input jumping issue, unified ref references
+
+### 📖 Reading Mode
+
+#### New Features
+- **Page Flip Mode**: Page-flip reading for TXT/EPUB/MD with left-right dual-column CSS Grid layout
+- **Keyboard Shortcuts**: ArrowLeft/ArrowRight for page navigation
+- **Cross-Chapter Navigation**: Page flip buttons support chapter transitions
+
+#### Improvements
+- **Highlight Performance**: `nextTick()` delay reduces main thread blocking
+- **Oversized Paragraphs**: `splitOversized` supports HTML tags, highlights preserved during pagination
+- **Text Highlight Fix**: Highlighting and notes work in page-flip mode with immediate redraw
+- **Flip Button Interaction**: Hidden by default, visible on hover with blue shadow and scale
+- **Sidebar Theme**: Left TOC panel hover background adapts to themes
+- **TOC Collapsed**: Table of contents collapsed by default for cleaner UI
 
 #### Removed
-- Removed browser native SpeechSynthesis API (synthesis-failed issues)
-- Removed Flask backend TTS service (edge-tts-universal runs directly in browser)
-- Removed page flip mode related code and CSS
-- Removed line height text label display
+- Page flip mode code and CSS (v0.6.0)
+- Page flip mode re-added (v0.7.0)
+- Line height text labels ("Super Wide"/"Standard" etc.)
 
-### v0.5.0 (2026-05-27)
-
-#### New Features
-- **Highlighter Tool**: New highlighter in annotation mode with semi-transparent painting effect, 4 fluorescent colors (yellow, green, pink, blue)
-- **Toolbar Layout Optimization**: Reorganized annotation toolbar with clearer grouping (pen/highlighter/eraser)
-- **Click Outside to Close**: Right side panels (Read Aloud, Shelf, Settings, etc.) now close when clicking blank area in reading area
-
-#### Improvements
-- **Reduced Toolbar Size**: Buttons, icons, and color dots unified to smaller sizes for a more compact UI
-- **Highlighter Independent Width**: Highlighter uses pixel-level width (10-40px), separate from pen's millimeter-level width
-- **Danger Color for Clear Button**: Clear All button turns red on hover for better warning
-
-#### Removed
-- Removed PDF text highlight feature (textLayer implementation had compatibility issues)
-
-### v0.4.0 (2026-05-26)
+### 📝 Annotations
 
 #### New Features
-- **Magic Academy UI**: Redesigned Home and Library pages with magic academy theme, enhanced brand text effects
-- **QReader Rebrand**: Horizontal logo + brand name layout, transparent logo background, blue icon
-- **PDF Fullscreen**: Fullscreen reading mode for PDF with bottom-right floating toggle button
-- **TXT Reading Info Bar**: Floating bottom-left info bar with real-time clock and word count (words read / total words), visible in both fullscreen and normal modes
-- **Theme Support**: Info bar adapts to all 4 themes (light, dark, green, parchment)
+- **PDF Pen Annotation**: Canvas overlay, 6 colors, 0.5-10mm stroke width
+- **Highlighter**: Semi-transparent painting, 4 fluorescent colors (yellow, green, pink, blue)
+- **Line Erase**: Swipe across strokes to erase (segment distance detection)
+- **Lasso Erase**: Draw a loop, ray-casting batch erase inside
+- **Persistent Annotations**: Annotations visible when toolbar is collapsed
+- **Annotation Undo**: Undo last annotation or clear all
+- **Pen Width Selection**: 5-level pen width (1/2/3/4/6px)
 
 #### Improvements
-- **PDF Fullscreen Button**: Unified bottom-right floating button across all formats
-- **Zoom Controls**: Fixed white background in parchment mode, removed yellow box and divider line
-- **Dark Mode**: Fixed fullscreen button blending into background
-- Info bar font unified with chapter indicator (Georgia/Times New Roman, 14px, 500 weight)
-
-#### Bug Fixes
-- Fixed PDF range slider style override (WebKit/Firefox)
-- Fixed compilation error (extra div closing tag)
-
-### v0.3.0 (2026-05-25)
-
-#### New Features
-- **PDF Pen Annotation**: Canvas overlay with 6 colors, 0.5-10mm stroke width
-- **Line Erase**: Swipe across annotation strokes to erase (segment distance detection)
-- **Lasso Erase**: Draw a loop, ray-casting detection to batch erase annotations inside
-- **Persistent Annotations**: Annotations visible even when toolbar is collapsed
-
-#### Improvements
-- **Font Weight 5-Level**: Multi-layer shadow stacking (4/6/8/12 layers), visible difference per level, Windows Microsoft YaHei optimized
-- **TOC Panel Collapsed**: Table of contents panel collapsed by default for cleaner UI
 - **Storage Refactor**: Switched to LocalStorage, isolated by file content hash
-- **Erase Precision**: Segment distance replaces point-to-point distance for better hit detection
+- **Erase Precision**: Segment distance replaces point-to-point distance
 - **Coordinate Fix**: `screenX * canvas.width / rect.width` eliminates CSS zoom bias
-- **Event Separation**: mouseleave only cleans up state for lasso mode, preventing false erases
-- **Icon Redesign**: New icons for line erase, lasso erase, and clear all
-- **Theme Cleanup**: Removed independent `.pdf-zoom-controls` background to avoid green box
+- **Event Separation**: mouseleave only cleans up state in lasso mode
+- **Icon Redesign**: New icons for erase, lasso, and clear all
+- **Toolbar Merge**: Annotation tools merged with zoom controls
+- **Danger Color for Clear**: Clear All button turns red on hover
+- **Highlighter Independent Width**: Pixel-level width (10-40px) separate from pen's mm width
 
 #### Bug Fixes
-- Fixed mouseleave triggering lasso erasure of out-of-loop annotations
-- Fixed annotations disappearing when toolbar is collapsed
+- Fixed mouseleave triggering false lasso erasure
+- Fixed annotations disappearing when toolbar collapsed
 - Fixed `setTransform` parameter error
-- Fixed missing `toggleReadAloud` function
-
-### v0.2.0 (2026-05-23)
-
-#### New Features
-- **OPFS Storage**: Use Origin Private File System as primary storage, more reliable and secure
-- **Data Export**: Export all data to JSON backup file
-- **Data Import**: Restore data from JSON backup file
-- **Storage Fallback**: Automatic fallback to IndexedDB for browsers without OPFS support
-- **Storage Status**: Display current storage method in Settings page
-
-#### Improvements
-- **Data Migration**: Auto-migrate data from IndexedDB to OPFS on first use
-- **Hybrid Storage Architecture**: StorageService supports both OPFS and IndexedDB modes
-- **File-based Management**: Data stored as files, easier to backup and restore
-
-### v0.1.0 (2026-05-16)
-
-#### New Features
-- **PDF Chapter Navigation**: Create chapter structure from PDF outline, click to jump to chapter start page
-- **Page Indicator**: Display current chapter/page number for PDF
-- **Pen Width Selection**: 5-level annotation pen width (1/2/3/4/6px)
-- **Annotation Undo**: Undo last annotation or clear all annotations
-
-#### Improvements
-- **Eraser Refactor**: Fixed coordinate offset after zoom, real-time erase feedback
-- **Toolbar Merge**: Combined annotation tools with zoom controls into single floating bar
-- **PDF Parser Optimization**: Auto-chapter every 10 pages for PDFs without outline
-- **Build Config**: Optimized Vite config with AllowedHosts for remote preview
-
-#### Bug Fixes
 - Fixed annotation coordinate calculation after PDF zoom
 - Fixed annotation loss after refresh
 - Fixed eraser coordinate system consistency
-- Fixed TypeScript type definition errors
+- Fixed pen color always resetting to yellow
 
 #### Removed
-- Removed text selection highlight (focus on core reading experience, native PDF rendering)
+- PDF text highlight (textLayer compatibility issues)
 
-### v0.0.0 (2026-05-13)
+### 💾 Storage / Data
 
-- Project initialization
-- Basic architecture setup
-- Type definitions and database design
-- Core component development
+#### New Features
+- **OPFS Storage**: Origin Private File System as primary storage, more reliable and secure
+- **Data Export/Import**: JSON backup and restore
+- **Storage Fallback**: Automatic fallback to IndexedDB for browsers without OPFS
+- **Data Migration**: Auto-migrate from IndexedDB to OPFS on first use
+- **Storage Status**: Display current storage method in Settings page
+
+### 🖥️ Electron / Desktop
+
+#### Improvements
+- **Desktop Icon**: Standard ICO icon (16/32/48/256) in Electron builds
+- **TTS Integration**: Built-in TTS proxy for out-of-the-box read aloud
+- **Startup Screen**: QReader brand loading animation
+
+#### Bug Fixes
+- Fixed default icon display in Electron builds
+
+### 🔧 Build / Configuration
+
+#### Improvements
+- **PDF.js Worker**: Offline worker localized, no CDN dependency
+- **Build Config**: Optimized Vite config with AllowedHosts for remote preview
+- **Base Path Fix**: Fixed `base: './'` causing broken resource paths in production
+- **Code Cleanup**: Removed temporary server files, keeping only http-server.js
+
+#### Bug Fixes
+- Fixed TypeScript type definition errors
+- Fixed reading time tracking race condition
+
+### 📄 Early Versions (v0.1.0)
+
+- PDF chapter navigation, page indicator, basic pen annotation, eraser
+- Architecture setup, type definitions, database design
+- Fixed PDF zoom coordinates, annotation refresh loss, and initial issues
+
+---
 
 ---
 
