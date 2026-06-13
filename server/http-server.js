@@ -4,6 +4,16 @@ import { EdgeTTS } from 'edge-tts-universal';
 const PORT = 3004;
 const REQUEST_TIMEOUT = 60000; // 60s 超时
 
+// 代理配置（国内访问微软 TTS 服务需要）
+// 可通过环境变量 TTS_PROXY 设置，格式如: http://127.0.0.1:10809
+const PROXY = process.env.TTS_PROXY || '';
+
+function getTTSOptions(voice, rate, volume, pitch) {
+  const opts = { rate, volume, pitch };
+  if (PROXY) opts.proxy = PROXY;
+  return opts;
+}
+
 const server = http.createServer(async (req, res) => {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,7 +29,7 @@ const server = http.createServer(async (req, res) => {
   // 健康检查
   if (req.url === '/api/health' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
+    res.end(JSON.stringify({ status: 'ok', proxy: PROXY || 'none', timestamp: new Date().toISOString() }));
     return;
   }
 
@@ -52,7 +62,7 @@ const server = http.createServer(async (req, res) => {
 
         console.log(`[TTS] 批量请求: ${sentences.length}句, voice=${voice}, rate=${rate}, total=${combinedText.length}字`);
 
-        const tts = new EdgeTTS(combinedText, voice, { rate, volume, pitch });
+        const tts = new EdgeTTS(combinedText, voice, getTTSOptions(voice, rate, volume, pitch));
         const result = await tts.synthesize();
         const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
 
@@ -94,9 +104,9 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        console.log(`[TTS] 请求: voice=${voice}, rate=${rate}, text="${cleanText.substring(0, 50)}..."`);
+        console.log(`[TTS] 请求: voice=${voice}, rate=${rate}, proxy=${PROXY || 'none'}, text="${cleanText.substring(0, 50)}..."`);
 
-        const tts = new EdgeTTS(cleanText, voice, { rate, volume, pitch });
+        const tts = new EdgeTTS(cleanText, voice, getTTSOptions(voice, rate, volume, pitch));
 
         // 设置合成超时
         const timeout = new Promise((_, reject) =>
@@ -130,6 +140,8 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[TTS Server] 运行在 http://localhost:${PORT}`);
+  console.log(`[TTS Server] 代理: ${PROXY || '未设置（直连）'}`);
+  console.log(`[TTS Server] 提示: 如需代理，请设置环境变量 TTS_PROXY，如 TTS_PROXY=http://127.0.0.1:10809`);
   console.log(`[TTS Server] 单句端点: POST http://localhost:${PORT}/api/tts`);
   console.log(`[TTS Server] 批量端点: POST http://localhost:${PORT}/api/tts/batch`);
 });

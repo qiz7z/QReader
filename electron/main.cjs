@@ -114,6 +114,10 @@ function stopStaticServer() {
 
 // ==================== TTS 服务器 ====================
 
+// 代理配置（国内访问微软 TTS 服务需要）
+// 可通过环境变量 TTS_PROXY 设置，格式如: http://127.0.0.1:10809
+const TTS_PROXY = process.env.TTS_PROXY || ''
+
 function startTTSServer() {
   let EdgeTTS
   try {
@@ -136,7 +140,7 @@ function startTTSServer() {
 
     if (req.url === '/api/health' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ status: 'ok' }))
+      res.end(JSON.stringify({ status: 'ok', proxy: TTS_PROXY || 'none' }))
       return
     }
 
@@ -162,7 +166,9 @@ function startTTSServer() {
             return
           }
           log(`[TTS] 批量: ${sentences.length}句, voice=${voice}, ${combinedText.length}字`)
-          const tts = new EdgeTTS(combinedText, voice, { rate, volume, pitch })
+          const ttsOpts = { rate, volume, pitch }
+          if (TTS_PROXY) ttsOpts.proxy = TTS_PROXY
+          const tts = new EdgeTTS(combinedText, voice, ttsOpts)
           const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TTS timeout')), REQUEST_TIMEOUT))
           const result = await Promise.race([tts.synthesize(), timeout])
           const audioBuffer = Buffer.from(await result.audio.arrayBuffer())
@@ -196,7 +202,9 @@ function startTTSServer() {
             res.end(JSON.stringify({ error: '文本为空' }))
             return
           }
-          const tts = new EdgeTTS(cleanText, voice, { rate, volume, pitch })
+          const ttsOpts = { rate, volume, pitch }
+          if (TTS_PROXY) ttsOpts.proxy = TTS_PROXY
+          const tts = new EdgeTTS(cleanText, voice, ttsOpts)
           const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TTS timeout')), REQUEST_TIMEOUT))
           const result = await Promise.race([tts.synthesize(), timeout])
           const audioBuffer = Buffer.from(await result.audio.arrayBuffer())
@@ -218,6 +226,7 @@ function startTTSServer() {
 
   ttsServer.listen(TTS_PORT, () => {
     log(`[TTS Server] 运行在 http://localhost:${TTS_PORT}`)
+    log(`[TTS Server] 代理: ${TTS_PROXY || '未设置（直连）'}`)
   })
 
   ttsServer.on('error', (err) => {

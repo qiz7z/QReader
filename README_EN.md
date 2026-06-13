@@ -33,6 +33,8 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 
 ### 🎬 Demo Video
 
+> The demo video is available on [GitHub Release](https://github.com/qiz7z/reader_v0/releases) for download.
+
 ---
 
 ## ✨ Features
@@ -475,7 +477,7 @@ npm run electron:build:nsis       # Installer only
 npm run electron:build:portable   # Portable only
 ```
 
-Output: `releases/QReader-0.8.0-Setup.exe` (NSIS installer, 141MB) and `releases/QReader-0.8.0.exe` (Portable, 122MB)
+Output: `releases/QReader-1.2.2-Setup.exe` (NSIS installer) and `releases/QReader-1.2.2.exe` (Portable)
 
 The Electron version has built-in TTS proxy, plus falls back to system voice.
 

@@ -30,7 +30,7 @@ import { ref, computed, watch } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { PdfAnnotation, Point } from '@/utils/annotationStorage'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
 const BASE_RENDER_SCALE = 3.0
 
@@ -479,24 +479,16 @@ watch(() => props.annotations, (newAnnots) => {
 
 // 导出滚动到指定页的方法
 function scrollToPage(pageNum: number) {
-  console.log('[PdfReader] scrollToPage called with pageNum:', pageNum)
-  
   // 使用 pdf-pages 容器而不是 pdf-pages-wrapper
   const pagesContainer = document.querySelector('.pdf-pages')
-  if (!pagesContainer) {
-    console.error('[PdfReader] .pdf-pages not found')
-    return
-  }
-  
+  if (!pagesContainer) return
+
   // pageNum 是从 1 开始的 PDF 页码
   const pageWrappers = pagesContainer.querySelectorAll('.pdf-page-wrapper')
   const pageEl = pageWrappers[pageNum - 1]
-  
+
   if (pageEl) {
-    console.log('[PdfReader] Found page element, scrolling...')
     pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  } else {
-    console.error('[PdfReader] Page element not found for pageNum:', pageNum, 'total pages:', pageWrappers.length)
   }
 }
 

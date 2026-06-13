@@ -45,12 +45,9 @@ export async function parseEPUB(file: File, arrayBuffer: ArrayBuffer): Promise<P
     }
   })
 
-  console.log('[EPUB Parser] TOC entries:', tocEntries)
-
   // 5. 获取 spine（章节顺序）
   const spine = (book as any).spine
   const spineLength = spine.length
-  console.log('[EPUB Parser] Spine length:', spineLength)
 
   // 6. 构建存档文件索引（用于精确查找图片路径）
   const archive = (book as any).archive
@@ -181,8 +178,6 @@ export async function parseEPUB(file: File, arrayBuffer: ArrayBuffer): Promise<P
     })
   }
   
-  console.log('[EPUB Parser] Chapters:', content.slice(0, 5).map(c => c.title))
-
   // 8. 提取封面
   let cover: ArrayBuffer | null = null
 
@@ -192,7 +187,6 @@ export async function parseEPUB(file: File, arrayBuffer: ArrayBuffer): Promise<P
     if (resolvedPath && archive.zip.files[resolvedPath]) {
       try {
         const data = await archive.zip.files[resolvedPath].async('arraybuffer')
-        console.log('[EPUB] Cover loaded from:', resolvedPath)
         return data
       } catch (e) {
         console.warn('[EPUB] Failed to load cover from resolved path:', resolvedPath, e)

@@ -32,8 +32,8 @@
 - **可扩展**: 支持后续打包为桌面应用
 
 ### 🎬 演示视频
-- 微信演示视频：https://mp.weixin.qq.com/s/zxb2C2zxtIEOKfjRW1zQ9A
-- https://github.com/qiz7z/QReader/tree/QReader/public/demo.mp4
+
+> 视频已上传至 [GitHub Release](https://github.com/qiz7z/reader_v0/releases)，可在 Release 页面下载观看。
 ---
 
 ## ✨ 功能特性
@@ -175,7 +175,7 @@ npm run build
 npm run electron:build
 ```
 
-输出：`releases/QReader-0.8.0-Setup.exe`（NSIS 安装版，141MB）和 `releases/QReader-0.8.0.exe`（便携版，122MB）
+输出：`releases/QReader-1.2.2-Setup.exe`（NSIS 安装版）和 `releases/QReader-1.2.2.exe`（便携版）
 
 ---
 
@@ -466,7 +466,7 @@ npm run build
 npm run electron:build
 ```
 
-输出：`releases/QReader-0.8.0-Setup.exe`（NSIS 安装版，141MB）和 `releases/QReader-0.8.0.exe`（便携版，122MB）
+输出：`releases/QReader-1.2.2-Setup.exe`（NSIS 安装版）和 `releases/QReader-1.2.2.exe`（便携版）
 
 Electron 版本集成了 TTS 代理服务器，朗读功能开箱即用。
 

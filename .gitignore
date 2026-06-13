@@ -26,4 +26,14 @@ dist-ssr
 # WorkBuddy
 .workbuddy/
 
+# Build output
+releases/
+
+# Dev tools
+.monkeycode/
+
+# Temp/test files
 test.mp3
+*.mp4
+debug.log
+server.log

@@ -319,7 +319,7 @@
       <!-- 划线笔记浮动工具栏 -->
       <div v-if="showHlToolbar" class="hl-toolbar" :style="{ left: hlToolbarPos.x + 'px', top: hlToolbarPos.y + 'px' }">
         <div class="hl-colors">
-          <button v-for="c in hlColors" :key="c" class="hl-color-btn" :class="{ active: hlSelectedColor === c }" :style="{ background: c }" @click="hlSelectedColor = c; console.log('hlColor clicked:', c)"></button>
+          <button v-for="c in hlColors" :key="c" class="hl-color-btn" :class="{ active: hlSelectedColor === c }" :style="{ background: c }" @click="hlSelectedColor = c"></button>
         </div>
         <div class="hl-actions">
           <button class="hl-btn hl-btn-note" @click="hlShowNoteInput = !hlShowNoteInput">{{ hlShowNoteInput ? '取消' : '笔记' }}</button>
@@ -333,25 +333,49 @@
       <!-- 右侧工具栏 -->
       <aside class="reader-right" :class="{ 'hover-visible': !rightPanel }" @mouseenter="showRightTools = true" @mouseleave="showRightTools = false" @click.stop>
         <div class="right-tools">
+          <!-- 朗读 -->
           <button class="tool-btn" @click.stop="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud' }" title="朗读">
-            <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-              <line x1="9" y1="9" x2="9" y2="15"></line>
-              <line x1="15" y1="9" x2="15" y2="15"></line>
+            <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+              <rect x="14" y="4" width="4" height="16" rx="1"></rect>
             </svg>
-            <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
             </svg>
+            <span class="tool-label">朗读</span>
           </button>
-          <button class="tool-btn" @click.stop="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架">📚</button>
-          <button class="tool-btn" @click.stop="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置">⚙</button>
-          <button class="tool-btn" @click.stop="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记">✎</button>
+          <!-- 书架 -->
+          <button class="tool-btn" @click.stop="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <span class="tool-label">书架</span>
+          </button>
+          <!-- 设置 -->
+          <button class="tool-btn" @click.stop="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span class="tool-label">设置</span>
+          </button>
+          <!-- 划线笔记 -->
+          <button class="tool-btn" @click.stop="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+            <span class="tool-label">笔记</span>
+          </button>
+          <!-- 书签 -->
           <button class="tool-btn" @click.stop="toggleRight('bookmarks')" :class="{ active: rightPanel === 'bookmarks' }" title="书签">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             </svg>
+            <span class="tool-label">书签</span>
           </button>
         </div>
 
@@ -359,43 +383,49 @@
           <div v-if="rightPanel" class="right-panel" :class="rightPanel">
                 <div class="right-panel-hd">
               <span>{{ rightPanel === 'shelf' ? '书架' : rightPanel === 'readAloud' ? '朗读' : rightPanel === 'annotations' ? '划线笔记' : rightPanel === 'bookmarks' ? '书签' : '阅读设置' }}</span>
-              <button class="close-btn" @click="rightPanel = ''">✕</button>
+              <button class="close-btn" @click="rightPanel = ''">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
             </div>
             <div class="right-panel-bd">
               <!-- 朗读面板 -->
               <div v-if="rightPanel === 'readAloud'" class="read-aloud-panel">
-                <div class="read-aloud-header">
-                  <div class="read-aloud-title">朗读</div>
-                  <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying, error: isSpeechError }">
-                    {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : isVoicesLoaded ? '准备就绪' : '加载中...' }}
+                <div class="panel-card">
+                  <div class="read-aloud-header">
+                    <div class="read-aloud-title">朗读控制</div>
+                    <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying, error: isSpeechError }">
+                      {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : isVoicesLoaded ? '准备就绪' : '加载中...' }}
+                    </div>
                   </div>
-                </div>
-                
-                <div class="read-aloud-controls">
-                  <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="voiceCache.length === 0">
-                    <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                      <rect x="6" y="4" width="4" height="16"></rect>
-                      <rect x="14" y="4" width="4" height="16"></rect>
-                    </svg>
-                    <svg v-else viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                  </button>
+                  
+                  <div class="read-aloud-controls">
+                    <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="voiceCache.length === 0">
+                      <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                        <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                      </svg>
+                      <svg v-else viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
-                <div class="read-aloud-settings">
-                  <div class="setting-row voice-row">
-                    <label>音色</label>
-                    <select v-model="selectedVoiceName" @change="onVoiceChange" :disabled="voiceCache.length === 0">
-                      <option v-for="voice in voiceCache" :key="voice.id" :value="voice.id">
-                        {{ voice.name }} · {{ voice.style }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="setting-row">
-                    <label>语速</label>
-                    <input type="range" min="0.5" max="1.5" step="0.1" v-model="speechRate" @change="updateSettings" />
-                    <span class="setting-value">{{ speechRate }}x</span>
+                <div class="panel-card">
+                  <div class="read-aloud-settings">
+                    <div class="setting-row voice-row">
+                      <label>音色</label>
+                      <select v-model="selectedVoiceName" @change="onVoiceChange" :disabled="voiceCache.length === 0">
+                        <option v-for="voice in voiceCache" :key="voice.id" :value="voice.id">
+                          {{ voice.name }} · {{ voice.style }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="setting-row">
+                      <label>语速</label>
+                      <input type="range" min="0.5" max="1.5" step="0.1" v-model="speechRate" @change="updateSettings" />
+                      <span class="setting-value">{{ speechRate }}x</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -420,67 +450,81 @@
 
               <!-- 设置 -->
               <div v-if="rightPanel === 'settings'" class="settings-panel">
-                <div class="setting-group">
-                  <label class="group-label">字体大小</label>
-                  <div class="size-control">
-                    <button @click="readerStore.setFontSize(Math.max(1, readerStore.fontSize - 1))">−</button>
-                    <div class="size-dots">
-                      <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontSize }"></span>
+                <div class="panel-card">
+                  <div class="card-label">显示</div>
+                  <div class="setting-group">
+                    <label class="group-label">字体大小</label>
+                    <div class="size-control">
+                      <button @click="readerStore.setFontSize(Math.max(1, readerStore.fontSize - 1))">−</button>
+                      <div class="size-dots">
+                        <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontSize }"></span>
+                      </div>
+                      <button @click="readerStore.setFontSize(Math.min(5, readerStore.fontSize + 1))">+</button>
                     </div>
-                    <button @click="readerStore.setFontSize(Math.min(5, readerStore.fontSize + 1))">+</button>
+                  </div>
+                  <div class="setting-group">
+                    <label class="group-label">字体粗细</label>
+                    <div class="size-control">
+                      <button @click="readerStore.setFontWeight(Math.max(1, readerStore.fontWeight - 1))">−</button>
+                      <div class="size-dots">
+                        <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span>
+                      </div>
+                      <button @click="readerStore.setFontWeight(Math.min(5, readerStore.fontWeight + 1))">+</button>
+                    </div>
+                  </div>
+                  <div class="setting-group">
+                    <label class="group-label">行间距</label>
+                    <div class="size-control">
+                      <button @click="readerStore.setLineHeight(Math.max(1, readerStore.lineHeight - 1))">−</button>
+                      <div class="size-dots">
+                        <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.lineHeight }"></span>
+                      </div>
+                      <button @click="readerStore.setLineHeight(Math.min(5, readerStore.lineHeight + 1))">+</button>
+                    </div>
                   </div>
                 </div>
-              <div class="setting-group">
-                <label class="group-label">字体粗细</label>
-                <div class="size-control">
-                  <button @click="readerStore.setFontWeight(Math.max(1, readerStore.fontWeight - 1))">−</button>
-                  <div class="size-dots">
-                    <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span>
+
+                <div class="panel-card">
+                  <div class="card-label">排版</div>
+                  <div class="setting-group">
+                    <label class="group-label">阅读方式</label>
+                    <div class="mode-switch">
+                      <button
+                        class="mode-btn"
+                        :class="{ active: readerStore.readerMode === 'scroll' }"
+                        @click="readerStore.setReaderMode('scroll')"
+                      >滚动</button>
+                      <button
+                        class="mode-btn"
+                        :class="{ active: readerStore.readerMode === 'page' }"
+                        @click="readerStore.setReaderMode('page')"
+                        v-if="pageModeAvailable"
+                      >翻页</button>
+                    </div>
                   </div>
-                  <button @click="readerStore.setFontWeight(Math.min(5, readerStore.fontWeight + 1))">+</button>
-                </div>
-              </div>
-              <div class="setting-group">
-                <label class="group-label">行间距</label>
-                <div class="size-control">
-                  <button @click="readerStore.setLineHeight(Math.max(1, readerStore.lineHeight - 1))">−</button>
-                  <div class="size-dots">
-                    <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.lineHeight }"></span>
-                  </div>
-                  <button @click="readerStore.setLineHeight(Math.min(5, readerStore.lineHeight + 1))">+</button>
-                </div>
-              </div>
-              <div class="setting-group">
-                <label class="group-label">阅读方式</label>
-                <div class="mode-switch">
-                  <button
-                    class="mode-btn"
-                    :class="{ active: readerStore.readerMode === 'scroll' }"
-                    @click="readerStore.setReaderMode('scroll')"
-                  >滚动</button>
-                  <button
-                    class="mode-btn"
-                    :class="{ active: readerStore.readerMode === 'page' }"
-                    @click="readerStore.setReaderMode('page')"
-                    v-if="pageModeAvailable"
-                  >翻页</button>
-                </div>
-              </div>
-              <div class="setting-group">
-                <label class="group-label">阅读主题</label>
-                  <div class="theme-grid">
-                    <button v-for="t in themes" :key="t.v" class="theme-btn" :class="{ active: readerStore.theme === t.v }" @click="readerStore.setTheme(t.v)">{{ t.l }}</button>
+                  <div class="setting-group">
+                    <label class="group-label">字体风格</label>
+                    <div class="font-family-grid">
+                      <button v-for="f in fonts" :key="f.v" class="font-btn" :class="{ active: readerStore.fontFamily === f.v }" @click="readerStore.setFontFamily(f.v)" :style="{ fontFamily: f.css }">{{ f.l }}</button>
+                    </div>
                   </div>
                 </div>
-                <div class="setting-group">
-                  <label class="group-label">字体风格</label>
-                  <div class="font-family-grid">
-                    <button v-for="f in fonts" :key="f.v" class="font-btn" :class="{ active: readerStore.fontFamily === f.v }" @click="readerStore.setFontFamily(f.v)" :style="{ fontFamily: f.css }">{{ f.l }}</button>
+
+                <div class="panel-card">
+                  <div class="card-label">外观</div>
+                  <div class="setting-group">
+                    <label class="group-label">阅读主题</label>
+                    <div class="theme-grid">
+                      <button v-for="t in themes" :key="t.v" class="theme-btn" :class="{ active: readerStore.theme === t.v }" @click="readerStore.setTheme(t.v)">{{ t.l }}</button>
+                    </div>
                   </div>
                 </div>
-                <div class="setting-group data-management">
-                  <label class="group-label">数据管理</label>
-                  <button class="danger-btn" @click="handleClearAllData">清除所有数据</button>
+
+                <div class="panel-card card-danger">
+                  <div class="card-label">数据</div>
+                  <div class="setting-group data-management">
+                    <button class="danger-btn" @click="handleClearAllData">清除所有数据</button>
+                  </div>
                 </div>
               </div>
 
@@ -491,13 +535,16 @@
                     <div class="annotation-hd">
                       <span class="annotation-color" :style="{ background: hl.highlightColor }"></span>
                       <span class="annotation-chapter">{{ getChapterTitle(hl.chapterId) || '未知章节' }}</span>
-                      <button class="annotation-del" @click="deleteHighlight(hl.id)">✕</button>
+                      <button class="annotation-del" @click="deleteHighlight(hl.id)">
+                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
                     </div>
                     <div class="annotation-text">{{ hl.selectedText }}</div>
                     <div v-if="hl.note" class="annotation-note">{{ hl.note }}</div>
                   </div>
                 </div>
                 <div v-else class="empty-placeholder">
+                  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                   <p>暂无划线笔记</p>
                   <p class="empty-hint">选中正文内容即可添加划线</p>
                 </div>
@@ -506,7 +553,10 @@
               <!-- 书签 -->
               <div v-if="rightPanel === 'bookmarks'" class="bookmarks-panel">
                 <div class="bookmarks-actions">
-                  <button class="bm-add-btn" @click="addBookmark">＋ 添加书签</button>
+                  <button class="bm-add-btn" @click="addBookmark">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    添加书签
+                  </button>
                 </div>
                 <div v-if="bookmarks.length" class="bookmarks-list">
                   <div v-for="bm in bookmarks" :key="bm.id" class="bookmark-item" @click="goToBookmark(bm)">
@@ -518,11 +568,13 @@
                     <div class="bookmark-info">
                       <div class="bookmark-title">{{ bm.title }}</div>
                     </div>
-                    <button class="bookmark-del" @click.stop="deleteBookmark(bm.id)">✕</button>
+                    <button class="bookmark-del" @click.stop="deleteBookmark(bm.id)">
+                      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                   </div>
                 </div>
                 <div v-else class="empty-placeholder">
-                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                   <p>暂无书签</p>
                   <p class="empty-hint">点击上方按钮添加书签</p>
                 </div>
@@ -890,7 +942,6 @@ function nextChapter() {
 function handlePageKeydown(e: KeyboardEvent) {
   if (readerStore.readerMode !== 'page' || !pageModeAvailable.value) return
   if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
-  console.log('[keydown]', e.key, 'mode:', readerStore.readerMode, 'pageModeAvailable:', pageModeAvailable.value)
   if (e.key === 'ArrowLeft') { e.preventDefault(); pagePrev() }
   else if (e.key === 'ArrowRight') { e.preventDefault(); pageNext() }
 }
@@ -924,11 +975,11 @@ const bookmarks = ref<BookmarkRecord[]>([])
 const isReadAloudPlaying = ref(false)
 const speechRate = ref(1)
 const selectedVoiceName = ref('')
-let currentSentenceIndex = ref(0)
+const currentSentenceIndex = ref(0)
 let isAutoAdvancingChapter = false // 朗读自动跳章标记
 
 // TTS 代理服务器配置（用于非 Edge 浏览器）
-let isProxyAvailable = ref<boolean | null>(null)
+const isProxyAvailable = ref<boolean | null>(null)
 const themes = [
   { l: '白天', v: 'light' as const },
   { l: '夜间', v: 'dark' as const },
@@ -1114,8 +1165,6 @@ async function saveHighlight() {
   const chapter = book.value.content?.[currentChapter.value]
   if (!chapter) return
 
-  console.log('[saveHighlight] hlSelectedColor:', hlSelectedColor.value)
-  
   const note = await StorageService.addNote({
     bookId: bookId.value,
     chapterId: chapter.id || '',
@@ -1207,8 +1256,8 @@ const allHighlights = computed(() => highlights.value)
 //   3. 引擎切换对用户透明，不弹错误提示，不要求手动启动服务
 
 // ---- 状态 ----
-let isSpeechError = ref(false)
-let retryCount = ref(0)
+const isSpeechError = ref(false)
+const retryCount = ref(0)
 const MAX_RETRY = 2
 
 // 音色列表（合并系统语音和 Edge 增强语音）
@@ -1284,20 +1333,37 @@ function stopProxyHealthCheck() {
   }
 }
 
-// ---- 音色加载：合并系统语音 + Edge 增强 ----
+// ---- 音色加载：Edge TTS 优先，系统语音备选 ----
 async function loadAllVoices() {
-  // Edge TTS 音色
-  voiceCache.value = EDGE_VOICES.map(v => ({ ...v, engine: 'edge' as const, id: 'edge:' + v.id }))
-
   // 检测代理
   isProxyAvailable.value = await checkProxyAvailability()
 
+  const voices: { engine: 'edge' | 'synth'; id: string; name: string; gender?: string; style?: string }[] = []
+
+  if (isProxyAvailable.value) {
+    // 代理可用 → 仅展示 Edge TTS 音色
+    voices.push(...EDGE_VOICES.map(v => ({ ...v, engine: 'edge' as const, id: 'edge:' + v.id })))
+  } else {
+    // 代理不可用 → 展示系统语音
+    const sysVoices = speechSynthesis.getVoices()
+    const zhVoices = sysVoices.filter(v => v.lang.startsWith('zh') || v.lang.startsWith('cmn'))
+    const voicesToAdd = zhVoices.length > 0 ? zhVoices : sysVoices.slice(0, 6)
+    voices.push(...voicesToAdd.map(v => ({
+      engine: 'synth' as const,
+      id: 'system:' + v.voiceURI,
+      name: v.name,
+      gender: v.lang.includes('Female') ? '女' : '男'
+    })))
+  }
+
+  voiceCache.value = voices
+
   // 恢复偏好或选默认
   const saved = localStorage.getItem('reader-voice')
-  if (saved && voiceCache.value.some(v => v.id === saved)) {
+  if (saved && voices.some(v => v.id === saved)) {
     selectedVoiceName.value = saved
   } else {
-    selectedVoiceName.value = voiceCache.value[0]?.id || ''
+    selectedVoiceName.value = voices[0]?.id || ''
   }
 
   isVoicesLoaded.value = true
@@ -1365,26 +1431,18 @@ function getRateStr(): string {
 }
 
 async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
-  // 先走代理
-  try {
-    const resp = await fetch(TTS_PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice, rate: getRateStr(), volume: '+0%', pitch: '+0Hz' }),
-      signal: ttsAbort?.signal
-    })
-    if (resp.ok) {
-      const ab = await resp.arrayBuffer()
-      return new Blob([ab], { type: 'audio/mpeg' })
-    }
-  } catch (err: any) {
-    if (err.name === 'AbortError') throw err
+  // 仅通过代理服务器合成（浏览器端 WebSocket 受 CORS 限制不可靠）
+  const resp = await fetch(TTS_PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice, rate: getRateStr(), volume: '+0%', pitch: '+0Hz' }),
+    signal: ttsAbort?.signal
+  })
+  if (!resp.ok) {
+    throw new Error(`TTS 代理返回 ${resp.status}`)
   }
-  // 降级浏览器端
-  const { EdgeTTSBrowser } = await import('edge-tts-universal/browser')
-  const tts = new EdgeTTSBrowser(text, voice, { rate: getRateStr(), volume: '+0%', pitch: '+0Hz' })
-  const result = await tts.synthesize()
-  return result.audio
+  const ab = await resp.arrayBuffer()
+  return new Blob([ab], { type: 'audio/mpeg' })
 }
 
 async function prefetchEdge(index: number) {
@@ -1426,11 +1484,10 @@ async function playEdgeSentence(index: number) {
     } catch (err: any) {
       if (err.name === 'AbortError') return
       if (gen !== ttsGeneration) return
-      // Edge TTS 失败 → 降级到 SpeechSynthesis
-      console.warn('[TTS] Edge失败，降级 SpeechSynthesis')
-      showTtsToast('Edge TTS 不可用，已切换系统语音', 3000)
-      activeEngine = 'synth'
-      playSynthSentence(index)
+      // Edge TTS 失败 → 重试当前句，多次失败则停止
+      console.warn('[TTS] Edge合成失败:', err.message)
+      showTtsToast('Edge TTS 暂时不可用，正在重试...', 2000)
+      setTimeout(() => { if (gen === ttsGeneration) playEdgeSentence(index) }, 1000)
       return
     }
   }
@@ -1449,19 +1506,17 @@ async function playEdgeSentence(index: number) {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    // Edge 失败 → SpeechSynthesis
-    console.warn('[TTS] Audio播放失败，降级 SpeechSynthesis')
-    showTtsToast('Edge TTS 不可用，已切换系统语音', 3000)
-    activeEngine = 'synth'
-    playSynthSentence(index)
+    // 音频播放失败 → 重试
+    console.warn('[TTS] Audio播放失败，重试')
+    setTimeout(() => { if (gen === ttsGeneration) playEdgeSentence(index) }, 1000)
   }
 
   audio.play().catch(() => {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    activeEngine = 'synth'
-    playSynthSentence(index)
+    // 播放失败 → 重试
+    setTimeout(() => { if (gen === ttsGeneration) playEdgeSentence(index) }, 1000)
   })
 }
 
@@ -1535,7 +1590,7 @@ function tryNextChapter() {
       const engine = activeEngine // 保持当前引擎
       stopReadAloud()
       activeEngine = engine
-      startReadAloud(0)
+      startReadAloud(0, true) // skipVoiceLoad，保持当前引擎和音色
     }, 300)
   } else {
     stopReadAloud()
@@ -1565,25 +1620,35 @@ async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
       showTtsToast('未找到可用语音')
       return
     }
-    if (!isProxyAvailable.value) {
-      showTtsToast('Edge TTS 代理未启动，将使用系统语音')
-    }
+  }
+
+  // 根据代理状态和当前音色选择引擎
+  if (isProxyAvailable.value && selectedVoiceName.value.startsWith('edge:')) {
+    activeEngine = 'edge'
+  } else {
+    activeEngine = 'synth'
   }
 
   ttsAbort = new AbortController()
   startProxyHealthCheck()
 
-  activeEngine = 'edge'
-  showTtsToast('开始朗读', 1500)
-
-  playEdgeSentence(startIndex)
-  prefetchEdge(startIndex + 1)
+  if (activeEngine === 'edge') {
+    showTtsToast('开始朗读（Edge TTS）', 1500)
+    playEdgeSentence(startIndex)
+    prefetchEdge(startIndex + 1)
+  } else {
+    if (!isProxyAvailable.value && selectedVoiceName.value.startsWith('edge:')) {
+      showTtsToast('Edge TTS 代理未启动，使用系统语音', 3000)
+    } else {
+      showTtsToast('开始朗读', 1500)
+    }
+    playSynthSentence(startIndex)
+  }
 }
 
 function pauseReadAloud() {
   ttsState = 'paused'
   isReadAloudPlaying.value = false
-  // 彻底取消当前语音，不依赖不可靠的 speechSynthesis.pause()
   if (activeEngine === 'synth') {
     speechSynthesis.cancel()
   } else if (currentAudio && !currentAudio.paused) {
@@ -1595,8 +1660,8 @@ function resumeReadAloud() {
   const idx = currentSentenceIndex.value
   if (activeEngine === 'edge' && currentAudio && currentAudio.paused) {
     currentAudio.play().catch(() => {
-      activeEngine = 'synth'
-      playSynthSentence(idx)
+      // Edge 音频恢复失败 → 重播当前句
+      playEdgeSentence(idx)
     })
   } else {
     // 均重新开始当前句（最可靠的恢复方式）
@@ -1901,17 +1966,12 @@ watch(currentChapter, async () => {
 
 // 目录点击处理
 function onTocClick(idx: number) {
-  console.log('[ReaderView] onTocClick idx:', idx, 'bookFormat:', bookFormat.value)
-  console.log('[ReaderView] book.value?.toc:', book.value?.toc)
   currentChapter.value = idx
   if (bookFormat.value === 'pdf' && book.value?.toc?.[idx]) {
     // PDF: 从 toc 中读取起始页码
     const tocEntry = book.value.toc[idx]
-    console.log('[ReaderView] PDF toc entry:', tocEntry)
     const pageNum = tocEntry.position
-    console.log('[ReaderView] PDF toc click, pageNum:', pageNum)
     nextTick(() => {
-      console.log('[ReaderView] pdfReaderRef:', pdfReaderRef.value)
       setTimeout(() => {
         pdfReaderRef.value?.scrollToPage?.(pageNum)
       }, 100)
@@ -1949,7 +2009,7 @@ onMounted(() => {
   if (vp) resizeObserver.observe(vp)
 })
 
-onBeforeUnmount(() => { 
+onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   if (timeTimer) clearInterval(timeTimer)
   if (readingTimeTimer) clearInterval(readingTimeTimer)
@@ -1959,6 +2019,11 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', handlePageKeydown)
   stopReadAloud()
   stopReadingTimeTracker()
+  // 释放封面 blob URL，防止内存泄漏
+  for (const url of coverUrlCache.values()) {
+    URL.revokeObjectURL(url)
+  }
+  coverUrlCache.clear()
 })
 </script>
 
@@ -2796,16 +2861,94 @@ onBeforeUnmount(() => {
 }
 .annotation-color-btn:hover { transform: scale(1.15); }
 .annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 1px #fff, 0 0 0 2px #333; }
+
+/* ===== 右侧工具栏 + 面板 ===== */
+.reader-right {
+  position: relative;
+  width: 56px;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(0,0,0,0.06);
+  z-index: 20;
+}
+.reader-right.hover-visible {
+  opacity: 0.08;
+  transition: opacity 0.3s ease;
+  background: transparent;
+  border-left: none;
+}
+.reader-right.hover-visible:hover {
+  opacity: 1;
+}
+.right-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  padding-top: 12vh;
+  width: 100%;
+  height: 100%;
+}
+/* 工具按钮 */
 .tool-btn {
-  min-width: 20px;
-}
-.tool-btn.active {
-  background: rgba(24,144,255,0.2);
-  color: #1890ff;
-}
-.highlighter-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  color: #888;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
+.tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.tool-label {
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  opacity: 0.7;
+  font-family: "Inter", "Kaiti SC", "STKaiti", "KaiTi", sans-serif;
+}
+.tool-btn:hover {
+  background: rgba(0,0,0,0.05);
+  color: #333;
+  transform: translateY(-1px);
+}
+.tool-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+.tool-btn.active {
+  background: rgba(59,130,246,0.1);
+  color: #3b82f6;
+}
+.tool-btn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: #3b82f6;
+}
+.tool-btn.active:hover {
+  background: rgba(59,130,246,0.16);
+}
+.bottom-fullscreen-btn { margin-top: auto; }
 .highlighter-btn.active {
   background: rgba(255, 255, 0, 0.25);
   color: #b8860b;
@@ -2855,49 +2998,6 @@ onBeforeUnmount(() => {
 .fullscreen-btn { padding: 6px; display: flex; align-items: center; justify-content: center; }
 .fullscreen-btn:hover { background: rgba(24,144,255,0.1); border-color: #1890ff; }
 
-/* 右侧区域：固定宽度定位容器 */
-.reader-right {
-  position: relative;
-  width: 64px;
-  height: 100%;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #fff;
-  border-left: 1px solid #eee;
-}
-.reader-right.hover-visible {
-  opacity: 0.1;
-  transition: opacity 0.3s ease;
-  background: transparent;
-  border-left: none;
-}
-.reader-right.hover-visible:hover {
-  opacity: 1;
-}
-.right-tools { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 6px; 
-  align-items: center; 
-  padding-top: 15vh; 
-  width: 100%;
-  height: 100%;
-}
-.tool-divider { width: 24px; height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; }
-.theme-dark .tool-divider { background: rgba(255,255,255,0.1); }
-.tool-icon { width: 20px; height: 20px; }
-.tool-btn { width: 52px; height: 52px; border: none; background: rgba(0,0,0,0.06); cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; border-radius: 10px; flex-shrink: 0; color: #666; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
-.tool-btn svg { width: 20px; height: 20px; transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-.tool-btn::after { content: ''; position: absolute; inset: 0; border-radius: 10px; background: radial-gradient(circle at center, rgba(24,144,255,0.15) 0%, transparent 70%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
-.tool-btn:hover { background: rgba(0,0,0,0.1); color: #333; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.tool-btn:hover svg { transform: scale(1.1); }
-.tool-btn:hover::after { opacity: 1; }
-.tool-btn:active { transform: translateY(0) scale(0.95); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-.tool-btn.active { background: rgba(24,144,255,0.15); color: #1890ff; box-shadow: 0 2px 8px rgba(24,144,255,0.2); }
-.tool-btn.active:hover { background: rgba(24,144,255,0.22); box-shadow: 0 4px 16px rgba(24,144,255,0.3); }
-.bottom-fullscreen-btn { margin-top: auto; }
 
 /* 划线笔记浮动工具栏 */
 .hl-toolbar {
@@ -3009,112 +3109,127 @@ onBeforeUnmount(() => {
 }
 .bookmark-del:hover { background: #ff4d4f; color: #fff; }
 
-/* 右侧面板：绝对定位浮动在按钮左侧，垂直居中 */
+/* ===== 右侧面板 ===== */
 .right-panel {
   position: absolute;
-  right: calc(100% + 12px);
+  right: calc(100% + 8px);
   top: 50%;
   transform: translateY(-50%);
   width: 300px;
   max-width: 70vw;
   max-height: 85vh;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.04);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 30;
 }
 .right-panel-hd {
-  padding: 14px 18px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 15px;
   font-weight: 600;
+  color: #1e293b;
   flex-shrink: 0;
 }
 .close-btn {
-  width: 24px; height: 24px;
-  border: none; background: #f5f5f5; border-radius: 4px;
-  cursor: pointer; font-size: 12px; color: #666;
+  width: 28px; height: 28px;
+  border: none;
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  cursor: pointer;
+  color: #94a3b8;
   display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
 }
-.close-btn:hover { background: #eee; }
+.close-btn:hover { background: rgba(0,0,0,0.08); color: #475569; }
+.close-btn:active { transform: scale(0.92); }
 .right-panel-bd { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
 
 /* 过渡动画 */
-.panel-slide-enter-active, .panel-slide-leave-active { transition: opacity 0.2s, transform 0.2s; }
-.panel-slide-enter-from, .panel-slide-leave-to { opacity: 0; transform: translateY(-50%) translateX(8px); }
+.panel-slide-enter-active, .panel-slide-leave-active { transition: opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1); }
+.panel-slide-enter-from, .panel-slide-leave-to { opacity: 0; transform: translateY(-50%) translateX(12px) scale(0.97); }
 
+/* ===== 面板卡片 ===== */
+.panel-card {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.panel-card + .panel-card { margin-top: 12px; }
+.card-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: -4px;
+}
+.panel-card.card-danger { border-color: rgba(239,68,68,0.15); }
 
-/* 书架面板 */
+/* ===== 书架面板 ===== */
 .shelf-panel { min-height: 120px; }
-.shelf-grid { display: flex; flex-direction: column; gap: 8px; }
+.shelf-grid { display: flex; flex-direction: column; gap: 6px; }
 .shelf-card {
   display: flex; flex-direction: row; align-items: center; gap: 12px;
-  padding: 10px 12px; border-radius: 8px; border: 1px solid #f0f0f0;
-  cursor: pointer; transition: all 0.15s; background: #fafafa;
+  padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.04);
+  cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.6);
 }
-.shelf-card:hover { border-color: #1890ff; background: #f5f9ff; transform: translateX(2px); box-shadow: 0 2px 8px rgba(24,144,255,0.08); }
-.shelf-cover {
-  width: 36px; height: 36px; border-radius: 6px; background: linear-gradient(135deg, #1890ff, #36cfc9);
-  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 600; flex-shrink: 0;
-}
+.shelf-card:hover { border-color: #3b82f6; background: rgba(59,130,246,0.06); transform: translateX(2px); box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
 .shelf-cover-img {
-  width: 36px; height: 50px; border-radius: 6px; overflow: hidden; flex-shrink: 0;
-  background: #f0f0f0;
+  width: 32px; height: 44px; border-radius: 4px; overflow: hidden; flex-shrink: 0;
+  background: #f0f0f0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.shelf-cover-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.shelf-cover-img img { width: 100%; height: 100%; object-fit: cover; }
 .shelf-info { text-align: left; width: 100%; overflow: hidden; }
-.shelf-name { font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shelf-name { font-size: 13px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 
-/* 设置面板 */
-.settings-panel { display: flex; flex-direction: column; gap: 24px; }
-.setting-group { display: flex; flex-direction: column; gap: 12px; }
-.group-label {
-  font-size: 12px; color: #999; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-.setting-group { margin-bottom: 24px; }
+/* ===== 设置面板 ===== */
+.settings-panel { display: flex; flex-direction: column; gap: 0; }
+.setting-group { display: flex; flex-direction: column; gap: 8px; }
+.setting-group + .setting-group { margin-top: 12px; }
 .setting-group:last-child { margin-bottom: 0; }
+.group-label {
+  font-size: 12px; color: #64748b; font-weight: 500;
+  letter-spacing: 0.3px;
+}
 
 /* +/- 控制按钮 */
-.size-control { display: flex; align-items: center; gap: 16px; }
+.size-control { display: flex; align-items: center; gap: 12px; }
 .size-control button {
-  width: 40px; height: 40px; border: 1.5px solid #e8e8e8; border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%); cursor: pointer;
-  font-size: 20px; font-weight: 400; color: #666;
+  width: 36px; height: 36px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  background: rgba(255,255,255,0.8); cursor: pointer;
+  font-size: 18px; font-weight: 400; color: #64748b;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .size-control button:hover {
-  border-color: #1890ff; color: #1890ff;
-  background: linear-gradient(180deg, #f0f7ff 0%, #e6f4ff 100%);
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+  border-color: #3b82f6; color: #3b82f6;
+  background: rgba(59,130,246,0.06);
+  box-shadow: 0 2px 8px rgba(59,130,246,0.15);
 }
-.size-control button:active {
-  transform: scale(0.95);
-  box-shadow: 0 1px 2px rgba(24, 144, 255, 0.2);
-}
-.size-dots { flex: 1; display: flex; gap: 10px; justify-content: center; }
+.size-control button:active { transform: scale(0.94); }
+.size-dots { flex: 1; display: flex; gap: 8px; justify-content: center; }
 .dot {
-  width: 16px; height: 16px; border-radius: 5px; background: #e8e8e8;
+  width: 14px; height: 14px; border-radius: 4px; background: #e2e8f0;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .dot.active {
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.35);
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  box-shadow: 0 2px 6px rgba(59,130,246,0.35);
   transform: scale(1.1);
 }
 
@@ -3122,55 +3237,46 @@ onBeforeUnmount(() => {
 .mode-switch {
   display: flex;
   gap: 0;
-  background: #f5f5f5;
-  border-radius: 12px;
-  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
   width: fit-content;
 }
 .mode-btn {
-  padding: 10px 28px;
+  padding: 8px 24px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #999;
+  color: #94a3b8;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
 }
 .mode-btn.active {
   background: #fff;
-  color: #1890ff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  color: #3b82f6;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   font-weight: 600;
 }
-.mode-btn:hover:not(.active) {
-  color: #666;
-  background: rgba(255,255,255,0.6);
-}
+.mode-btn:hover:not(.active) { color: #64748b; }
 
 /* 主题切换 */
-.theme-grid { display: flex; gap: 12px; }
+.theme-grid { display: flex; gap: 8px; }
 .theme-btn {
-  flex: 1; height: 36px; border: 2px solid transparent; border-radius: 8px;
-  cursor: pointer; font-size: 13px; font-weight: 500;
+  flex: 1; height: 34px; border: 2px solid transparent; border-radius: 8px;
+  cursor: pointer; font-size: 12px; font-weight: 500;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
 }
-.theme-btn:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-}
-.theme-btn:active {
-  transform: translateY(0) scale(0.97);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
+.theme-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+.theme-btn:active { transform: translateY(0) scale(0.97); }
 .theme-grid .theme-btn:first-child { background: #fff; color: #333; border-color: #e8e8e8; }
-.theme-grid .theme-btn:first-child.active { border-color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+.theme-grid .theme-btn:first-child.active { border-color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .theme-grid .theme-btn:nth-child(2) { background: #2d2d2d; color: #fff; border-color: #444; }
-.theme-grid .theme-btn:nth-child(2).active { border-color: #1890ff; box-shadow: 0 2px 10px rgba(24,144,255,0.35); }
+.theme-grid .theme-btn:nth-child(2).active { border-color: #3b82f6; box-shadow: 0 2px 10px rgba(59,130,246,0.35); }
 .theme-grid .theme-btn:nth-child(3) { background: #e8f0e3; color: #3a5a3a; border-color: #c8dba0; }
 .theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; box-shadow: 0 2px 10px rgba(90,158,66,0.3); }
 .theme-grid .theme-btn:nth-child(4) { background: #ede0c8; color: #3d2a00; border-color: #d4c5a9; }
@@ -3178,85 +3284,77 @@ onBeforeUnmount(() => {
 
 /* 字体风格 */
 .font-family-grid {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  background: transparent;
-  border-radius: 0;
-  padding: 0;
+  display: flex; flex-wrap: wrap; gap: 6px;
 }
 .font-btn {
-  flex: 0 0 auto; padding: 5px 12px; border: 1.5px solid #e8e8e8; border-radius: 8px;
-  background: #fff; cursor: pointer; font-size: 13px; color: #666;
+  flex: 0 0 auto; padding: 5px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  background: rgba(255,255,255,0.6); cursor: pointer; font-size: 12px; color: #64748b;
   text-align: center; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
-.font-btn:hover {
-  border-color: #1890ff;
-  color: #1890ff;
-  background: #f0f7ff;
-}
+.font-btn:hover { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.06); }
 .font-btn.active {
-  border-color: #1890ff;
-  background: #e6f7ff;
-  color: #1890ff; font-weight: 600;
-  box-shadow: 0 1px 4px rgba(24,144,255,0.15);
+  border-color: #3b82f6; background: rgba(59,130,246,0.1);
+  color: #3b82f6; font-weight: 600;
+  box-shadow: 0 1px 4px rgba(59,130,246,0.12);
 }
 
 /* 危险按钮 */
 .danger-btn {
   width: 100%;
-  padding: 12px 16px; border: 1.5px solid #ffccc7; border-radius: 12px;
-  background: #fff2f0; cursor: pointer; font-size: 13px; color: #ff4d4f;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 10px 14px; border: 1.5px solid #fecaca; border-radius: 10px;
+  background: rgba(254,242,242,0.8); cursor: pointer; font-size: 13px; color: #ef4444;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
 }
 .danger-btn:hover {
-  background: #ff4d4f; color: #fff; border-color: #ff4d4f;
-  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.35);
+  background: #ef4444; color: #fff; border-color: #ef4444;
+  box-shadow: 0 4px 12px rgba(239,68,68,0.3);
   transform: translateY(-1px);
 }
-.danger-btn:active {
-  transform: scale(0.98);
-}
+.danger-btn:active { transform: scale(0.98); }
 
-/* 朗读面板 */
-.read-aloud-panel { display: flex; flex-direction: column; gap: 16px; }
+/* ===== 朗读面板 ===== */
+.read-aloud-panel { display: flex; flex-direction: column; gap: 12px; }
 .read-aloud-header { display: flex; justify-content: space-between; align-items: center; }
-.read-aloud-title { font-size: 15px; font-weight: 600; color: #333; }
-.read-aloud-status { font-size: 12px; color: #999; }
-.read-aloud-status.playing { color: #1890ff; }
-.read-aloud-controls { display: flex; gap: 8px; justify-content: center; }
+.read-aloud-title { font-size: 14px; font-weight: 600; color: #1e293b; }
+.read-aloud-status { font-size: 11px; color: #94a3b8; font-weight: 500; }
+.read-aloud-status.playing { color: #3b82f6; }
+.read-aloud-controls { display: flex; gap: 8px; justify-content: center; padding: 8px 0; }
 .control-btn {
-  width: 48px; height: 48px; border: none; border-radius: 10px;
-  background: #f5f5f5; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: #666; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+  width: 44px; height: 44px; border: none; border-radius: 10px;
+  background: rgba(0,0,0,0.04); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: #64748b; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
 }
-.control-btn:hover { background: #e8e8e8; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.control-btn:active { transform: translateY(0) scale(0.95); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.control-btn:hover { background: rgba(0,0,0,0.08); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
+.control-btn:active { transform: translateY(0) scale(0.96); }
 .control-btn.primary {
-  width: 56px; height: 56px; background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%); color: #fff;
-  box-shadow: 0 4px 16px rgba(24,144,255,0.35); border-radius: 14px;
+  width: 52px; height: 52px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #fff;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.3); border-radius: 14px;
 }
-.control-btn.primary:hover { background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(24,144,255,0.45); }
-.control-btn.primary:active { transform: translateY(0) scale(0.96); box-shadow: 0 2px 8px rgba(24,144,255,0.3); }
-.read-aloud-settings { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
-.setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.setting-row.voice-row { flex-direction: column; gap: 8px; align-items: center; }
-.setting-row label { font-size: 13px; color: #666; flex-shrink: 0; }
+.control-btn.primary:hover { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.4); }
+.control-btn.primary:active { transform: translateY(0) scale(0.96); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+.read-aloud-settings { display: flex; flex-direction: column; gap: 10px; }
+.setting-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.setting-row.voice-row { flex-direction: column; gap: 6px; align-items: center; }
+.setting-row label { font-size: 12px; color: #64748b; flex-shrink: 0; font-weight: 500; }
 .setting-row select {
-  padding: 8px 10px; border: 1px solid #d0d0d0; border-radius: 8px;
-  background: #f8f8f8; font-size: 13px; font-weight: 500; color: #333; outline: none;
+  padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  background: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500; color: #1e293b; outline: none;
   cursor: pointer; appearance: auto; max-width: 160px;
+  transition: border-color 0.2s;
 }
-.setting-row select:hover { border-color: #1890ff; background: #f0f7ff; }
+.setting-row select:hover { border-color: #3b82f6; }
+.setting-row select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
 .setting-row input[type="range"] {
-  flex: 1; height: 4px; appearance: none; background: #e8e8e8; border-radius: 2px; outline: none;
+  flex: 1; height: 4px; appearance: none; background: #e2e8f0; border-radius: 2px; outline: none;
 }
 .setting-row input[type="range"]::-webkit-slider-thumb {
-  appearance: none; width: 16px; height: 16px; background: #1890ff; border-radius: 50%;
-  cursor: pointer; transition: transform 0.15s;
+  appearance: none; width: 16px; height: 16px; background: #3b82f6; border-radius: 50%;
+  cursor: pointer; transition: transform 0.15s; box-shadow: 0 1px 4px rgba(59,130,246,0.3);
 }
-.setting-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
-.setting-value { font-size: 12px; color: #1890ff; font-weight: 500; width: 36px; text-align: right; }
+.setting-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.setting-value { font-size: 11px; color: #3b82f6; font-weight: 600; width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* 段落高亮 - 朗读追踪 */
 .reader-content p.read-aloud-active,
@@ -3380,24 +3478,21 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 .theme-dark .tool-btn {
-  background: rgba(255,255,255,0.08);
-  color: #aaa;
-  border: none;
+  background: transparent;
+  color: #94a3b8;
 }
 .theme-dark .tool-btn:hover {
-  background: rgba(255,255,255,0.15);
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  background: rgba(255,255,255,0.08);
+  color: #e2e8f0;
 }
 .theme-dark .tool-btn:active {
-  transform: translateY(0) scale(0.95);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transform: translateY(0) scale(0.96);
 }
 .theme-dark .tool-btn.active {
-  background: rgba(24,144,255,0.2);
-  color: #1890ff;
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
 }
+.theme-dark .tool-btn.active::before { background: #60a5fa; }
 .theme-dark .annotation-item { background: #2a2a2a; border-color: #444; }
 .theme-dark .annotation-text { color: #ccc; }
 .theme-dark .annotation-note { color: #999; background: rgba(255,255,255,0.05); }
@@ -3407,12 +3502,15 @@ onBeforeUnmount(() => {
 .theme-dark .bookmark-title { color: #ccc; }
 .theme-dark .bm-add-btn { border-color: #555; color: #999; }
 .theme-dark .bm-add-btn:hover { border-color: #1890ff; color: #1890ff; background: rgba(24,144,255,0.1); }
-.theme-dark .right-panel, .theme-dark .full-toc { background: #1a1a1a; border-color: #333; }
-.theme-dark .right-panel-hd { border-color: #333; color: #e0e0e0; }
-.theme-dark .reader-right { background: #1a1a1a; border-color: #333; }
-.theme-dark .close-btn { background: #444; color: #ccc; }
-.theme-dark .shelf-card { background: #383838; border-color: #444; }
-.theme-dark .shelf-name { color: #e0e0e0; }
+.theme-dark .right-panel, .theme-dark .full-toc { background: rgba(30,30,30,0.95); border-color: rgba(255,255,255,0.08); backdrop-filter: blur(16px); }
+.theme-dark .right-panel-hd { border-color: rgba(255,255,255,0.06); color: #e2e8f0; }
+.theme-dark .reader-right { background: rgba(30,30,30,0.85); border-color: rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
+.theme-dark .close-btn { background: rgba(255,255,255,0.08); color: #94a3b8; }
+.theme-dark .close-btn:hover { background: rgba(255,255,255,0.15); color: #e2e8f0; }
+.theme-dark .panel-card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
+.theme-dark .shelf-card { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.08); }
+.theme-dark .shelf-card:hover { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
+.theme-dark .shelf-name { color: #e2e8f0; }
 .theme-dark .weight-btn { background: #3a3a3a; border-color: #555; color: #ccc; }
 .theme-dark .weight-btn.active { background: #1890ff; color: #fff; border-color: #1890ff; }
 .theme-dark .theme-grid .theme-btn:first-child { background: #555; color: #ccc; border-color: #666; }
@@ -3514,8 +3612,8 @@ onBeforeUnmount(() => {
 .theme-green .bookmark-title { color: #3a5a3a; }
 .theme-green .bm-add-btn { border-color: #c8dba0; color: #7aa86a; }
 .theme-green .bm-add-btn:hover { border-color: #5a9e42; color: #5a9e42; background: rgba(90,158,66,0.06); }
-.theme-green .reader-right { background: #e8f0e3; border-color: #d4e8c8; }
-.theme-green .right-panel, .theme-green .full-toc { background: #e8f0e3; border-color: #d4e8c8; }
+.theme-green .reader-right { background: rgba(232,240,227,0.85); border-color: #d4e8c8; backdrop-filter: blur(12px); }
+.theme-green .right-panel, .theme-green .full-toc { background: rgba(232,240,227,0.92); border-color: #d4e8c8; backdrop-filter: blur(16px); }
 .theme-green .shelf-card { background: #f0f7eb; border-color: #d4e8c8; }
 .theme-green .weight-btn { background: #f0f7eb; border-color: #c8dba0; }
 .theme-green .weight-btn.active { background: #5a9e42; color: #fff; border-color: #5a9e42; }
@@ -3634,8 +3732,8 @@ onBeforeUnmount(() => {
 .theme-parchment .bookmark-title { color: #3d2a00; }
 .theme-parchment .bm-add-btn { border-color: #c9b894; color: #7a6a4a; }
 .theme-parchment .bm-add-btn:hover { border-color: #8b6914; color: #8b6914; background: rgba(139,105,20,0.06); }
-.theme-parchment .reader-right { background: #f5e6c8; border-color: #d4c5a9; }
-.theme-parchment .right-panel, .theme-parchment .full-toc { background: #f5e6c8; border-color: #d4c5a9; }
+.theme-parchment .reader-right { background: rgba(245,230,200,0.85); border-color: #d4c5a9; backdrop-filter: blur(12px); }
+.theme-parchment .right-panel, .theme-parchment .full-toc { background: rgba(245,230,200,0.92); border-color: #d4c5a9; backdrop-filter: blur(16px); }
 .theme-parchment .right-panel-hd { border-color: #d4c5a9; }
 .theme-parchment .shelf-card { background: #f0e6d0; border-color: #d4c5a9; }
 .theme-parchment .shelf-name { color: #3d2a00; }
