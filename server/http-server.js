@@ -1,12 +1,31 @@
 import http from 'http';
+import { execSync } from 'child_process';
 import { EdgeTTS } from 'edge-tts-universal';
 
 const PORT = 3004;
-const REQUEST_TIMEOUT = 10000; // 10s 超时（国内直连基本不通，10s够判断了）
+const REQUEST_TIMEOUT = 15000; // 15s 超时
 
-// 代理配置（国内访问微软 TTS 服务需要）
-// 可通过环境变量 TTS_PROXY 设置，格式如: http://127.0.0.1:10809
-const PROXY = process.env.TTS_PROXY || '';
+// 代理配置：环境变量 TTS_PROXY > Windows 系统代理 > 无代理
+function detectSystemProxy() {
+  try {
+    const output = execSync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable', { encoding: 'utf8' });
+    const enabled = /0x1/i.test(output);
+    if (!enabled) return '';
+    const serverOutput = execSync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer', { encoding: 'utf8' });
+    const match = serverOutput.match(/REG_SZ\s+(.+)/);
+    if (match) {
+      let proxy = match[1].trim();
+      if (proxy && !proxy.startsWith('http')) proxy = 'http://' + proxy;
+      console.log(`[TTS] 检测到系统代理: ${proxy}`);
+      return proxy;
+    }
+  } catch (e) {
+    // 非 Windows 或注册表不可用
+  }
+  return '';
+}
+
+const PROXY = process.env.TTS_PROXY || detectSystemProxy() || '';
 
 function getTTSOptions(voice, rate, volume, pitch) {
   const opts = { rate, volume, pitch };

@@ -29,6 +29,12 @@ dist-ssr
 # Build output
 releases/
 
+# Android build output
+android/app/build/
+android/.gradle/
+android/.gradle_tmp/
+android/local.properties
+
 # Dev tools
 .monkeycode/
 
@@ -37,3 +43,4 @@ test.mp3
 *.mp4
 debug.log
 server.log
+nul

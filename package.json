@@ -58,13 +58,17 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "QReader",
-      "artifactName": "QReader-${version}-Setup.exe"
+      "artifactName": "QReader-${version}-Setup.exe",
+      "installerIcon": "public/qreader-icon.ico",
+      "uninstallerIcon": "public/qreader-icon.ico"
     },
     "portable": {
       "artifactName": "QReader-${version}.exe"
     }
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
     "dexie": "^4.4.2",
     "edge-tts-universal": "^1.4.0",
     "element-plus": "^2.14.0",
@@ -78,6 +82,7 @@
     "vue-router": "^5.0.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
     "@types/node": "^24.12.3",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/tsconfig": "^0.9.1",

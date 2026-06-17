@@ -1,28 +1,9 @@
 <template>
   <div class="reader-view" :class="themeClass">
-    <!-- 顶部工具栏 -->
-    <header class="reader-toolbar">
-      <div class="toolbar-left">
-        <button class="home-btn" @click="goHome" title="返回首页">
-          <svg class="home-icon" viewBox="0 0 24 24" fill="none">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button class="library-btn" @click="goToLibrary" title="返回书架">
-          <svg class="library-icon" viewBox="0 0 24 24" fill="none">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-          </svg>
-        </button>
-      </div>
-      <span class="toolbar-title">{{ book?.title || '加载中...' }}</span>
-    </header>
-
-    <div class="reader-body" ref="bodyRef" :style="{ paddingLeft: (showTocPanel ? sidebarWidth : 60) + 'px' }">
-      <!-- 左侧目录 -->
-      <aside class="reader-sidebar" :class="{ collapsed: !showTocPanel }" :style="{ width: (showTocPanel ? sidebarWidth : 60) + 'px' }">
-        <div v-show="showTocPanel" class="sidebar-expanded">
+    <div class="reader-body" ref="bodyRef">
+      <!-- 左侧目录（仅展开时显示，作为叠加层） -->
+      <aside class="reader-sidebar" v-show="!uiHidden && showTocPanel" :style="{ width: sidebarWidth + 'px' }">
+        <div class="sidebar-expanded">
           <div class="sidebar-header">
             <h3>目录</h3>
             <button @click="showTocPanel = false" title="收起" class="collapse-btn side-btn">
@@ -33,20 +14,14 @@
           </div>
           <div class="sidebar-content" :style="{ ...getFontWeightStyle(readerStore.fontWeight), fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css }">
             <div v-if="book?.content?.length" v-for="(ch, idx) in book.content" :key="ch.id || idx" class="toc-item" :class="{ active: currentChapter === idx }" @click="onTocClick(idx)">
-              <span class="toc-icon">#</span>
+              <svg class="toc-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="7" x2="18" y2="7"></line>
+                <line x1="7" y1="14" x2="18" y2="14"></line>
+                <line x1="7" y1="20" x2="12" y2="20"></line>
+              </svg>
               <span class="toc-title">{{ ch.title || `第 ${idx + 1} 章` }}</span>
             </div>
             <div v-else class="empty-text">暂无目录</div>
-          </div>
-        </div>
-
-        <div v-show="!showTocPanel" class="sidebar-collapsed hover-visible">
-          <div class="toc-icon-btn" data-title="目录" @click="showTocPanel = true">
-            <svg class="collapsed-icon-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-            </svg>
-            <span class="badge-dot"></span>
           </div>
         </div>
       </aside>
@@ -55,7 +30,7 @@
       <div v-if="showTocPanel" class="resize-bar" @mousedown="startResize"></div>
 
   <!-- 主阅读区 -->
-  <main class="reader-main" :class="{ 'page-mode': readerStore.readerMode === 'page' && pageModeAvailable }" ref="mainRef" @click="rightPanel = ''">
+  <main class="reader-main" :class="{ 'page-mode': readerStore.readerMode === 'page' && pageModeAvailable }" ref="mainRef" @click="handleMainClick">
     <PdfReader
       ref="pdfReaderRef"
       v-if="book && bookFormat === 'pdf'"
@@ -184,8 +159,9 @@
           v-for="(paragraph, idx) in highlightedSentences"
           :key="idx"
           :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
-          :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex }"
+          :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }"
           v-html="paragraph"
+          @click="onParagraphClick(idx)"
         />
         <!-- 章节末尾翻章按钮 -->
         <div v-if="book && bookFormat !== 'pdf'" class="chapter-end-nav">
@@ -210,12 +186,12 @@
         <div class="page-viewport" :style="contentStyle" @mouseup="handleTextSelection">
           <div class="page-col-left">
             <template v-for="(item, i) in currentPageData?.left || []" :key="'l'+pageNum+'-'+i">
-              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex }"/>
+              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }" @click="onParagraphClick(item.idx)"/>
             </template>
           </div>
           <div class="page-col-right">
             <template v-for="(item, i) in currentPageData?.right || []" :key="'r'+pageNum+'-'+i">
-              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex }"/>
+              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }" @click="onParagraphClick(item.idx)"/>
             </template>
           </div>
         </div>
@@ -281,14 +257,6 @@
 
         <!-- 翻页模式右下角翻章按钮已移除，章节跳转统一在底部功能栏 -->
 
-        <!-- 悬浮全屏按钮 -->
-        <button v-if="!isFullscreen" class="fullscreen-btn-float" @click="toggleFullscreen" title="全屏阅读">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path>
-            <path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path>
-          </svg>
-        </button>
-
         <!-- 底部阅读信息（滚动模式） -->
         <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-info-bar">
           <div class="info-left">
@@ -329,136 +297,157 @@
           <textarea v-model="hlNoteInput" class="hl-note-input" placeholder="添加笔记..." rows="2"></textarea>
         </div>
       </div>
+    </div>
 
-      <!-- 右侧工具栏 -->
-      <aside class="reader-right" :class="{ 'hover-visible': !rightPanel }" @mouseenter="showRightTools = true" @mouseleave="showRightTools = false" @click.stop>
-        <div class="right-tools">
-          <!-- 朗读 -->
-          <button class="tool-btn" @click.stop="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud' }" title="朗读">
-            <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="6" y="4" width="4" height="16" rx="1"></rect>
-              <rect x="14" y="4" width="4" height="16" rx="1"></rect>
-            </svg>
-            <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <span class="tool-label">朗读</span>
-          </button>
-          <!-- 书架 -->
-          <button class="tool-btn" @click.stop="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            <span class="tool-label">书架</span>
-          </button>
-          <!-- 设置 -->
-          <button class="tool-btn" @click.stop="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-            <span class="tool-label">设置</span>
-          </button>
-          <!-- 划线笔记 -->
-          <button class="tool-btn" @click.stop="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-            <span class="tool-label">笔记</span>
-          </button>
-          <!-- 书签 -->
-          <button class="tool-btn" @click.stop="toggleRight('bookmarks')" :class="{ active: rightPanel === 'bookmarks' }" title="书签">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <span class="tool-label">书签</span>
-          </button>
-        </div>
+    <!-- 底部控制栏 -->
+    <div class="bottom-bar" v-show="!uiHidden" @click.stop>
+        <button class="bot-btn" @click="goHome" title="返回首页">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="bot-label">首页</span>
+        </button>
+        <button class="bot-btn" @click="goToLibrary" title="返回书架">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          <span class="bot-label">书架</span>
+        </button>
+        <div class="bot-divider"></div>
+        <button class="bot-btn" @click="showTocPanel=!showTocPanel" :class="{ active: showTocPanel }" title="目录">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="5" x2="21" y2="5"></line>
+            <line x1="3" y1="10" x2="16" y2="10"></line>
+            <line x1="8" y1="14" x2="21" y2="14"></line>
+            <line x1="8" y1="19" x2="14" y2="19"></line>
+          </svg>
+          <span class="bot-label">目录</span>
+        </button>
+        <button class="bot-btn" @click="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <span class="bot-label">笔记</span>
+        </button>
+        <button class="bot-btn" @click="toggleRight('bookmarks')" :class="{ active: rightPanel === 'bookmarks' }" title="书签">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span class="bot-label">书签</span>
+        </button>
+        <button class="bot-btn" @click="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud' }" title="朗读">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <span class="bot-label">朗读</span>
+        </button>
+        <button class="bot-btn" @click="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span class="bot-label">书架</span>
+        </button>
+        <button class="bot-btn" @click="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="bot-label">设置</span>
+        </button>
+        <div class="bot-divider"></div>
+        <button class="bot-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏阅读'">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path>
+            <path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path>
+          </svg>
+          <span class="bot-label">全屏</span>
+        </button>
+      </div>
 
-        <transition name="panel-slide">
-          <div v-if="rightPanel" class="right-panel" :class="rightPanel">
-                <div class="right-panel-hd">
-              <span>{{ rightPanel === 'shelf' ? '书架' : rightPanel === 'readAloud' ? '朗读' : rightPanel === 'annotations' ? '划线笔记' : rightPanel === 'bookmarks' ? '书签' : '阅读设置' }}</span>
-              <button class="close-btn" @click="rightPanel = ''">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
+      <!-- 底部弹出面板 -->
+      <transition name="panel-slide-up">
+        <div v-if="rightPanel" class="bottom-panel" :class="rightPanel" @click.stop>
+          <div class="bottom-panel-hd">
+            <span>{{ rightPanel === 'shelf' ? '书架' : rightPanel === 'readAloud' ? '朗读' : rightPanel === 'annotations' ? '划线笔记' : rightPanel === 'bookmarks' ? '书签' : '阅读设置' }}</span>
+            <button class="close-btn" @click="rightPanel = ''">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <div class="bottom-panel-bd">
+            <!-- 朗读面板 -->
+            <div v-if="rightPanel === 'readAloud'" class="read-aloud-panel">
+              <div class="panel-card">
+                <div class="read-aloud-header">
+                  <div class="read-aloud-title">朗读控制</div>
+                  <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying, error: isSpeechError }">
+                    {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : isVoicesLoaded ? '准备就绪' : '加载中...' }}
+                  </div>
+                </div>
+                <div class="read-aloud-controls">
+                  <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="voiceCache.length === 0">
+                    <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                      <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="panel-card">
+                <div class="read-aloud-settings">
+                  <div class="setting-row voice-row">
+                    <label>音色</label>
+                    <select v-model="selectedVoiceName" @change="onVoiceChange" :disabled="voiceCache.length === 0">
+                      <option v-for="voice in voiceCache" :key="voice.id" :value="voice.id">
+                        {{ voice.name }}{{ voice.style ? ' · ' + voice.style : '' }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="setting-row">
+                    <label>语速</label>
+                    <input type="range" min="0.5" max="1.5" step="0.1" v-model="speechRate" @change="updateSettings" />
+                    <span class="setting-value">{{ speechRate }}x</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="right-panel-bd">
-              <!-- 朗读面板 -->
-              <div v-if="rightPanel === 'readAloud'" class="read-aloud-panel">
-                <div class="panel-card">
-                  <div class="read-aloud-header">
-                    <div class="read-aloud-title">朗读控制</div>
-                    <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying, error: isSpeechError }">
-                      {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : isVoicesLoaded ? '准备就绪' : '加载中...' }}
-                    </div>
-                  </div>
-                  
-                  <div class="read-aloud-controls">
-                    <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="voiceCache.length === 0">
-                      <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                        <rect x="6" y="4" width="4" height="16" rx="1"></rect>
-                        <rect x="14" y="4" width="4" height="16" rx="1"></rect>
-                      </svg>
-                      <svg v-else viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
 
-                <div class="panel-card">
-                  <div class="read-aloud-settings">
-                    <div class="setting-row voice-row">
-                      <label>音色</label>
-                      <select v-model="selectedVoiceName" @change="onVoiceChange" :disabled="voiceCache.length === 0">
-                        <option v-for="voice in voiceCache" :key="voice.id" :value="voice.id">
-                          {{ voice.name }} · {{ voice.style }}
-                        </option>
-                      </select>
-                    </div>
-                    <div class="setting-row">
-                      <label>语速</label>
-                      <input type="range" min="0.5" max="1.5" step="0.1" v-model="speechRate" @change="updateSettings" />
-                      <span class="setting-value">{{ speechRate }}x</span>
-                    </div>
+            <!-- 书架 -->
+            <div v-if="rightPanel === 'shelf'" class="shelf-panel">
+              <div v-if="shelfList.length" class="shelf-grid">
+                <div v-for="b in shelfList" :key="b.id" class="shelf-card" @click="openBook(b.id)">
+                  <div class="shelf-cover-img">
+                    <img :src="coverUrl(b.id, b.cover, b.title)" alt="" />
+                  </div>
+                  <div class="shelf-info">
+                    <div class="shelf-name">{{ b.title }}</div>
                   </div>
                 </div>
               </div>
-
-              <!-- 书架 -->
-              <div v-if="rightPanel === 'shelf'" class="shelf-panel">
-                <div v-if="shelfList.length" class="shelf-grid">
-                  <div v-for="b in shelfList" :key="b.id" class="shelf-card" @click="openBook(b.id)">
-                    <div class="shelf-cover-img">
-                      <img :src="coverUrl(b.id, b.cover, b.title)" alt="" />
-                    </div>
-                    <div class="shelf-info">
-                      <div class="shelf-name">{{ b.title }}</div>
-                    </div>
-                  </div>
-                </div>
-                <div v-else class="empty-placeholder">
-                  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                  <p>暂无书籍</p>
-                </div>
+              <div v-else class="empty-placeholder">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <p>暂无书籍</p>
               </div>
+            </div>
 
-              <!-- 设置 -->
-              <div v-if="rightPanel === 'settings'" class="settings-panel">
+            <!-- 设置 -->
+            <div v-if="rightPanel === 'settings'" class="settings-panel">
+              <div class="settings-grid">
                 <div class="panel-card">
                   <div class="card-label">显示</div>
                   <div class="setting-group">
                     <label class="group-label">字体大小</label>
                     <div class="size-control">
                       <button @click="readerStore.setFontSize(Math.max(1, readerStore.fontSize - 1))">−</button>
-                      <div class="size-dots">
-                        <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontSize }"></span>
-                      </div>
+                      <div class="size-dots"><span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontSize }"></span></div>
                       <button @click="readerStore.setFontSize(Math.min(5, readerStore.fontSize + 1))">+</button>
                     </div>
                   </div>
@@ -466,9 +455,7 @@
                     <label class="group-label">字体粗细</label>
                     <div class="size-control">
                       <button @click="readerStore.setFontWeight(Math.max(1, readerStore.fontWeight - 1))">−</button>
-                      <div class="size-dots">
-                        <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span>
-                      </div>
+                      <div class="size-dots"><span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span></div>
                       <button @click="readerStore.setFontWeight(Math.min(5, readerStore.fontWeight + 1))">+</button>
                     </div>
                   </div>
@@ -476,30 +463,18 @@
                     <label class="group-label">行间距</label>
                     <div class="size-control">
                       <button @click="readerStore.setLineHeight(Math.max(1, readerStore.lineHeight - 1))">−</button>
-                      <div class="size-dots">
-                        <span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.lineHeight }"></span>
-                      </div>
+                      <div class="size-dots"><span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.lineHeight }"></span></div>
                       <button @click="readerStore.setLineHeight(Math.min(5, readerStore.lineHeight + 1))">+</button>
                     </div>
                   </div>
                 </div>
-
                 <div class="panel-card">
                   <div class="card-label">排版</div>
                   <div class="setting-group">
                     <label class="group-label">阅读方式</label>
                     <div class="mode-switch">
-                      <button
-                        class="mode-btn"
-                        :class="{ active: readerStore.readerMode === 'scroll' }"
-                        @click="readerStore.setReaderMode('scroll')"
-                      >滚动</button>
-                      <button
-                        class="mode-btn"
-                        :class="{ active: readerStore.readerMode === 'page' }"
-                        @click="readerStore.setReaderMode('page')"
-                        v-if="pageModeAvailable"
-                      >翻页</button>
+                      <button class="mode-btn" :class="{ active: readerStore.readerMode === 'scroll' }" @click="readerStore.setReaderMode('scroll')">滚动</button>
+                      <button class="mode-btn" :class="{ active: readerStore.readerMode === 'page' }" @click="readerStore.setReaderMode('page')" v-if="pageModeAvailable">翻页</button>
                     </div>
                   </div>
                   <div class="setting-group">
@@ -509,81 +484,78 @@
                     </div>
                   </div>
                 </div>
-
-                <div class="panel-card">
-                  <div class="card-label">外观</div>
-                  <div class="setting-group">
-                    <label class="group-label">阅读主题</label>
-                    <div class="theme-grid">
-                      <button v-for="t in themes" :key="t.v" class="theme-btn" :class="{ active: readerStore.theme === t.v }" @click="readerStore.setTheme(t.v)">{{ t.l }}</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="panel-card card-danger">
-                  <div class="card-label">数据</div>
-                  <div class="setting-group data-management">
-                    <button class="danger-btn" @click="handleClearAllData">清除所有数据</button>
+              </div>
+              <div class="panel-card">
+                <div class="card-label">外观</div>
+                <div class="setting-group">
+                  <label class="group-label">阅读主题</label>
+                  <div class="theme-grid">
+                    <button v-for="t in themes" :key="t.v" class="theme-btn" :class="{ active: readerStore.theme === t.v }" @click="readerStore.setTheme(t.v)">{{ t.l }}</button>
                   </div>
                 </div>
               </div>
-
-              <!-- 划线笔记 -->
-              <div v-if="rightPanel === 'annotations'" class="annotations-panel">
-                <div v-if="allHighlights.length" class="annotations-list">
-                  <div v-for="hl in allHighlights" :key="hl.id" class="annotation-item">
-                    <div class="annotation-hd">
-                      <span class="annotation-color" :style="{ background: hl.highlightColor }"></span>
-                      <span class="annotation-chapter">{{ getChapterTitle(hl.chapterId) || '未知章节' }}</span>
-                      <button class="annotation-del" @click="deleteHighlight(hl.id)">
-                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                    </div>
-                    <div class="annotation-text">{{ hl.selectedText }}</div>
-                    <div v-if="hl.note" class="annotation-note">{{ hl.note }}</div>
-                  </div>
-                </div>
-                <div v-else class="empty-placeholder">
-                  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                  <p>暂无划线笔记</p>
-                  <p class="empty-hint">选中正文内容即可添加划线</p>
-                </div>
-              </div>
-
-              <!-- 书签 -->
-              <div v-if="rightPanel === 'bookmarks'" class="bookmarks-panel">
-                <div class="bookmarks-actions">
-                  <button class="bm-add-btn" @click="addBookmark">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    添加书签
-                  </button>
-                </div>
-                <div v-if="bookmarks.length" class="bookmarks-list">
-                  <div v-for="bm in bookmarks" :key="bm.id" class="bookmark-item" @click="goToBookmark(bm)">
-                    <div class="bookmark-icon">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                      </svg>
-                    </div>
-                    <div class="bookmark-info">
-                      <div class="bookmark-title">{{ bm.title }}</div>
-                    </div>
-                    <button class="bookmark-del" @click.stop="deleteBookmark(bm.id)">
-                      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                  </div>
-                </div>
-                <div v-else class="empty-placeholder">
-                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                  <p>暂无书签</p>
-                  <p class="empty-hint">点击上方按钮添加书签</p>
+              <div class="panel-card card-danger">
+                <div class="card-label">数据</div>
+                <div class="setting-group data-management">
+                  <button class="danger-btn" @click="handleClearAllData">清除所有数据</button>
                 </div>
               </div>
             </div>
+
+            <!-- 划线笔记 -->
+            <div v-if="rightPanel === 'annotations'" class="annotations-panel">
+              <div v-if="allHighlights.length" class="annotations-list">
+                <div v-for="hl in allHighlights" :key="hl.id" class="annotation-item">
+                  <div class="annotation-hd">
+                    <span class="annotation-color" :style="{ background: hl.highlightColor }"></span>
+                    <span class="annotation-chapter">{{ getChapterTitle(hl.chapterId) || '未知章节' }}</span>
+                    <button class="annotation-del" @click="deleteHighlight(hl.id)">
+                      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                  <div class="annotation-text">{{ hl.selectedText }}</div>
+                  <div v-if="hl.note" class="annotation-note">{{ hl.note }}</div>
+                </div>
+              </div>
+              <div v-else class="empty-placeholder">
+                <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <p>暂无划线笔记</p>
+                <p class="empty-hint">选中正文内容即可添加划线</p>
+              </div>
+            </div>
+
+            <!-- 书签 -->
+            <div v-if="rightPanel === 'bookmarks'" class="bookmarks-panel">
+              <div class="bookmarks-actions">
+                <button class="bm-add-btn" @click="addBookmark">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  添加书签
+                </button>
+              </div>
+              <div v-if="bookmarks.length" class="bookmarks-list">
+                <div v-for="bm in bookmarks" :key="bm.id" class="bookmark-item" @click="goToBookmark(bm)">
+                  <div class="bookmark-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </div>
+                  <div class="bookmark-info">
+                    <div class="bookmark-title">{{ bm.title }}</div>
+                  </div>
+                  <button class="bookmark-del" @click.stop="deleteBookmark(bm.id)">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+              </div>
+              <div v-else class="empty-placeholder">
+                <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                <p>暂无书签</p>
+                <p class="empty-hint">点击上方按钮添加书签</p>
+              </div>
+            </div>
           </div>
-        </transition>
-      </aside>
-    </div>
+        </div>
+      </transition>
 
     <!-- 全屏导航 - 鼠标靠近底部时显示 -->
     <div v-if="isFullscreen && bookFormat !== 'pdf'" class="fullnav" :class="{ visible: showFullNav }">
@@ -624,7 +596,11 @@
         <div class="full-toc-hd"><span>目录</span><button @click="showFullToc = false">关闭</button></div>
         <div class="full-toc-bd" :style="{ ...getFontWeightStyle(readerStore.fontWeight), fontFamily: fonts[readerStore.fontFamily]?.css || fonts[0].css }">
           <div v-for="(ch, idx) in book.content" :key="ch.id || idx" class="full-toc-item" :class="{ active: currentChapter === idx }" @click="currentChapter = idx; showFullToc = false">
-            <span class="toc-icon">#</span>{{ ch.title || `第 ${idx + 1} 章` }}
+            <svg class="toc-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="7" x2="18" y2="7"></line>
+              <line x1="7" y1="14" x2="18" y2="14"></line>
+              <line x1="7" y1="20" x2="12" y2="20"></line>
+            </svg>{{ ch.title || `第 ${idx + 1} 章` }}
           </div>
         </div>
       </div>
@@ -647,6 +623,7 @@ import {
   clearAnnotations,
   type PdfAnnotation
 } from '@/utils/annotationStorage'
+import { EdgeTTS } from 'edge-tts-universal/browser'
 
 const route = useRoute()
 const router = useRouter()
@@ -774,7 +751,7 @@ const bodyRef = ref<HTMLElement | null>(null)
 
 const showTocPanel = ref(false)
 const sidebarWidth = ref(200)
-const showRightTools = ref(false)
+const uiHidden = ref(false)  // 全屏沉浸模式：隐藏所有 UI
 
 // 翻页模式
 const pageNum = ref(1)
@@ -978,6 +955,9 @@ const selectedVoiceName = ref('')
 const currentSentenceIndex = ref(0)
 let isAutoAdvancingChapter = false // 朗读自动跳章标记
 
+// TTS 是否处于活跃状态（播放中或暂停中）
+const isTtsActive = computed(() => ttsState === 'playing' || ttsState === 'paused')
+
 // TTS 代理服务器配置（用于非 Edge 浏览器）
 const isProxyAvailable = ref<boolean | null>(null)
 const themes = [
@@ -1126,6 +1106,19 @@ function toggleRight(p: 'shelf' | 'settings' | 'readAloud' | 'annotations' | 'bo
   rightPanel.value = rightPanel.value === p ? '' : p
 }
 
+// 点击主阅读区：切换 UI 显示/隐藏
+function handleMainClick(e: Event) {
+  // 点击交互元素时不触发
+  const target = e.target as HTMLElement
+  if (target.closest('a, button, input, select, textarea, .hl-toolbar, .page-nav-side, .bottom-bar, .reader-sidebar, .right-panel, .annotation-action-btn')) return
+  
+  if (rightPanel.value) {
+    rightPanel.value = ''
+  } else {
+    uiHidden.value = !uiHidden.value
+  }
+}
+
 // 划线笔记
 async function loadHighlights() {
   if (!bookId.value || !book.value) return
@@ -1248,23 +1241,31 @@ const allHighlights = computed(() => highlights.value)
 
 // =============================================================================
 // =============================================================================
-// 朗读功能 — 双引擎 TTS（SpeechSynthesis 主力 + Edge TTS 增强）
+// 朗读功能 — Edge TTS（浏览器直连 WebSocket + 本地代理回退）
 // =============================================================================
 // 设计原则：
-//   1. SpeechSynthesis API 浏览器内置，零依赖、永远可用，做主引擎
-//   2. Edge TTS 代理后台静默检测，可用时自动切换到高质量音色
-//   3. 引擎切换对用户透明，不弹错误提示，不要求手动启动服务
+//   1. 使用浏览器端 edge-tts-universal 库通过 WebSocket 直连微软 Edge TTS
+//   2. 直连失败时回退到本地代理服务器（localhost:3004）
+//   3. 移动端使用 Web Speech API
+//   4. 不依赖本地 Node.js 代理，浏览器预览也可直接朗读
+
+// ---- Platform detection ----
+// 移动端（Android / iOS / Capacitor）使用 Web Speech API
+const isMobilePlatform = computed(() => {
+  if (typeof navigator === 'undefined') return true
+  const ua = navigator.userAgent.toLowerCase()
+  return /android|iphone|ipad|ipod/.test(ua) || /capacitor/.test(ua)
+})
+const ttsEngine = computed(() => isMobilePlatform.value ? 'speech' : 'edge')
+
+// ---- Web Speech API (Mobile) 状态 ----
 
 // ---- 状态 ----
 const isSpeechError = ref(false)
 const retryCount = ref(0)
-// 最大重试次数
 const MAX_RETRY = 3  // 最大重试 3 次
-const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string; engine: 'synth' | 'edge' }>>([])
+const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string }>>([])
 const isVoicesLoaded = ref(false)
-
-// 当前使用的引擎
-let activeEngine: 'synth' | 'edge' = 'synth'
 let ttsAbort: AbortController | null = null
 
 // ---- Edge TTS 配置 ----
@@ -1303,94 +1304,35 @@ function showTtsToast(msg: string, duration = 3000) {
   }, duration)
 }
 
-// ---- 代理检测 + 系统语音预检 ----
-async function checkProxyAvailability(): Promise<boolean> {
+// ---- 健康检查（仅用于本地代理回退检测） ----
+async function quickHealthCheck(): Promise<boolean> {
   try {
-    // 先快速检查健康端点
     const healthUrl = TTS_PROXY_URL.replace('/api/tts', '/api/health')
     const resp = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) })
-    if (!resp.ok) return false
-    
-    // 真实合成测试：发一个极短的文本验证 Edge TTS 能工作
-    const testUrl = TTS_PROXY_URL
-    const testResp = await fetch(testUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '测试', voice: 'zh-CN-XiaoxiaoNeural' }),
-      signal: AbortSignal.timeout(12000)  // 12s 超时
-    })
-    if (!testResp.ok) {
-      console.log('[TTS] Edge 合成测试失败（可能需要代理），状态码:', testResp.status)
-      return false
-    }
-    // 确认返回的是音频数据
-    const contentType = testResp.headers.get('content-type') || ''
-    const available = contentType.startsWith('audio/')
-    console.log('[TTS] Edge 合成测试:', available ? '成功' : '失败（返回类型:', contentType + '）')
-    return available
-  } catch (error: any) {
-    console.log('[TTS] 代理检测失败:', error.message)
-    return false
-  }
-}
-
-// 预检系统语音是否可用（仅用于初始化，不导出，变量名前加下划线规避 TS 检查）
-void function _checkSynthAvailability(): Promise<boolean> {
-  try {
-    const voices = speechSynthesis.getVoices()
-    if (voices.length === 0) return Promise.resolve(false)
-    
-    // 测试是否能发声
-    return new Promise(resolve => {
-      const testUtter = new SpeechSynthesisUtterance('测试')
-      testUtter.volume = 0 // 静音测试
-      const testVoice = voices.find((v: SpeechSynthesisVoice) => v.lang.startsWith('zh') || v.lang.startsWith('cmn')) || voices[0]
-      if (testVoice) testUtter.voice = testVoice
-      
-      testUtter.onend = () => resolve(true)
-      testUtter.onerror = () => resolve(false)
-      speechSynthesis.speak(testUtter)
-      
-      // 1 秒超时
-      setTimeout(() => {
-        speechSynthesis.cancel()
-        resolve(false)
-      }, 1000)
-    })
-  } catch {
-    return Promise.resolve(false)
-  }
+    return resp.ok
+  } catch { return false }
 }
 
 function startProxyHealthCheck() {
   stopProxyHealthCheck()
   // 启动时立即检测一次
-  checkProxyAvailability().then(available => {
-    if (isProxyAvailable.value !== available) {
-      isProxyAvailable.value = available
-      if (available) showTtsToast('TTS 代理已就绪', 2000)
-    }
+  quickHealthCheck().then(available => {
+    isProxyAvailable.value = available
   })
   
   proxyCheckTimer = window.setInterval(async () => {
-    const available = await checkProxyAvailability()
+    const available = await quickHealthCheck()
     if (isProxyAvailable.value !== available) {
       isProxyAvailable.value = available
-      // 代理恢复时，后台更新音色列表
       if (available) {
-        await loadAllVoices()
-        showTtsToast('TTS 代理已恢复，已切换回 Edge 音色', 3000)
+        // 代理恢复后，允许下次朗读先尝试直连
+        edgeTTSDirectFailed = false
+        showTtsToast('TTS 代理已就绪', 2000)
       } else {
-        showTtsToast('TTS 代理已断开，自动切换到系统语音', 4000)
-        // 如果在朗读中，立即降级到系统语音
-        if (ttsState === 'playing' && activeEngine === 'edge') {
-          activeEngine = 'synth'
-          const idx = currentSentenceIndex.value
-          setTimeout(() => playSynthSentence(idx), 500)
-        }
+        showTtsToast('TTS 代理不可用（直连仍可工作）', 3000)
       }
     }
-  }, 30000) // 30 秒检测一次
+  }, 30000)
 }
 
 function stopProxyHealthCheck() {
@@ -1400,90 +1342,70 @@ function stopProxyHealthCheck() {
   }
 }
 
-// ---- 音色加载：Edge TTS 优先，系统语音备选 ----
+// ---- 音色加载 ----
 async function loadAllVoices() {
-  // 实时检测代理（不缓存状态）
-  const currentProxyAvailable = await checkProxyAvailability()
-  console.log('[TTS] 代理检测结果:', currentProxyAvailable)
-
-  const voices: { engine: 'edge' | 'synth'; id: string; name: string; gender: string; style: string }[] = []
-
-  if (currentProxyAvailable) {
-    // 代理可用 → 仅展示 Edge 音色（不显示系统语音）
-    voices.push(...EDGE_VOICES.map(v => ({ ...v, engine: 'edge' as const, id: 'edge:' + v.id })))
-    console.log('[TTS] 加载 Edge 音色:', voices.length, '个')
+  if (ttsEngine.value === 'speech') {
+    await loadSpeechVoices()
   } else {
-    // 代理不可用 → 仅展示系统语音
-    const sysVoices = speechSynthesis.getVoices()
-    const zhVoices = sysVoices.filter((v: SpeechSynthesisVoice) => v.lang.startsWith('zh') || v.lang.startsWith('cmn'))
-    const voicesToAdd = zhVoices.length > 0 ? zhVoices : sysVoices.slice(0, 6)
-    voices.push(...voicesToAdd.map(v => ({
-      engine: 'synth' as const,
-      id: 'system:' + v.voiceURI,
-      name: v.name,
-      gender: v.lang.includes('Female') ? '女' : '男',
-      style: '系统'
-    })))
-    console.log('[TTS] 加载系统语音:', voices.length, '个')
+    // 桌面端：始终展示 Edge 音色
+    const voices = EDGE_VOICES.map(v => ({ ...v, id: 'edge:' + v.id }))
+    voiceCache.value = voices
+
+    // 恢复偏好或选默认
+    const saved = localStorage.getItem('reader-voice')
+    if (saved && voices.some(v => v.id === saved)) {
+      selectedVoiceName.value = saved
+    } else {
+      selectedVoiceName.value = voices[0]?.id || ''
+    }
+
+    isVoicesLoaded.value = true
   }
+}
 
-  voiceCache.value = voices
+async function loadSpeechVoices() {
+  try {
+    const allVoices = await new Promise<SpeechSynthesisVoice[]>((resolve) => {
+      const v = window.speechSynthesis.getVoices()
+      if (v.length > 0) { resolve(v); return }
+      window.speechSynthesis.onvoiceschanged = () => resolve(window.speechSynthesis.getVoices())
+      setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 3000)
+    })
 
-  // 恢复偏好或选默认
-  const saved = localStorage.getItem('reader-voice')
-  if (saved && voices.some(v => v.id === saved)) {
-    selectedVoiceName.value = saved
-  } else {
-    selectedVoiceName.value = voices[0]?.id || ''
+    // 优先展示中文语音
+    const zhVoices = allVoices.filter(v => v.lang.startsWith('zh'))
+    const displayVoices = zhVoices.length > 0 ? zhVoices : allVoices
+
+    voiceCache.value = displayVoices.map(v => ({
+      id: 'speech:' + v.name,
+      name: v.name.replace(/^Google\s*/i, '').replace(/^Microsoft\s*/i, ''),
+      gender: '',
+      style: v.lang
+    }))
+
+    if (voiceCache.value.length === 0) {
+      voiceCache.value = [{ id: 'speech:default', name: '默认语音', gender: '', style: '' }]
+    }
+
+    const saved = localStorage.getItem('reader-voice')
+    if (saved && voiceCache.value.some(v => v.id === saved)) {
+      selectedVoiceName.value = saved
+    } else {
+      selectedVoiceName.value = voiceCache.value[0]?.id || ''
+    }
+  } catch (e) {
+    console.warn('[TTS][Speech] 加载语音失败:', e)
+    voiceCache.value = [{ id: 'speech:default', name: '默认语音', gender: '', style: '' }]
   }
-
   isVoicesLoaded.value = true
-  
-  // 显示可用引擎信息
-  if (currentProxyAvailable) {
-    showTtsToast('朗读引擎已就绪（Edge TTS）', 2000)
-  } else {
-    showTtsToast('Edge TTS 不可用（需代理），已切换到系统语音', 4000)
-  }
 }
 
 // ---- 判断当前语音属于哪个引擎 ----
-// ---- SpeechSynthesis 引擎 ----
+// ---- Edge TTS 引擎 ----
 let ttsState: 'idle' | 'playing' | 'paused' = 'idle'
 let ttsGeneration = 0  // 每 start/stop 递增，用于打断幽灵链
 
-function speakWithSynth(text: string, voiceURI: string, rate: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (ttsAbort?.signal.aborted) { reject(new Error('abort')); return }
-
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.rate = rate
-    utter.volume = 1.0
-
-    // 匹配语音
-    const rawId = voiceURI.replace('system:', '')
-    const voice = speechSynthesis.getVoices().find(v => v.voiceURI === rawId)
-      || speechSynthesis.getVoices().find(v => v.lang.startsWith('zh') || v.lang.startsWith('cmn'))
-    if (voice) utter.voice = voice
-
-    utter.onstart = () => {
-      isSpeechError.value = false
-      isReadAloudPlaying.value = true
-      ttsState = 'playing'
-    }
-    utter.onend = () => { resolve() }
-    utter.onerror = (e) => {
-      if (e.error === 'canceled' || e.error === 'interrupted') {
-        reject(new Error('canceled'))  // 中断=reject，打断幽灵链
-      } else {
-        reject(new Error(e.error || 'speech error'))
-      }
-    }
-    speechSynthesis.speak(utter)
-  })
-}
-
-// ---- Edge TTS 引擎（简化版：复用现有能力） ----
+// ---- Edge TTS 引擎 ----
 
 let prefetchedAudio: { index: number; blob: Blob; url: string } | null = null
 let currentAudio: HTMLAudioElement | null = null
@@ -1508,8 +1430,18 @@ function getRateStr(): string {
   return (pct >= 0 ? '+' : '') + pct + '%'
 }
 
-async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
-  // 仅通过代理服务器合成（浏览器端 WebSocket 受 CORS 限制不可靠）
+// ---- 浏览器直连 Edge TTS（WebSocket） ----
+let edgeTTSDirectFailed = false  // 标记直连是否曾经失败，避免每次都先尝试直连
+
+async function synthesizeViaEdgeDirect(text: string, voice: string): Promise<Blob> {
+  const rate = getRateStr()
+  const tts = new EdgeTTS(text, voice, { rate, volume: '+0%', pitch: '+0Hz' })
+  const result = await tts.synthesize()
+  return result.audio
+}
+
+// ---- 本地代理回退 ----
+async function synthesizeViaEdgeProxy(text: string, voice: string): Promise<Blob> {
   const resp = await fetch(TTS_PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1517,10 +1449,26 @@ async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
     signal: ttsAbort?.signal
   })
   if (!resp.ok) {
-    throw new Error(`TTS 代理返回 ${resp.status}`)
+    const errBody = await resp.text().catch(() => '')
+    throw new Error(`TTS 代理返回 ${resp.status}: ${errBody}`)
   }
   const ab = await resp.arrayBuffer()
   return new Blob([ab], { type: 'audio/mpeg' })
+}
+
+async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
+  if (!edgeTTSDirectFailed) {
+    try {
+      const blob = await synthesizeViaEdgeDirect(text, voice)
+      return blob
+    } catch (err: any) {
+      console.warn('[TTS] 直连 Edge TTS 失败，回退到本地代理:', err.message)
+      edgeTTSDirectFailed = true
+      showTtsToast('直连失败，尝试本地代理...', 2000)
+    }
+  }
+  // 回退：走本地代理
+  return synthesizeViaEdgeProxy(text, voice)
 }
 
 async function prefetchEdge(index: number) {
@@ -1562,11 +1510,9 @@ async function playEdgeSentence(index: number) {
     } catch (err: any) {
       if (err.name === 'AbortError') return
       if (gen !== ttsGeneration) return
-      // Edge TTS 失败 → 降级到系统语音，不再重试 Edge
-      console.warn('[TTS] Edge 代理失败，降级到系统语音:', err.message)
-      activeEngine = 'synth'
-      showTtsToast('Edge 代理不可用，已自动切换到系统语音朗读', 4000)
-      setTimeout(() => playSynthSentence(index), 500)
+      // Edge TTS 失败 → 重试，不降级到系统语音
+      console.warn('[TTS] Edge 合成失败:', err.message)
+      handleEdgeError(index, err.message)
       return
     }
   }
@@ -1585,65 +1531,101 @@ async function playEdgeSentence(index: number) {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    // 音频播放失败 → 降级到系统语音
-    console.warn('[TTS] Edge 音频播放失败，降级到系统语音')
-    activeEngine = 'synth'
-    showTtsToast('Edge 播放失败，已切换到系统语音', 3000)
-    setTimeout(() => playSynthSentence(index), 500)
+    console.warn('[TTS] Edge 音频播放失败')
+    handleEdgeError(index, '音频播放失败')
   }
 
   audio.play().catch(() => {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    // 播放失败 → 降级到系统语音
-    console.warn('[TTS] Edge 播放失败，降级到系统语音')
-    activeEngine = 'synth'
-    setTimeout(() => playSynthSentence(index), 500)
+    handleEdgeError(index, '音频播放失败')
   })
 }
 
-// ---- SpeechSynthesis 逐句播放 ----
-async function playSynthSentence(index: number) {
-  const gen = ttsGeneration  // 捕获当前 generation
-  if (ttsAbort?.signal.aborted) return
-  if (index >= sentences.value.length) { tryNextChapter(); return }
-
-  const text = sentences.value[index].replace(/<[^>]*>/g, ' ')
-  if (!text.trim()) { advanceToNextSynth(index); return }
-
-  currentSentenceIndex.value = index
-  scrollToSentence(index)
-
-  try {
-    await speakWithSynth(text, selectedVoiceName.value.replace('system:', ''), speechRate.value)
-    // 检查 generation 是否变化（stopReadAloud 后旧链必须停下）
-    if (gen !== ttsGeneration) return
-    advanceToNextSynth(index)
-  } catch (err: any) {
-    if (err.message === 'abort' || err.message === 'canceled') return
-    console.error('[Synth] 播放失败:', err.message)
-    handleSynthError(index)
-  }
-}
-
-function advanceToNextSynth(currentIdx: number) {
-  if (currentIdx < sentences.value.length - 1) {
-    playSynthSentence(currentIdx + 1)
-  } else {
-    tryNextChapter()
-  }
-}
-
-function handleSynthError(index: number) {
+// ---- Edge TTS 错误处理（指数退避重试） ----
+function handleEdgeError(index: number, _reason: string) {
   isSpeechError.value = true
   retryCount.value++
   if (retryCount.value <= MAX_RETRY) {
-    const delay = Math.min(500 * Math.pow(2, (retryCount.value - 1) as number), 2000)
-    showTtsToast(`朗读异常，${delay/1000}s 后重试 (${retryCount.value}/${MAX_RETRY})...`, 2000)
-    setTimeout(() => { isSpeechError.value = false; playSynthSentence(index) }, delay)
+    const delay = Math.min(500 * Math.pow(2, retryCount.value - 1), 3000)
+    showTtsToast(`朗读异常，${delay/1000}s 后重试 (${retryCount.value}/${MAX_RETRY})...`, 3000)
+    setTimeout(() => { isSpeechError.value = false; playEdgeSentence(index) }, delay)
   } else {
-    showTtsToast('系统语音朗读不可用，请检查浏览器语音设置', 5000)
+    showTtsToast('朗读失败，请检查网络连接或代理设置', 5000)
+    stopReadAloud()
+  }
+}
+
+// ---- Web Speech API (Mobile) 引擎 ----
+function stopSpeechSynthesis() {
+  window.speechSynthesis?.cancel()
+}
+
+
+async function playSpeechSentence(index: number) {
+  const gen = ttsGeneration
+  if (gen !== ttsGeneration) return
+  if (index >= sentences.value.length) { tryNextChapter(); return }
+
+  const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
+  if (!text) { advanceToNext(index); return }
+
+  // 取消正在播放的语音
+  window.speechSynthesis.cancel()
+
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = 'zh-CN'
+  utterance.rate = speechRate.value
+
+  // 选择语音
+  const voiceId = selectedVoiceName.value
+  if (voiceId && voiceId.startsWith('speech:')) {
+    const voiceName = voiceId.replace('speech:', '')
+    if (voiceName !== 'default') {
+      const voices = window.speechSynthesis.getVoices()
+      const matched = voices.find(v => v.name === voiceName)
+      if (matched) utterance.voice = matched
+    }
+  } else {
+    // 自动选择中文语音
+    const voices = window.speechSynthesis.getVoices()
+    const zhVoice = voices.find(v => v.lang.startsWith('zh'))
+    if (zhVoice) utterance.voice = zhVoice
+  }
+
+  utterance.onstart = () => {
+    if (gen !== ttsGeneration) return
+    isReadAloudPlaying.value = true
+    ttsState = 'playing'
+    currentSentenceIndex.value = index
+    scrollToSentence(index)
+  }
+
+  utterance.onend = () => {
+    if (gen !== ttsGeneration) return
+    advanceToNext(index)
+  }
+
+  utterance.onerror = (e) => {
+    if (gen !== ttsGeneration) return
+    console.warn('[TTS][Speech] 播放出错:', e.error)
+    handleSpeechError(index)
+  }
+
+  window.speechSynthesis.speak(utterance)
+}
+
+// ---- SpeechSynthesis 错误处理 ----
+function handleSpeechError(index: number) {
+  isSpeechError.value = true
+  retryCount.value++
+  if (retryCount.value <= MAX_RETRY) {
+    const delay = Math.min(500 * Math.pow(2, retryCount.value - 1), 3000)
+    showTtsToast(`朗读异常，${delay/1000}s 后重试 (${retryCount.value}/${MAX_RETRY})...`, 3000)
+    setTimeout(() => { isSpeechError.value = false; playSpeechSentence(index) }, delay)
+  } else {
+    showTtsToast('朗读失败，请检查语音设置', 5000)
     stopReadAloud()
   }
 }
@@ -1652,11 +1634,11 @@ function handleSynthError(index: number) {
 function advanceToNext(currentIdx: number) {
   if (currentIdx < sentences.value.length - 1) {
     const next = currentIdx + 1
-    if (activeEngine === 'edge') {
+    if (ttsEngine.value === 'edge') {
       prefetchEdge(next + 1)
       playEdgeSentence(next)
     } else {
-      playSynthSentence(next)
+      playSpeechSentence(next)
     }
   } else {
     tryNextChapter()
@@ -1665,17 +1647,14 @@ function advanceToNext(currentIdx: number) {
 
 // ---- 自动跳章 ----
 function tryNextChapter() {
-  // 防止幽灵链在 setTimeout 触发前完成了当前句，导致重复跳章
   if (isAutoAdvancingChapter) return
   if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
     isAutoAdvancingChapter = true
     currentChapter.value++
     setTimeout(() => {
       isAutoAdvancingChapter = false
-      const engine = activeEngine // 保持当前引擎
       stopReadAloud()
-      activeEngine = engine
-      startReadAloud(0, true) // skipVoiceLoad，保持当前引擎和音色
+      startReadAloud(0, true) // skipVoiceLoad
     }, 300)
   } else {
     stopReadAloud()
@@ -1687,9 +1666,10 @@ function stopReadAloud() {
   ttsGeneration++
   ttsAbort?.abort()
   ttsAbort = null
-  speechSynthesis.cancel()
   releaseCurrentAudio()
   clearPrefetched()
+  stopProxyHealthCheck()
+  stopSpeechSynthesis()
   isReadAloudPlaying.value = false
   isSpeechError.value = false
   retryCount.value = 0
@@ -1702,61 +1682,48 @@ async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
   if (!skipVoiceLoad) {
     await loadAllVoices()
     if (voiceCache.value.length === 0) {
-      showTtsToast('未找到可用语音，请检查浏览器语音设置')
+      showTtsToast('未找到可用音色')
       return
     }
   }
 
-  // 根据代理状态和当前音色选择引擎
-  const currentProxyAvailable = await checkProxyAvailability()
-  if (currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
-    activeEngine = 'edge'
-  } else {
-    activeEngine = 'synth'
-  }
-
-  ttsAbort = new AbortController()
-  startProxyHealthCheck()
-
-  if (activeEngine === 'edge') {
-    showTtsToast('开始朗读（Edge TTS）', 1500)
+  if (ttsEngine.value === 'edge') {
+    ttsAbort = new AbortController()
+    edgeTTSDirectFailed = false  // 每次启动新朗读，重新尝试直连
+    // 直连无需代理健康检查，但保留健康检查用于回退通知
+    startProxyHealthCheck()
+    showTtsToast('开始朗读', 1500)
     playEdgeSentence(startIndex)
     prefetchEdge(startIndex + 1)
   } else {
-    if (currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
-      showTtsToast('Edge TTS 合成失败，已切换到系统语音', 3000)
-    } else if (!currentProxyAvailable && selectedVoiceName.value.startsWith('edge:')) {
-      showTtsToast('Edge TTS 需要代理！请启动代理（127.0.0.1:10809），暂时使用系统语音', 5000)
-    } else {
-      showTtsToast('开始朗读（系统语音）', 1500)
-    }
-    playSynthSentence(startIndex)
+    showTtsToast('开始朗读', 1500)
+    playSpeechSentence(startIndex)
   }
 }
 
 function pauseReadAloud() {
   ttsState = 'paused'
   isReadAloudPlaying.value = false
-  if (activeEngine === 'synth') {
-    speechSynthesis.cancel()
-  } else if (currentAudio && !currentAudio.paused) {
-    currentAudio.pause()
+  if (ttsEngine.value === 'edge') {
+    if (currentAudio && !currentAudio.paused) currentAudio.pause()
+  } else {
+    window.speechSynthesis?.pause()
   }
 }
 
 function resumeReadAloud() {
   const idx = currentSentenceIndex.value
-  if (activeEngine === 'edge' && currentAudio && currentAudio.paused) {
-    currentAudio.play().catch(() => {
-      // Edge 音频恢复失败 → 重播当前句
-      playEdgeSentence(idx)
-    })
-  } else {
-    // 均重新开始当前句（最可靠的恢复方式）
-    if (activeEngine === 'edge') {
-      playEdgeSentence(idx)
+  if (ttsEngine.value === 'edge') {
+    if (currentAudio && currentAudio.paused) {
+      currentAudio.play().catch(() => { playEdgeSentence(idx) })
     } else {
-      playSynthSentence(idx)
+      playEdgeSentence(idx)
+    }
+  } else {
+    window.speechSynthesis?.resume()
+    // 如果 resume 不生效（部分浏览器），重新播放
+    if (!window.speechSynthesis?.speaking) {
+      playSpeechSentence(idx)
     }
   }
 }
@@ -1768,6 +1735,29 @@ function toggleReadAloud() {
     resumeReadAloud()
   } else {
     startReadAloud(currentSentenceIndex.value)
+  }
+}
+
+// 点击段落跳转朗读
+function onParagraphClick(idx: number) {
+  if (ttsState === 'idle') return  // 未在朗读时不响应
+
+  // 防止误触：如果正在播放的句子就是点击的句子，不处理
+  if (currentSentenceIndex.value === idx) return
+
+  // 停止当前播放
+  releaseCurrentAudio()
+  clearPrefetched()
+  stopSpeechSynthesis()
+  retryCount.value = 0
+
+  // 设置新的起始位置并继续朗读
+  currentSentenceIndex.value = idx
+  if (ttsEngine.value === 'edge') {
+    playEdgeSentence(idx)
+    prefetchEdge(idx + 1)
+  } else {
+    playSpeechSentence(idx)
   }
 }
 
@@ -2226,18 +2216,17 @@ onBeforeUnmount(() => {
 }
 
 /* 布局容器 */
-.reader-body { flex: 1; display: flex; overflow: hidden; position: relative; transition: padding-left 0.15s; }
+.reader-body { flex: 1; display: flex; overflow: hidden; position: relative; }
 
-/* 左侧目录 */
+/* 左侧目录（仅展开时显示，作为覆盖层） */
 .reader-sidebar {
   background: #fff; border-right: 1px solid #eee;
   display: flex; flex-direction: column; flex-shrink: 0;
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  z-index: 2;
-  transition: width 0.15s; will-change: width;
+  z-index: 30;
+  box-shadow: 4px 0 16px rgba(0,0,0,0.08);
 }
-.reader-sidebar.collapsed { border-right: none; }
 .sidebar-expanded { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .sidebar-header { padding: 8px 10px 8px 4px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px; font-size: 14px; flex-shrink: 0; }
 .collapse-btn {
@@ -2260,75 +2249,9 @@ onBeforeUnmount(() => {
 .side-btn:hover { background: rgba(24,144,255,0.1); color: #1890ff; }
 .sidebar-content { flex: 1; overflow-y: auto; padding: 4px 0; }
 .toc-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; cursor: pointer; font-size: 15px; }
-.toc-item .toc-icon { font-size: 13px; color: #999; flex-shrink: 0; }
+.toc-item .toc-icon { width: 14px; height: 14px; color: #999; flex-shrink: 0; display: block; margin-top: 1px; }
 .toc-item.active { background: rgba(24,144,255,0.1); border-left: 3px solid #1890ff; font-weight: 600; }
-
-/* 收起状态：居中醒目 */
-.sidebar-collapsed {
-  flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
-  user-select: none; padding: 15vh 6px 12px; text-align: center;
-}
-.sidebar-collapsed.hover-visible {
-  opacity: 0.1;
-  background: transparent;
-  transition: opacity 0.3s ease;
-}
-.sidebar-collapsed.hover-visible .toc-icon-btn {
-  background: transparent;
-  box-shadow: none;
-  border-color: transparent;
-}
-.sidebar-collapsed.hover-visible:hover {
-  opacity: 1;
-}
-.theme-dark .sidebar-collapsed.hover-visible:hover { background: #1a1a1a; }
-.theme-green .sidebar-collapsed.hover-visible:hover { background: #e8f0e3; }
-.theme-parchment .sidebar-collapsed.hover-visible:hover { background: #f5e6c8; }
-.sidebar-collapsed.hover-visible:hover .toc-icon-btn {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  border-color: rgba(0,0,0,0.04);
-}
-.theme-dark .sidebar-collapsed.hover-visible:hover .toc-icon-btn { background: #444; }
-.theme-green .sidebar-collapsed.hover-visible:hover .toc-icon-btn { background: #c8dba0; }
-.theme-parchment .sidebar-collapsed.hover-visible:hover .toc-icon-btn { background: #d4c5a9; }
-.toc-icon-btn {
-  width: 46px; height: 46px;
-  background: #fff;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  transition: all 0.25s ease;
-  margin-bottom: 10px;
-  position: relative;
-  border: 1px solid rgba(0,0,0,0.04);
-}
-.badge-dot {
-  position: absolute; top: 4px; right: 4px;
-  width: 8px; height: 8px;
-  background: #1890ff;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  opacity: 0;
-  transform: scale(0);
-  transition: all 0.2s;
-}
-.toc-icon-btn:hover::after {
-  content: attr(data-title);
-  position: absolute; left: 56px; top: 50%; transform: translateY(-50%);
-  white-space: nowrap; padding: 4px 10px; border-radius: 4px;
-  background: rgba(0,0,0,0.75); color: #fff; font-size: 13px;
-  pointer-events: none; z-index: 10;
-}
-.toc-icon-btn:hover {
-  background: #1890ff;
-  box-shadow: 0 6px 16px rgba(24,144,255,0.25);
-  transform: translateY(-3px) scale(1.05);
-  border-color: #1890ff;
-}
-.toc-icon-btn:hover .badge-dot { opacity: 0; transform: scale(0); }
-.toc-icon-btn .collapsed-icon-svg { color: #666; transition: color 0.2s; }
-.toc-icon-btn:hover .collapsed-icon-svg { color: #fff; }
+.toc-item.active .toc-icon { color: #1890ff; }
 
 /* 拖拽条 */
 .resize-bar { width: 6px; cursor: col-resize; background: transparent; flex-shrink: 0; }
@@ -2951,43 +2874,28 @@ onBeforeUnmount(() => {
 .annotation-color-btn:hover { transform: scale(1.15); }
 .annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 1px #fff, 0 0 0 2px #333; }
 
-/* ===== 右侧工具栏 + 面板 ===== */
-.reader-right {
-  position: relative;
-  width: 56px;
-  height: 100%;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: rgba(255,255,255,0.85);
+/* ===== 底部控制栏 ===== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(255,255,255,0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-left: 1px solid rgba(0,0,0,0.06);
-  z-index: 20;
-}
-.reader-right.hover-visible {
-  opacity: 0.08;
-  transition: opacity 0.3s ease;
-  background: transparent;
-  border-left: none;
-}
-.reader-right.hover-visible:hover {
-  opacity: 1;
-}
-.right-tools {
+  border-top: 1px solid rgba(0,0,0,0.06);
   display: flex;
-  flex-direction: column;
-  gap: 4px;
   align-items: center;
-  padding-top: 12vh;
-  width: 100%;
-  height: 100%;
+  justify-content: center;
+  gap: 8px;
+  z-index: 200;
+  padding: 0 16px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
-/* 工具按钮 */
-.tool-btn {
-  width: 44px;
-  height: 44px;
+.bot-btn {
+  width: 52px;
+  height: 48px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -3002,8 +2910,8 @@ onBeforeUnmount(() => {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
-.tool-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
-.tool-label {
+.bot-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+.bot-label {
   font-size: 9px;
   font-weight: 500;
   line-height: 1;
@@ -3011,33 +2919,26 @@ onBeforeUnmount(() => {
   opacity: 0.7;
   font-family: "Inter", "Kaiti SC", "STKaiti", "KaiTi", sans-serif;
 }
-.tool-btn:hover {
-  background: rgba(0,0,0,0.05);
-  color: #333;
-  transform: translateY(-1px);
-}
-.tool-btn:active {
-  transform: translateY(0) scale(0.96);
-}
-.tool-btn.active {
-  background: rgba(59,130,246,0.1);
-  color: #3b82f6;
-}
-.tool-btn.active::before {
+.bot-btn:hover { background: rgba(0,0,0,0.05); color: #333; transform: translateY(-1px); }
+.bot-btn:active { transform: translateY(0) scale(0.96); }
+.bot-btn.active { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.bot-btn.active::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  border-radius: 0 3px 3px 0;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
   background: #3b82f6;
 }
-.tool-btn.active:hover {
-  background: rgba(59,130,246,0.16);
+.bot-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(0,0,0,0.08);
+  flex-shrink: 0;
 }
-.bottom-fullscreen-btn { margin-top: auto; }
 .highlighter-btn.active {
   background: rgba(255, 255, 0, 0.25);
   color: #b8860b;
@@ -3199,32 +3100,32 @@ onBeforeUnmount(() => {
 .bookmark-del:hover { background: #ff4d4f; color: #fff; }
 
 /* ===== 右侧面板 ===== */
-.right-panel {
-  position: absolute;
-  right: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 300px;
-  max-width: 70vw;
-  max-height: 85vh;
-  background: rgba(255,255,255,0.92);
+/* ===== 底部弹出面板 ===== */
+.bottom-panel {
+  position: fixed;
+  bottom: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  max-width: 520px;
+  max-height: 40vh;
+  background: rgba(255,255,255,0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.04);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 30;
+  z-index: 110;
 }
-.right-panel-hd {
-  padding: 16px 20px;
+.bottom-panel-hd {
+  padding: 12px 16px;
   border-bottom: 1px solid rgba(0,0,0,0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #1e293b;
   flex-shrink: 0;
@@ -3241,32 +3142,55 @@ onBeforeUnmount(() => {
 }
 .close-btn:hover { background: rgba(0,0,0,0.08); color: #475569; }
 .close-btn:active { transform: scale(0.92); }
-.right-panel-bd { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
+.bottom-panel-bd { flex: 1; overflow-y: auto; padding: 12px; min-height: 0; }
 
 /* 过渡动画 */
-.panel-slide-enter-active, .panel-slide-leave-active { transition: opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1); }
-.panel-slide-enter-from, .panel-slide-leave-to { opacity: 0; transform: translateY(-50%) translateX(12px) scale(0.97); }
+.panel-slide-up-enter-active, .panel-slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s cubic-bezier(0.4,0,0.2,1); }
+.panel-slide-up-enter-from, .panel-slide-up-leave-to { transform: translateX(-50%) translateY(100%); opacity: 0; }
 
-/* ===== 面板卡片 ===== */
+/* ===== 紧凑面板卡片 ===== */
 .panel-card {
   background: rgba(255,255,255,0.7);
   border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
-.panel-card + .panel-card { margin-top: 12px; }
+.panel-card + .panel-card { margin-top: 10px; }
 .card-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  margin-bottom: -4px;
+  margin-bottom: -2px;
 }
 .panel-card.card-danger { border-color: rgba(239,68,68,0.15); }
+
+/* ===== 朗读面板 - 水平紧凑布局 ===== */
+.read-aloud-panel { display: flex; flex-direction: column; gap: 8px; }
+.read-aloud-header { display: flex; align-items: center; justify-content: space-between; }
+.read-aloud-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+.read-aloud-status { font-size: 11px; color: #94a3b8; }
+.read-aloud-status.playing { color: #3b82f6; }
+.read-aloud-status.error { color: #ef4444; }
+.read-aloud-controls { display: flex; justify-content: center; }
+.control-btn.primary {
+  width: 44px; height: 44px; border-radius: 50%; border: none;
+  background: #3b82f6; color: #fff; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; transition: all 0.2s;
+}
+.control-btn.primary:hover { background: #2563eb; transform: scale(1.05); }
+.control-btn.primary:active { transform: scale(0.95); }
+.control-btn.primary:disabled { background: #94a3b8; cursor: not-allowed; }
+.read-aloud-settings { display: flex; flex-direction: column; gap: 6px; }
+.setting-row { display: flex; align-items: center; gap: 8px; }
+.setting-row label { font-size: 12px; color: #64748b; min-width: 36px; flex-shrink: 0; }
+.setting-row select { flex: 1; height: 30px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0 8px; font-size: 12px; background: #fff; }
+.setting-row input[type="range"] { flex: 1; }
+.setting-value { font-size: 11px; color: #64748b; min-width: 28px; text-align: right; }
 
 /* ===== 书架面板 ===== */
 .shelf-panel { min-height: 120px; }
@@ -3285,22 +3209,22 @@ onBeforeUnmount(() => {
 .shelf-info { text-align: left; width: 100%; overflow: hidden; }
 .shelf-name { font-size: 13px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 
-/* ===== 设置面板 ===== */
+/* ===== 设置面板 - 紧凑网格 ===== */
 .settings-panel { display: flex; flex-direction: column; gap: 0; }
-.setting-group { display: flex; flex-direction: column; gap: 8px; }
-.setting-group + .setting-group { margin-top: 12px; }
+.setting-group { display: flex; flex-direction: column; gap: 6px; }
+.setting-group + .setting-group { margin-top: 8px; }
 .setting-group:last-child { margin-bottom: 0; }
 .group-label {
-  font-size: 12px; color: #64748b; font-weight: 500;
+  font-size: 11px; color: #64748b; font-weight: 500;
   letter-spacing: 0.3px;
 }
 
-/* +/- 控制按钮 */
-.size-control { display: flex; align-items: center; gap: 12px; }
+/* 紧凑 +/- 控制按钮 */
+.size-control { display: flex; align-items: center; gap: 8px; }
 .size-control button {
-  width: 36px; height: 36px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  width: 30px; height: 30px; border: 1.5px solid #e2e8f0; border-radius: 8px;
   background: rgba(255,255,255,0.8); cursor: pointer;
-  font-size: 18px; font-weight: 400; color: #64748b;
+  font-size: 15px; font-weight: 400; color: #64748b;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
@@ -3311,9 +3235,9 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 8px rgba(59,130,246,0.15);
 }
 .size-control button:active { transform: scale(0.94); }
-.size-dots { flex: 1; display: flex; gap: 8px; justify-content: center; }
+.size-dots { flex: 1; display: flex; gap: 6px; justify-content: center; }
 .dot {
-  width: 14px; height: 14px; border-radius: 4px; background: #e2e8f0;
+  width: 10px; height: 10px; border-radius: 3px; background: #e2e8f0;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .dot.active {
@@ -3322,22 +3246,30 @@ onBeforeUnmount(() => {
   transform: scale(1.1);
 }
 
+/* 设置两列布局 */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.settings-grid .panel-card { margin-top: 0; }
+
 /* 阅读方式切换 */
 .mode-switch {
   display: flex;
   gap: 0;
   background: #f1f5f9;
-  border-radius: 10px;
-  padding: 3px;
+  border-radius: 8px;
+  padding: 2px;
   width: fit-content;
 }
 .mode-btn {
-  padding: 8px 24px;
+  padding: 6px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #94a3b8;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3458,6 +3390,19 @@ onBeforeUnmount(() => {
   transition: all 0.3s ease;
   box-shadow: inset 0 0 0 1px rgba(24,144,255,0.06);
 }
+
+/* 朗读期间段落可点击提示 */
+.reader-content p.clickable-during-tts,
+.reader-page-mode p.clickable-during-tts {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.reader-content p.clickable-during-tts:hover:not(.read-aloud-active),
+.reader-page-mode p.clickable-during-tts:hover:not(.read-aloud-active) {
+  background: rgba(24,144,255,0.06);
+  border-left: 2px solid rgba(24,144,255,0.4);
+  padding-left: 13px;
+}
 .theme-dark .reader-content p.read-aloud-active,
 .theme-dark .reader-page-mode p.read-aloud-active {
   background: rgba(24,144,255,0.2);
@@ -3535,15 +3480,14 @@ onBeforeUnmount(() => {
 .full-toc-hd { padding: 10px 14px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; font-size: 14px; flex-shrink: 0; }
 .full-toc-bd { flex: 1; overflow-y: auto; padding: 6px 0; }
 .full-toc-item { display: flex; align-items: center; gap: 6px; padding: 8px 12px; cursor: pointer; font-size: 15px; }
-.full-toc-item .toc-icon { font-size: 13px; color: #999; flex-shrink: 0; }
+.full-toc-item .toc-icon { width: 14px; height: 14px; color: #999; flex-shrink: 0; display: block; margin-top: 1px; }
 .full-toc-item.active { background: rgba(24,144,255,0.1); border-left: 3px solid #1890ff; font-weight: 600; }
+.full-toc-item.active .toc-icon { color: #1890ff; }
 
 /* 主题适配 */
 .theme-dark { background: #1a1a1a; color: #e0e0e0; }
 .theme-dark .reader-sidebar { background: #1a1a1a; border-color: #333; color: #e0e0e0; }
 .theme-dark .sidebar-header { border-color: #333; color: #e0e0e0; }
-.theme-dark .toc-icon-btn { background: #2a2a2a; border-color: #444; color: #ccc; }
-.theme-dark .toc-icon-btn:hover { background: #444; color: #1890ff; }
 .theme-dark .toc-item { color: #ccc; }
 .theme-dark .toc-item:hover { background: rgba(255,255,255,0.05); }
 .theme-dark .toc-item.active { background: rgba(24,144,255,0.15); border-left-color: #1890ff; color: #e0e0e0; }
@@ -3584,6 +3528,18 @@ onBeforeUnmount(() => {
   background: rgba(59,130,246,0.15);
   color: #60a5fa;
 }
+.theme-dark .bot-btn {
+  background: transparent;
+  color: #94a3b8;
+}
+.theme-dark .bot-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: #e2e8f0;
+}
+.theme-dark .bot-btn.active {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+}
 .theme-dark .tool-btn.active::before { background: #60a5fa; }
 .theme-dark .annotation-item { background: #2a2a2a; border-color: #444; }
 .theme-dark .annotation-text { color: #ccc; }
@@ -3594,9 +3550,9 @@ onBeforeUnmount(() => {
 .theme-dark .bookmark-title { color: #ccc; }
 .theme-dark .bm-add-btn { border-color: #555; color: #999; }
 .theme-dark .bm-add-btn:hover { border-color: #1890ff; color: #1890ff; background: rgba(24,144,255,0.1); }
-.theme-dark .right-panel, .theme-dark .full-toc { background: rgba(30,30,30,0.95); border-color: rgba(255,255,255,0.08); backdrop-filter: blur(16px); }
-.theme-dark .right-panel-hd { border-color: rgba(255,255,255,0.06); color: #e2e8f0; }
-.theme-dark .reader-right { background: rgba(30,30,30,0.85); border-color: rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
+.theme-dark .bottom-panel, .theme-dark .full-toc { background: rgba(30,30,30,0.95); border-color: rgba(255,255,255,0.08); backdrop-filter: blur(16px); }
+.theme-dark .bottom-panel-hd { border-color: rgba(255,255,255,0.06); color: #e2e8f0; }
+.theme-dark .bottom-bar { background: rgba(30,30,30,0.9); border-color: rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
 .theme-dark .close-btn { background: rgba(255,255,255,0.08); color: #94a3b8; }
 .theme-dark .close-btn:hover { background: rgba(255,255,255,0.15); color: #e2e8f0; }
 .theme-dark .panel-card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
@@ -3679,8 +3635,6 @@ onBeforeUnmount(() => {
 .theme-green .reader-toolbar { background: #e8f0e3; border-color: #d4e8c8; }
 .theme-green .reader-sidebar { background: #e8f0e3; border-color: #d4e8c8; }
 .theme-green .sidebar-header { border-color: #d4e8c8; }
-.theme-green .toc-icon-btn { background: #f0f7eb; border-color: #c8dba0; color: #4a7a4a; }
-.theme-green .toc-icon-btn:hover { background: #d8e8d0; color: #5a9e42; }
 .theme-green .toc-item { color: #3a5a3a; }
 .theme-green .toc-item:hover { background: rgba(46,74,46,0.08); }
 .theme-green .toc-item.active { background: rgba(90,158,66,0.12); border-left-color: #5a9e42; color: #1e3a1e; }
@@ -3704,8 +3658,8 @@ onBeforeUnmount(() => {
 .theme-green .bookmark-title { color: #3a5a3a; }
 .theme-green .bm-add-btn { border-color: #c8dba0; color: #7aa86a; }
 .theme-green .bm-add-btn:hover { border-color: #5a9e42; color: #5a9e42; background: rgba(90,158,66,0.06); }
-.theme-green .reader-right { background: rgba(232,240,227,0.85); border-color: #d4e8c8; backdrop-filter: blur(12px); }
-.theme-green .right-panel, .theme-green .full-toc { background: rgba(232,240,227,0.92); border-color: #d4e8c8; backdrop-filter: blur(16px); }
+.theme-green .bottom-bar { background: rgba(232,240,227,0.92); border-color: #d4e8c8; backdrop-filter: blur(12px); }
+.theme-green .bottom-panel, .theme-green .full-toc { background: rgba(232,240,227,0.92); border-color: #d4e8c8; backdrop-filter: blur(16px); }
 .theme-green .shelf-card { background: #f0f7eb; border-color: #d4e8c8; }
 .theme-green .weight-btn { background: #f0f7eb; border-color: #c8dba0; }
 .theme-green .weight-btn.active { background: #5a9e42; color: #fff; border-color: #5a9e42; }
@@ -3799,8 +3753,6 @@ onBeforeUnmount(() => {
 .theme-parchment .reader-toolbar { background: rgba(245,230,200,0.9); border-color: #d4c5a9; }
 .theme-parchment .reader-sidebar { background: #f5e6c8; border-color: #d4c5a9; }
 .theme-parchment .sidebar-header { border-color: #d4c5a9; }
-.theme-parchment .toc-icon-btn { background: #f0e6d0; border-color: #d0bea0; color: #5a4a2a; }
-.theme-parchment .toc-icon-btn:hover { background: #e0d0b0; color: #8b6914; }
 .theme-parchment .toc-item { color: #3d2a00; }
 .theme-parchment .toc-item:hover { background: rgba(139,105,20,0.08); }
 .theme-parchment .toc-item.active { background: rgba(139,105,20,0.12); border-left-color: #8b6914; color: #2a1a00; }
@@ -3824,9 +3776,9 @@ onBeforeUnmount(() => {
 .theme-parchment .bookmark-title { color: #3d2a00; }
 .theme-parchment .bm-add-btn { border-color: #c9b894; color: #7a6a4a; }
 .theme-parchment .bm-add-btn:hover { border-color: #8b6914; color: #8b6914; background: rgba(139,105,20,0.06); }
-.theme-parchment .reader-right { background: rgba(245,230,200,0.85); border-color: #d4c5a9; backdrop-filter: blur(12px); }
-.theme-parchment .right-panel, .theme-parchment .full-toc { background: rgba(245,230,200,0.92); border-color: #d4c5a9; backdrop-filter: blur(16px); }
-.theme-parchment .right-panel-hd { border-color: #d4c5a9; }
+.theme-parchment .bottom-bar { background: rgba(245,230,200,0.92); border-color: #d4c5a9; backdrop-filter: blur(12px); }
+.theme-parchment .bottom-panel, .theme-parchment .full-toc { background: rgba(245,230,200,0.92); border-color: #d4c5a9; backdrop-filter: blur(16px); }
+.theme-parchment .bottom-panel-hd { border-color: #d4c5a9; }
 .theme-parchment .shelf-card { background: #f0e6d0; border-color: #d4c5a9; }
 .theme-parchment .shelf-name { color: #3d2a00; }
 .theme-parchment .weight-btn { background: #f0e6d0; border-color: #c9b894; color: #3d2a00; }

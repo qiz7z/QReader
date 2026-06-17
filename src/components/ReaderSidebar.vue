@@ -1,7 +1,7 @@
 <template>
   <aside class="reader-sidebar" :class="`sidebar-${position}`">
     <div class="sidebar-header">
-      <h3>目录</h3>
+      <h3>{{ tabs.find(t => t.key === activeTab)?.label || '目录' }}</h3>
       <button class="close-btn" @click="$emit('close')">&times;</button>
     </div>
     <div class="sidebar-tabs">
@@ -12,7 +12,8 @@
         :class="{ active: activeTab === tab.key }"
         @click="activeTab = tab.key"
       >
-        {{ tab.label }}
+        <svg class="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" v-html="tab.icon"></svg>
+        <span class="tab-label">{{ tab.label }}</span>
       </button>
     </div>
     <div class="sidebar-content">
@@ -130,10 +131,10 @@ defineEmits<{
 }>()
 
 const tabs = [
-  { key: 'toc', label: '目录' },
-  { key: 'bookmark', label: '书签' },
-  { key: 'note', label: '笔记' },
-  { key: 'settings', label: '设置' },
+  { key: 'toc', label: '目录', icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>' },
+  { key: 'bookmark', label: '书签', icon: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>' },
+  { key: 'note', label: '笔记', icon: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>' },
+  { key: 'settings', label: '设置', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
 ]
 
 const activeTab = ref(props.defaultTab || 'toc')
@@ -224,10 +225,23 @@ const themeOptions = [
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 13px;
-  color: #666;
+  font-size: 12px;
+  color: #888;
   border-bottom: 2px solid transparent;
-  transition: color 0.2s, border-color 0.2s;
+  transition: color 0.2s, border-color 0.2s, background-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.tab-btn .tab-icon {
+  color: inherit;
+  transition: color 0.2s;
+}
+
+.tab-btn .tab-label {
+  line-height: 1;
 }
 
 .tab-btn.active {
@@ -237,6 +251,7 @@ const themeOptions = [
 
 .tab-btn:hover:not(.active) {
   background-color: #f0f0f0;
+  color: #555;
 }
 
 .sidebar-content {

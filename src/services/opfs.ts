@@ -9,7 +9,7 @@ export class OPFSStorage {
     if (this.initialized) return this.isAvailable
 
     try {
-      if (!('showDirectoryPicker' in window)) {
+      if (!('getDirectory' in navigator.storage)) {
         this.isAvailable = false
         this.initialized = true
         console.warn('[OPFS] File System Access API not supported')
