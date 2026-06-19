@@ -1,7 +1,7 @@
 {
   "name": "qreader",
   "private": true,
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Web-based ebook reader supporting TXT, PDF, EPUB, MOBI, DOCX, Markdown",
   "author": "qiz7z",
   "type": "module",

@@ -29,7 +29,14 @@ const PROXY = process.env.TTS_PROXY || detectSystemProxy() || '';
 
 function getTTSOptions(voice, rate, volume, pitch) {
   const opts = { rate, volume, pitch };
-  if (PROXY) opts.proxy = PROXY;
+  // 仅当用户显式设置 TTS_PROXY 环境变量时才使用代理
+  const envProxy = process.env.TTS_PROXY;
+  if (envProxy) {
+    opts.proxy = envProxy;
+    console.log('[TTS] 使用代理:', envProxy);
+  } else {
+    console.log('[TTS] 直连（未设置 TTS_PROXY 环境变量）');
+  }
   return opts;
 }
 

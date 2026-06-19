@@ -203,7 +203,7 @@
             </svg>
           </button>
           <div class="page-nav-wrapper" @click.stop="pagePrev">
-            <button class="page-nav-side page-nav-left" :disabled="pageNum <= 1" title="上一页" aria-label="上一页">
+            <button class="page-nav-side page-nav-left" :disabled="pageNum <= 1 && currentChapter <= 0" title="上一页" aria-label="上一页">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
@@ -212,7 +212,7 @@
         </div>
         <div class="page-nav-right-group">
           <div class="page-nav-wrapper" @click.stop="pageNext">
-            <button class="page-nav-side page-nav-right" :disabled="pageNum >= totalPageNum" title="下一页" aria-label="下一页">
+            <button class="page-nav-side page-nav-right" :disabled="pageNum >= totalPageNum && currentChapter >= (book?.content?.length || 1) - 1" title="下一页" aria-label="下一页">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -225,7 +225,7 @@
             </svg>
           </button>
         </div>
-        <div v-if="!isFullscreen" class="page-indicator-bar">
+        <div v-if="!isFullscreen && !uiHidden" class="page-indicator-bar">
           <div class="indicator-left">
             <span class="info-time">{{ currentTime }}</span>
             <span class="info-divider">|</span>
@@ -258,7 +258,7 @@
         <!-- 翻页模式右下角翻章按钮已移除，章节跳转统一在底部功能栏 -->
 
         <!-- 底部阅读信息（滚动模式） -->
-        <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-info-bar">
+        <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page' && !uiHidden" class="reader-info-bar">
           <div class="info-left">
             <span class="info-time">{{ currentTime }}</span>
             <span class="info-divider">|</span>
@@ -309,11 +309,11 @@
           <span class="bot-label">首页</span>
         </button>
         <button class="bot-btn" @click="goToLibrary" title="返回书架">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
-          <span class="bot-label">书架</span>
+          <span class="bot-label">返回</span>
         </button>
         <div class="bot-divider"></div>
         <button class="bot-btn" @click="showTocPanel=!showTocPanel" :class="{ active: showTocPanel }" title="目录">
@@ -623,7 +623,6 @@ import {
   clearAnnotations,
   type PdfAnnotation
 } from '@/utils/annotationStorage'
-import { EdgeTTS } from 'edge-tts-universal/browser'
 
 const route = useRoute()
 const router = useRouter()
@@ -769,7 +768,7 @@ function recalcPages() {
 
   const cs = window.getComputedStyle(vp)
   const colWidth = (vp.clientWidth - 168) / 2
-  const pageHeight = vp.clientHeight - 40
+  const pageHeight = vp.clientHeight - 104
   if (pageHeight <= 0 || colWidth <= 0) return
 
   const margin = parseFloat(cs.fontSize) * 0.8
@@ -887,12 +886,27 @@ function recalcPages() {
 function pagePrev() {
   if (pageNum.value > 1) {
     pageNum.value--
+  } else if (currentChapter.value > 0) {
+    // 跳到上一章的最后一页
+    pageTransition.value = 'page-back'
+    currentChapter.value--
+    setTimeout(() => {
+      recalcPages()
+      pageNum.value = totalPageNum.value
+    }, 50)
   }
 }
 
 function pageNext() {
   if (pageNum.value < totalPageNum.value) {
     pageNum.value++
+  } else if (book.value && currentChapter.value < book.value.content.length - 1) {
+    // 跳到下一章的第一页
+    pageTransition.value = 'page-forward'
+    currentChapter.value++
+    pageNum.value = 1
+    scrollToChapterStart()
+    setTimeout(() => recalcPages(), 50)
   }
 }
 
@@ -1241,13 +1255,12 @@ const allHighlights = computed(() => highlights.value)
 
 // =============================================================================
 // =============================================================================
-// 朗读功能 — Edge TTS（浏览器直连 WebSocket + 本地代理回退）
+// 朗读功能 — Edge TTS（通过本地代理服务器）
 // =============================================================================
 // 设计原则：
-//   1. 使用浏览器端 edge-tts-universal 库通过 WebSocket 直连微软 Edge TTS
-//   2. 直连失败时回退到本地代理服务器（localhost:3004）
+//   1. 通过本地代理服务器 (localhost:3004) 调用 Edge TTS
+//   2. Vite 启动时自动启动代理服务器
 //   3. 移动端使用 Web Speech API
-//   4. 不依赖本地 Node.js 代理，浏览器预览也可直接朗读
 
 // ---- Platform detection ----
 // 移动端（Android / iOS / Capacitor）使用 Web Speech API
@@ -1325,11 +1338,9 @@ function startProxyHealthCheck() {
     if (isProxyAvailable.value !== available) {
       isProxyAvailable.value = available
       if (available) {
-        // 代理恢复后，允许下次朗读先尝试直连
-        edgeTTSDirectFailed = false
         showTtsToast('TTS 代理已就绪', 2000)
       } else {
-        showTtsToast('TTS 代理不可用（直连仍可工作）', 3000)
+        showTtsToast('TTS 代理不可用', 3000)
       }
     }
   }, 30000)
@@ -1430,18 +1441,8 @@ function getRateStr(): string {
   return (pct >= 0 ? '+' : '') + pct + '%'
 }
 
-// ---- 浏览器直连 Edge TTS（WebSocket） ----
-let edgeTTSDirectFailed = false  // 标记直连是否曾经失败，避免每次都先尝试直连
-
-async function synthesizeViaEdgeDirect(text: string, voice: string): Promise<Blob> {
-  const rate = getRateStr()
-  const tts = new EdgeTTS(text, voice, { rate, volume: '+0%', pitch: '+0Hz' })
-  const result = await tts.synthesize()
-  return result.audio
-}
-
-// ---- 本地代理回退 ----
-async function synthesizeViaEdgeProxy(text: string, voice: string): Promise<Blob> {
+// ---- Edge TTS 合成（通过本地代理服务器） ----
+async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
   const resp = await fetch(TTS_PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1454,21 +1455,6 @@ async function synthesizeViaEdgeProxy(text: string, voice: string): Promise<Blob
   }
   const ab = await resp.arrayBuffer()
   return new Blob([ab], { type: 'audio/mpeg' })
-}
-
-async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
-  if (!edgeTTSDirectFailed) {
-    try {
-      const blob = await synthesizeViaEdgeDirect(text, voice)
-      return blob
-    } catch (err: any) {
-      console.warn('[TTS] 直连 Edge TTS 失败，回退到本地代理:', err.message)
-      edgeTTSDirectFailed = true
-      showTtsToast('直连失败，尝试本地代理...', 2000)
-    }
-  }
-  // 回退：走本地代理
-  return synthesizeViaEdgeProxy(text, voice)
 }
 
 async function prefetchEdge(index: number) {
@@ -1689,8 +1675,6 @@ async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
 
   if (ttsEngine.value === 'edge') {
     ttsAbort = new AbortController()
-    edgeTTSDirectFailed = false  // 每次启动新朗读，重新尝试直连
-    // 直连无需代理健康检查，但保留健康检查用于回退通知
     startProxyHealthCheck()
     showTtsToast('开始朗读', 1500)
     playEdgeSentence(startIndex)
@@ -2276,7 +2260,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
-  padding: 20px 64px 20px 64px;
+  padding: 24px 64px 80px 64px;
   box-sizing: border-box;
   overflow: hidden;
   align-items: start;
@@ -2387,20 +2371,22 @@ onBeforeUnmount(() => {
   width: 80px; pointer-events: auto;
 }
 .page-nav-wrapper .page-nav-side {
-  background: transparent;
-  border: 1.5px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(4px);
+  border: 1.5px solid rgba(0,0,0,0.08);
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  color: #666;
+  width: 44px;
+  height: 44px;
+  color: #555;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0.5;
+  pointer-events: auto;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .page-nav-left-group:hover .page-nav-side,
 .page-nav-right-group:hover .page-nav-side {
@@ -2408,13 +2394,16 @@ onBeforeUnmount(() => {
 }
 .page-nav-wrapper:hover .page-nav-side {
   color: #1890ff;
-  transform: scale(1.15);
+  background: rgba(255,255,255,0.95);
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  border-color: #1890ff;
 }
 .page-nav-wrapper:active .page-nav-side {
-  transform: scale(0.9);
+  transform: scale(0.92);
 }
 .page-nav-side:disabled {
-  opacity: 0.35 !important;
+  opacity: 0.15 !important;
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -2534,12 +2523,12 @@ onBeforeUnmount(() => {
 }
 .chapter-nav-btn {
   width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
-  color: #666; cursor: pointer;
+  background: rgba(255,255,255,0.7); backdrop-filter: blur(4px);
+  color: #555; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0; pointer-events: none;
+  opacity: 0.5; pointer-events: auto;
 }
 .page-nav-left-group:hover .chapter-nav-btn,
 .page-nav-right-group:hover .chapter-nav-btn { opacity: 1; pointer-events: auto; }
@@ -3615,10 +3604,10 @@ onBeforeUnmount(() => {
   color: #40a9ff;
 }
 .theme-dark .page-nav-side {
-  background: transparent; border-color: rgba(255,255,255,0.2); color: #999;
+  background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #aaa;
 }
 .theme-dark .page-nav-wrapper:hover .page-nav-side {
-  color: #40a9ff;
+  background: rgba(255,255,255,0.15); color: #40a9ff; border-color: #40a9ff;
 }
 .theme-dark .page-nav-wrapper:active .page-nav-side { color: #40a9ff; }
 .theme-dark .danger-btn {
