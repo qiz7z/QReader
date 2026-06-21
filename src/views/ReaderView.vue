@@ -446,9 +446,18 @@
                 <div v-for="b in shelfList" :key="b.id" class="shelf-card" @click="openBook(b.id)">
                   <div class="shelf-cover-img">
                     <img :src="coverUrl(b.id, b.cover, b.title)" alt="" />
+                    <span class="shelf-format-tag">{{ b.format.toUpperCase() }}</span>
+                    <div v-if="b.progress && b.progress.percentage > 0" class="shelf-progress-track">
+                      <div class="shelf-progress-fill" :style="{ width: b.progress.percentage + '%' }"></div>
+                    </div>
                   </div>
                   <div class="shelf-info">
                     <div class="shelf-name">{{ b.title }}</div>
+                    <div class="shelf-author" v-if="b.author">{{ b.author }}</div>
+                    <div class="shelf-meta">
+                      <span v-if="b.progress && b.progress.percentage > 0" class="shelf-pct">{{ Math.round(b.progress.percentage) }}%</span>
+                      <span v-if="b.progress?.readingTime" class="shelf-time">{{ formatShelfTime(b.progress.readingTime) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -464,7 +473,7 @@
                 <div class="panel-card">
                   <div class="card-label">显示</div>
                   <div class="setting-group">
-                    <label class="group-label">字体大小</label>
+                    <label class="group-label">字体大小 <span class="group-value">{{ readerStore.fontSize }}</span></label>
                     <div class="size-control">
                       <button @click="readerStore.setFontSize(Math.max(1, readerStore.fontSize - 1))">−</button>
                       <div class="size-dots"><span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontSize }"></span></div>
@@ -472,7 +481,7 @@
                     </div>
                   </div>
                   <div class="setting-group">
-                    <label class="group-label">字体粗细</label>
+                    <label class="group-label">字体粗细 <span class="group-value">{{ readerStore.fontWeight }}</span></label>
                     <div class="size-control">
                       <button @click="readerStore.setFontWeight(Math.max(1, readerStore.fontWeight - 1))">−</button>
                       <div class="size-dots"><span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.fontWeight }"></span></div>
@@ -480,7 +489,7 @@
                     </div>
                   </div>
                   <div class="setting-group">
-                    <label class="group-label">行间距</label>
+                    <label class="group-label">行间距 <span class="group-value">{{ readerStore.lineHeight }}</span></label>
                     <div class="size-control">
                       <button @click="readerStore.setLineHeight(Math.max(1, readerStore.lineHeight - 1))">−</button>
                       <div class="size-dots"><span v-for="i in 5" :key="i" class="dot" :class="{ active: i <= readerStore.lineHeight }"></span></div>
@@ -524,8 +533,14 @@
 
             <!-- 划线笔记 -->
             <div v-if="rightPanel === 'annotations'" class="annotations-panel">
-              <div v-if="allHighlights.length" class="annotations-list">
-                <div v-for="hl in allHighlights" :key="hl.id" class="annotation-item">
+              <div v-if="allHighlights.length" class="annotations-filter">
+                <select v-model="annotationFilterChapter" class="annotation-filter-select">
+                  <option value="">全部章节 ({{ allHighlights.length }})</option>
+                  <option v-for="ch in annotationChapters" :key="ch.id" :value="ch.id">{{ ch.title }} ({{ ch.count }})</option>
+                </select>
+              </div>
+              <div v-if="filteredHighlights.length" class="annotations-list">
+                <div v-for="hl in filteredHighlights" :key="hl.id" class="annotation-item">
                   <div class="annotation-hd">
                     <span class="annotation-color" :style="{ background: hl.highlightColor }"></span>
                     <span class="annotation-chapter">{{ getChapterTitle(hl.chapterId) || '未知章节' }}</span>
@@ -536,6 +551,9 @@
                   <div class="annotation-text">{{ hl.selectedText }}</div>
                   <div v-if="hl.note" class="annotation-note">{{ hl.note }}</div>
                 </div>
+              </div>
+              <div v-else-if="allHighlights.length && !filteredHighlights.length" class="empty-placeholder">
+                <p>当前章节无笔记</p>
               </div>
               <div v-else class="empty-placeholder">
                 <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -989,7 +1007,7 @@ const minW = 120
 const maxW = 400
 
 const rightPanel = ref('')
-const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | null }>>([])
+const shelfList = ref<Array<{ id: string; title: string; cover: ArrayBuffer | null; format: string; author: string; progress?: { percentage: number; updatedAt: number; readingTime?: number } }>>([])
 const showFullToc = ref(false)
 const showFullNav = ref(false) // 全屏导航显示状态
 let fullNavTimer: ReturnType<typeof setTimeout> | null = null
@@ -1154,7 +1172,16 @@ function scrollToChapterStart() {
 async function loadShelf() {
   try {
     const all = await StorageService.getAllBooks()
-    shelfList.value = all.map(b => ({ id: b.id, title: b.title, cover: b.cover }))
+    const items = await Promise.all(all.map(async b => {
+      const progress = await StorageService.getProgress(b.id)
+      return {
+        id: b.id, title: b.title, cover: b.cover,
+        format: b.format, author: b.author || '',
+        progress: progress ? { percentage: progress.percentage, updatedAt: progress.updatedAt, readingTime: progress.readingTime } : undefined
+      }
+    }))
+    // 按最近阅读时间排序，未读的排后面
+    shelfList.value = items.sort((a, b) => (b.progress?.updatedAt || 0) - (a.progress?.updatedAt || 0))
   } catch {
     shelfList.value = []
   }
@@ -1301,6 +1328,23 @@ const highlightedSentences = computed(() => {
 })
 
 const allHighlights = computed(() => highlights.value)
+
+// 笔记章节筛选
+const annotationFilterChapter = ref('')
+const annotationChapters = computed(() => {
+  const map = new Map<string, { id: string; title: string; count: number }>()
+  for (const hl of allHighlights.value) {
+    const existing = map.get(hl.chapterId)
+    if (existing) { existing.count++ } else {
+      map.set(hl.chapterId, { id: hl.chapterId, title: getChapterTitle(hl.chapterId) || '未知章节', count: 1 })
+    }
+  }
+  return Array.from(map.values())
+})
+const filteredHighlights = computed(() => {
+  if (!annotationFilterChapter.value) return allHighlights.value
+  return allHighlights.value.filter(h => h.chapterId === annotationFilterChapter.value)
+})
 
 // =============================================================================
 // =============================================================================
@@ -1940,6 +1984,15 @@ function scrollToSentence(index: number) {
 }
 
 // 生成文件名封面（已移除，使用公共函数）
+
+// 书架阅读时长格式化（秒 → "Xh Xm" / "Xm"）
+function formatShelfTime(seconds: number): string {
+  if (!seconds || seconds < 60) return '<1m'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return `${h}h${m > 0 ? m + 'm' : ''}`
+  return `${m}m`
+}
 
 // 将 ArrayBuffer 封面转为 blob URL，无封面时动态生成文件名封面
 const coverUrlCache = new Map<string, string>()
@@ -3221,6 +3274,15 @@ onBeforeUnmount(() => {
 
 /* 划线笔记面板 */
 .annotations-panel { min-height: 100px; }
+.annotations-filter { margin-bottom: 8px; }
+.annotation-filter-select {
+  width: 100%; height: 32px; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 0 10px; font-size: 12px; color: #475569; background: rgba(255,255,255,0.8);
+  cursor: pointer; outline: none; font-family: inherit;
+  transition: border-color 0.2s;
+}
+.annotation-filter-select:hover { border-color: #3b82f6; }
+.annotation-filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
 .annotations-list { display: flex; flex-direction: column; gap: 10px; }
 .annotation-item {
   padding: 10px 12px; border-radius: 8px; border: 1px solid #f0f0f0;
@@ -3451,6 +3513,9 @@ onBeforeUnmount(() => {
 .ra-voice-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;
 }
+@media (max-width: 380px) {
+  .ra-voice-grid { grid-template-columns: 1fr; }
+}
 .ra-voice-chip {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 9px; border-radius: 10px;
@@ -3496,12 +3561,30 @@ onBeforeUnmount(() => {
 }
 .shelf-card:hover { border-color: #3b82f6; background: rgba(59,130,246,0.06); transform: translateX(2px); box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
 .shelf-cover-img {
-  width: 32px; height: 44px; border-radius: 4px; overflow: hidden; flex-shrink: 0;
+  width: 40px; height: 54px; border-radius: 5px; overflow: hidden; flex-shrink: 0; position: relative;
   background: #f0f0f0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .shelf-cover-img img { width: 100%; height: 100%; object-fit: cover; }
-.shelf-info { text-align: left; width: 100%; overflow: hidden; }
-.shelf-name { font-size: 13px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.shelf-format-tag {
+  position: absolute; top: 2px; left: 2px;
+  font-size: 8px; font-weight: 700; color: #fff; letter-spacing: 0.3px;
+  background: rgba(0,0,0,0.5); border-radius: 3px; padding: 1px 3px;
+  backdrop-filter: blur(4px); line-height: 1.2;
+}
+.shelf-progress-track {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: rgba(0,0,0,0.15);
+}
+.shelf-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 0 2px 0 0; transition: width 0.3s;
+}
+.shelf-info { text-align: left; width: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
+.shelf-name { font-size: 13px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; line-height: 1.3; }
+.shelf-author { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
+.shelf-meta { display: flex; gap: 8px; align-items: center; }
+.shelf-pct { font-size: 11px; font-weight: 600; color: #3b82f6; }
+.shelf-time { font-size: 10px; color: #94a3b8; }
 
 /* ===== 设置面板 - 紧凑网格 ===== */
 .settings-panel { display: flex; flex-direction: column; gap: 0; }
@@ -3511,6 +3594,12 @@ onBeforeUnmount(() => {
 .group-label {
   font-size: 11px; color: #64748b; font-weight: 500;
   letter-spacing: 0.3px;
+}
+.group-value {
+  display: inline-block; min-width: 16px; text-align: center;
+  font-size: 11px; font-weight: 700; color: #3b82f6;
+  background: rgba(59,130,246,0.08); border-radius: 4px;
+  padding: 0 4px; margin-left: 4px; font-variant-numeric: tabular-nums;
 }
 
 /* 紧凑 +/- 控制按钮 */
@@ -3798,6 +3887,15 @@ onBeforeUnmount(() => {
 .theme-dark .annotation-text { color: #ccc; }
 .theme-dark .annotation-note { color: #999; background: rgba(255,255,255,0.05); }
 .theme-dark .annotation-chapter { color: #777; }
+.theme-dark .shelf-name { color: #e2e8f0; }
+.theme-dark .shelf-author { color: #64748b; }
+.theme-dark .shelf-pct { color: #60a5fa; }
+.theme-dark .shelf-time { color: #64748b; }
+.theme-dark .shelf-format-tag { background: rgba(0,0,0,0.6); }
+.theme-dark .shelf-progress-track { background: rgba(255,255,255,0.15); }
+.theme-dark .annotation-filter-select { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+.theme-dark .annotation-filter-select:hover { border-color: #60a5fa; }
+.theme-dark .group-value { color: #60a5fa; background: rgba(96,165,250,0.12); }
 .theme-dark .bookmark-item { background: #2a2a2a; border-color: #444; }
 .theme-dark .bookmark-item:hover { background: rgba(24,144,255,0.08); border-color: rgba(24,144,255,0.25); }
 .theme-dark .bookmark-title { color: #ccc; }
@@ -3811,11 +3909,11 @@ onBeforeUnmount(() => {
 .theme-dark .panel-card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
 /* 朗读面板 - 暗色适配 */
 .theme-dark .ra-hero-card {
-  background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(99,102,241,0.1) 60%, rgba(139,92,246,0.1) 100%);
-  border-color: rgba(96,165,250,0.2);
+  background: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(99,102,241,0.14) 60%, rgba(139,92,246,0.14) 100%);
+  border-color: rgba(96,165,250,0.25);
 }
-.theme-dark .ra-hero-card.is-playing { background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(99,102,241,0.18)); border-color: rgba(96,165,250,0.4); }
-.theme-dark .ra-hero-card::before { background: radial-gradient(circle, rgba(96,165,250,0.22), transparent 70%); }
+.theme-dark .ra-hero-card.is-playing { background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(99,102,241,0.24)); border-color: rgba(96,165,250,0.5); }
+.theme-dark .ra-hero-card::before { background: radial-gradient(circle, rgba(96,165,250,0.3), transparent 70%); }
 .theme-dark .ra-status-pill { background: rgba(255,255,255,0.08); color: #94a3b8; border-color: rgba(255,255,255,0.1); }
 .theme-dark .is-playing .ra-status-pill { color: #60a5fa; }
 .theme-dark .ra-hero-hint { color: #64748b; }

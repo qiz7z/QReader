@@ -448,6 +448,16 @@ function particleStyle(_index: number) {
   border-color: rgba(191, 149, 63, 0.3);
 }
 
+.feature-card:hover .feature-icon-wrapper {
+  animation: iconFloat 1.5s ease-in-out infinite;
+  box-shadow: 0 0 28px rgba(191, 149, 63, 0.35);
+}
+
+@keyframes iconFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
 .feature-icon-wrapper {
   display: flex;
   align-items: center;
