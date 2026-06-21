@@ -51,6 +51,7 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Page navigation (prev/next)
 - Reading progress display (percentage/page number)
 - **TXT Live Info Bar**: Real-time clock and word count (read/total) at bottom-left, visible in both fullscreen and normal modes
+- **Page Flip Mode**: Left-right dual-column layout with auto page turn during read aloud
 - Responsive layout, adaptive to window size
 
 ### ⚙️ Personalized Settings
@@ -65,14 +66,19 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Customizable bookmark titles
 
 ### 🔊 Read Aloud
-- **Dual-Engine Architecture**: SpeechSynthesis (browser built-in, primary) + Edge TTS proxy (enhancement)
-- **Zero-Config**: SpeechSynthesis works out of the box, no server required
-- **Edge Enhanced Voices**: Auto-detects proxy availability, surfaces Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang
-- **Seamless Fallback**: Gracefully switches to system voice when Edge TTS fails
-- **System Chinese Voices**: Dynamically loads browser-native Chinese speech voices
+- **Edge TTS Engine**: Desktop defaults to Edge TTS with 6 Chinese neural voices (Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang)
+- **Sliding Window Prefetch**: Prefetches next 3 sentences while current one plays, eliminating gaps and stuttering
+- **Skip on Fail**: Retries once per sentence then auto-skips, never gets stuck on one sentence
+- **Server-Side Retry**: Auto-retries up to 2 times when Edge TTS returns empty audio
+- **15s Timeout Protection**: Dual timeout on frontend and backend, no infinite waiting
+- **Mobile SpeechSynthesis**: Android/iOS uses browser built-in engine, zero network dependency
+- **Read Aloud Panel UI**: Gradient play button + breathing pulse animation + wave bars
+- **Voice Chip Grid**: Visual voice selection (male blue / female pink avatars + style tags)
+- **Bottom Bar Status Indicator**: Blue breathing dot when playing, orange solid when paused
 - **Speed Control**: 0.5x ~ 1.5x adjustable
 - **Pause/Resume**: Precise position save and restore
 - **Auto Chapter Advance**: Automatically continues to next chapter
+- **Paragraph Jump**: Click any paragraph during read aloud to jump to that position
 
 ### 🖥️ Desktop App
 - **Electron Packaging**: Dual output — NSIS installer + Portable EXE, with built-in TTS proxy
@@ -563,6 +569,13 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 ### ✨ Read Aloud (TTS)
 
 #### New Features
+- **Sliding Window Prefetch**: Prefetch expanded from 1 to 3 sentences (Map cache + pendingSet dedup), eliminating read aloud stuttering
+- **Skip on Fail**: Retries once per sentence then auto-skips to next, never stuck on one sentence
+- **Frontend 15s Timeout**: Independent fetch timeout, replacing backend 15s idle wait
+- **Read Aloud Panel Redesign**: Gradient play button + breathing pulse + wave bar animation + status pill
+- **Voice Chip Grid**: Dropdown replaced with 2-column chip grid (male blue / female pink avatars + style tags)
+- **Bottom Bar Status Indicator**: Blue breathing dot + pause icon when playing, orange solid when paused
+- **Server-Side Retry**: Auto-retries up to 2 times when Edge TTS returns empty audio
 - **Edge TTS Support**: 6 Edge Chinese neural voices (Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang)
 - **TTS Proxy Server**: Node.js proxy on port 3004, start with `npm run server`
 - **Auto-scroll During Read Aloud**: Automatically tracks and scrolls to the current sentence position
@@ -574,6 +587,10 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 
 #### Bug Fixes
 - **TTS Ghost Chain**: Fixed ghost async chain running after `stopReadAloud()` causing sentence jumping (`ttsGeneration` counter)
+- **Paragraph Jump Ghost Chain**: Fixed `onParagraphClick` not incrementing `ttsGeneration`, allowing stale prefetch and retry setTimeout to execute
+- **SpeechSynthesis Retry Counter**: Fixed mobile `handleSpeechError` using global `retryCount` causing cross-sentence accumulation and premature session stop, changed to per-index `retryMap`
+- **Timer Leak**: Fixed `tryNextChapter` setTimeout and `ttsToastTimer` not cleaned up on component unmount
+- **Proxy Unavailable Hint**: Shows toast reminder when starting read aloud with proxy down
 - **Double Chapter Jump**: Fixed `tryNextChapter()` missing re-entry guard causing chapters to be skipped
 - **Pause Failure**: Fixed `toggleReadAloud` logic flaw and unreliable `speechSynthesis.pause()`
 - **Voice Switch Jumping**: Fixed `loadAllVoices()` overwriting user's voice selection mid-playback
@@ -620,10 +637,15 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 
 #### New Features
 - **Page Flip Mode**: Page-flip reading for TXT/EPUB/MD with left-right dual-column CSS Grid layout
-- **Keyboard Shortcuts**: ArrowLeft/ArrowRight for page navigation
+- **Keyboard Shortcuts**: ArrowLeft/ArrowRight for page navigation (auto-disabled during read aloud to prevent conflicts)
 - **Cross-Chapter Navigation**: Page flip buttons support chapter transitions
+- **Page Mode TTS Auto Page Turn**: Automatically flips to the page containing the current sentence during read aloud (sentenceToPage mapping)
+- **Page Mode Position Preservation**: Switching from scroll to page mode auto-positions to the current read aloud sentence's page
 
 #### Improvements
+- **Page Turn Race Fix**: Cross-chapter page turns now use `recalcVersion` guard + `nextTick` instead of `setTimeout`, eliminating page number desync
+- **Pagination Measurement**: Uses actual `.page-col-left` clientWidth for measurement, consistent with rendering
+- **recalcPages Fault Tolerance**: Retries up to 5 times when viewport not mounted, preventing infinite recursion stack overflow
 - **Highlight Performance**: `nextTick()` delay reduces main thread blocking
 - **Oversized Paragraphs**: `splitOversized` supports HTML tags, highlights preserved during pagination
 - **Text Highlight Fix**: Highlighting and notes work in page-flip mode with immediate redraw
