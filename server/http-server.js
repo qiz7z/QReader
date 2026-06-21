@@ -130,17 +130,27 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        console.log(`[TTS] 请求: voice=${voice}, rate=${rate}, proxy=${PROXY || 'none'}, text="${cleanText.substring(0, 50)}..."`);
+        console.log(`[TTS] 请求: voice=${voice}, rate=${rate}, text="${cleanText.substring(0, 50)}..."`);
 
-        const tts = new EdgeTTS(cleanText, voice, getTTSOptions(voice, rate, volume, pitch));
-
-        // 设置合成超时
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('TTS 合成超时')), REQUEST_TIMEOUT)
-        );
-
-        const result = await Promise.race([tts.synthesize(), timeout]);
-        const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+        // 带重试的合成（微软 Edge TTS 服务间歇性返回空音频）
+        const MAX_RETRIES = 2;
+        let audioBuffer = null;
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          const tts = new EdgeTTS(cleanText, voice, getTTSOptions(voice, rate, volume, pitch));
+          const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('TTS 合成超时')), REQUEST_TIMEOUT)
+          );
+          try {
+            const result = await Promise.race([tts.synthesize(), timeout]);
+            audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+            if (audioBuffer.length > 0) break;
+            console.log(`[TTS] 第${attempt}次: 收到空音频，重试...`);
+          } catch (err) {
+            console.log(`[TTS] 第${attempt}次失败: ${err.message}${attempt < MAX_RETRIES ? '，重试...' : ''}`);
+            if (attempt === MAX_RETRIES) throw err;
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
 
         res.writeHead(200, {
           'Content-Type': 'audio/mpeg',

@@ -338,11 +338,15 @@
           </svg>
           <span class="bot-label">书签</span>
         </button>
-        <button class="bot-btn" @click="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud' }" title="朗读">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="bot-btn" @click="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud', 'tts-playing': isReadAloudPlaying, 'tts-paused': isTtsActive && !isReadAloudPlaying }" title="朗读">
+          <svg v-if="!isReadAloudPlaying" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+            <rect x="14" y="4" width="4" height="16" rx="1"></rect>
           </svg>
           <span class="bot-label">朗读</span>
         </button>
@@ -382,40 +386,56 @@
           <div class="bottom-panel-bd">
             <!-- 朗读面板 -->
             <div v-if="rightPanel === 'readAloud'" class="read-aloud-panel">
-              <div class="panel-card">
-                <div class="read-aloud-header">
-                  <div class="read-aloud-title">朗读控制</div>
-                  <div class="read-aloud-status" :class="{ playing: isReadAloudPlaying, error: isSpeechError }">
-                    {{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读...' : isVoicesLoaded ? '准备就绪' : '加载中...' }}
+              <!-- 播放主控卡：渐变背景 + 动态状态指示 -->
+              <div class="panel-card ra-hero-card" :class="{ 'is-playing': isReadAloudPlaying, 'is-error': isSpeechError }">
+                <div class="ra-hero-top">
+                  <div class="ra-status-pill">
+                    <span class="ra-status-dot"></span>
+                    <span class="ra-status-text">{{ isSpeechError ? '出错' : isReadAloudPlaying ? '正在朗读' : isVoicesLoaded ? '准备就绪' : '加载中' }}</span>
                   </div>
                 </div>
-                <div class="read-aloud-controls">
-                  <button class="control-btn primary" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="voiceCache.length === 0">
-                    <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                      <rect x="6" y="4" width="4" height="16" rx="1"></rect>
-                      <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                <div class="ra-hero-play">
+                  <button class="ra-play-btn" @click="toggleReadAloud" :title="isReadAloudPlaying ? '暂停' : '开始朗读'" :disabled="voiceCache.length === 0">
+                    <svg v-if="isReadAloudPlaying" viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16" rx="1.2"></rect>
+                      <rect x="14" y="4" width="4" height="16" rx="1.2"></rect>
                     </svg>
-                    <svg v-else viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    <svg v-else viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+                      <path d="M7 4.5a1 1 0 0 1 1.55-.83l11 7.5a1 1 0 0 1 0 1.66l-11 7.5A1 1 0 0 1 7 19.5v-15z"></path>
                     </svg>
+                  </button>
+                  <div v-if="isReadAloudPlaying" class="ra-wave" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+                <div class="ra-hero-hint">{{ isReadAloudPlaying ? '点击暂停 · 可点正文段落跳转' : '点击播放，开始聆听' }}</div>
+              </div>
+
+              <!-- 音色选择卡：胶囊按钮网格 -->
+              <div class="panel-card">
+                <div class="card-label">音色</div>
+                <div class="ra-voice-grid">
+                  <button
+                    v-for="voice in voiceCache" :key="voice.id"
+                    class="ra-voice-chip"
+                    :class="{ active: selectedVoiceName === voice.id }"
+                    @click="selectedVoiceName = voice.id; onVoiceChange()"
+                  >
+                    <span class="ra-voice-avatar" :class="voice.gender === '男' ? 'm' : 'f'">{{ voice.name.charAt(0) }}</span>
+                    <span class="ra-voice-info">
+                      <span class="ra-voice-name">{{ voice.name }}</span>
+                      <span class="ra-voice-style">{{ voice.style }}</span>
+                    </span>
                   </button>
                 </div>
               </div>
+
+              <!-- 语速卡 -->
               <div class="panel-card">
-                <div class="read-aloud-settings">
-                  <div class="setting-row voice-row">
-                    <label>音色</label>
-                    <select v-model="selectedVoiceName" @change="onVoiceChange" :disabled="voiceCache.length === 0">
-                      <option v-for="voice in voiceCache" :key="voice.id" :value="voice.id">
-                        {{ voice.name }}{{ voice.style ? ' · ' + voice.style : '' }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="setting-row">
-                    <label>语速</label>
-                    <input type="range" min="0.5" max="1.5" step="0.1" v-model="speechRate" @change="updateSettings" />
-                    <span class="setting-value">{{ speechRate }}x</span>
-                  </div>
+                <div class="card-label">语速</div>
+                <div class="setting-row ra-rate-row">
+                  <input type="range" min="0.5" max="1.5" step="0.1" v-model="speechRate" @change="updateSettings" />
+                  <span class="setting-value">{{ speechRate.toFixed(1) }}x</span>
                 </div>
               </div>
             </div>
@@ -642,7 +662,6 @@ const book = ref<ParsedBook | null>(null)
 const rawFile = ref<ArrayBuffer | null>(null)
 const bookFormat = ref('')
 const currentChapter = ref(0)
-const pageTransition = ref('page-forward')
 const isFullscreen = ref(false)
 const pageModeAvailable = computed(() => bookFormat.value && bookFormat.value !== 'pdf')
 const pdfScale = ref(2.0)
@@ -756,25 +775,47 @@ const uiHidden = ref(false)  // 全屏沉浸模式：隐藏所有 UI
 const pageNum = ref(1)
 const totalPageNum = ref(1)
 const pages = ref<Array<{ left: Array<{ html: string, idx: number }>, right: Array<{ html: string, idx: number }> }>>([])
+// 句子索引 -> 所在页码（1-based）。recalcPages 时同步生成，供 TTS/跳转 O(1) 查页
+const sentenceToPage = new Map<number, number>()
+// recalcPages 的版本号，防止异步重试与新一轮重算冲突
+let recalcVersion = 0
+let recalcRetries = 0
 
 const currentPageData = computed(() => {
   if (pages.value.length === 0) return null
   return pages.value[Math.min(pageNum.value, pages.value.length) - 1]
 })
 
+// 记录某段索引所在页（一个段可能跨多页，记录其出现的所有页）
+function indexPage(idx: number, pageNo: number) {
+  // 只记录该 idx 第一次出现的页（首段从上一页延续时，归到起始页）
+  if (!sentenceToPage.has(idx)) sentenceToPage.set(idx, pageNo)
+}
+
 function recalcPages() {
   const vp = document.querySelector('.page-viewport') as HTMLElement
-  if (!vp) return
+  if (!vp) {
+    // viewport 尚未挂载（模式切换/全屏切换瞬间），延迟重试一次，最多重试 5 次防止栈溢出
+    if (recalcRetries < 5) {
+      recalcRetries++
+      const v = ++recalcVersion
+      nextTick(() => { if (v === recalcVersion) recalcPages() })
+    }
+    return
+  }
+  recalcRetries = 0
 
   const cs = window.getComputedStyle(vp)
-  const colWidth = (vp.clientWidth - 168) / 2
+  // 列宽按真实列容器计算，与渲染一致（P5：测量一致性）
+  const leftCol = vp.querySelector('.page-col-left') as HTMLElement
+  const realColWidth = leftCol?.clientWidth || (vp.clientWidth - 168) / 2
   const pageHeight = vp.clientHeight - 104
-  if (pageHeight <= 0 || colWidth <= 0) return
+  if (pageHeight <= 0 || realColWidth <= 0) return
 
   const margin = parseFloat(cs.fontSize) * 0.8
 
   const measurer = document.createElement('div')
-  measurer.style.cssText = `position:absolute;visibility:hidden;width:${colWidth}px;font-family:${cs.fontFamily};font-size:${cs.fontSize};line-height:${cs.lineHeight};padding:0;`
+  measurer.style.cssText = `position:absolute;visibility:hidden;width:${realColWidth}px;font-family:${cs.fontFamily};font-size:${cs.fontSize};line-height:${cs.lineHeight};padding:0;`
   document.body.appendChild(measurer)
   const p = document.createElement('p')
   p.style.margin = '0 0 0.8em 0'
@@ -852,15 +893,18 @@ function recalcPages() {
   document.body.removeChild(measurer)
 
   const newPages: Array<{ left: Array<{ html: string, idx: number }>, right: Array<{ html: string, idx: number }> }> = []
+  sentenceToPage.clear()
   let i = 0
 
   while (i < flattedParagraphs.length) {
+    const pageNo = newPages.length + 1
     let leftH = 0
     const left: Array<{ html: string, idx: number }> = []
     while (i < flattedParagraphs.length) {
       const h = flattedHeights[i] + margin
       if (left.length > 0 && leftH + h > pageHeight) break
       left.push(flattedParagraphs[i])
+      indexPage(flattedParagraphs[i].idx, pageNo)
       leftH += h
       i++
     }
@@ -871,6 +915,7 @@ function recalcPages() {
       const h = flattedHeights[i] + margin
       if (right.length > 0 && rightH + h > pageHeight) break
       right.push(flattedParagraphs[i])
+      indexPage(flattedParagraphs[i].idx, pageNo)
       rightH += h
       i++
     }
@@ -880,7 +925,7 @@ function recalcPages() {
 
   pages.value = newPages
   totalPageNum.value = newPages.length
-  if (pageNum.value > newPages.length) pageNum.value = newPages.length
+  if (pageNum.value > newPages.length) pageNum.value = Math.max(1, newPages.length)
 }
 
 function pagePrev() {
@@ -888,12 +933,14 @@ function pagePrev() {
     pageNum.value--
   } else if (currentChapter.value > 0) {
     // 跳到上一章的最后一页
-    pageTransition.value = 'page-back'
     currentChapter.value--
-    setTimeout(() => {
+    // 章节渲染完成后重算分页，再定位到尾页；用 version 守卫防止中途被打断
+    const v = ++recalcVersion
+    nextTick(() => {
+      if (v !== recalcVersion) return
       recalcPages()
       pageNum.value = totalPageNum.value
-    }, 50)
+    })
   }
 }
 
@@ -902,37 +949,39 @@ function pageNext() {
     pageNum.value++
   } else if (book.value && currentChapter.value < book.value.content.length - 1) {
     // 跳到下一章的第一页
-    pageTransition.value = 'page-forward'
     currentChapter.value++
     pageNum.value = 1
     scrollToChapterStart()
-    setTimeout(() => recalcPages(), 50)
+    const v = ++recalcVersion
+    nextTick(() => { if (v === recalcVersion) recalcPages() })
   }
 }
 
 function prevChapter() {
   if (currentChapter.value > 0) {
-    pageTransition.value = 'page-back'
     currentChapter.value--
     pageNum.value = 1
     scrollToChapterStart()
-    nextTick(() => recalcPages())
+    const v = ++recalcVersion
+    nextTick(() => { if (v === recalcVersion) recalcPages() })
   }
 }
 
 function nextChapter() {
   if (book.value && currentChapter.value < book.value.content.length - 1) {
-    pageTransition.value = 'page-forward'
     currentChapter.value++
     pageNum.value = 1
     scrollToChapterStart()
-    nextTick(() => recalcPages())
+    const v = ++recalcVersion
+    nextTick(() => { if (v === recalcVersion) recalcPages() })
   }
 }
 
 function handlePageKeydown(e: KeyboardEvent) {
   if (readerStore.readerMode !== 'page' || !pageModeAvailable.value) return
   if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
+  // 朗读中禁用键盘翻页，避免与 TTS 自动翻页冲突
+  if (isReadAloudPlaying.value) return
   if (e.key === 'ArrowLeft') { e.preventDefault(); pagePrev() }
   else if (e.key === 'ArrowRight') { e.preventDefault(); pageNext() }
 }
@@ -1186,13 +1235,13 @@ async function saveHighlight() {
   highlights.value.push(note)
   showHlToolbar.value = false
   window.getSelection()?.removeAllRanges()
-  if (readerStore.readerMode === 'page') nextTick(() => recalcPages())
+  if (readerStore.readerMode === 'page') { const v = ++recalcVersion; nextTick(() => { if (v === recalcVersion) recalcPages() }) }
 }
 
 async function deleteHighlight(id: string) {
   await StorageService.deleteNote(id)
   highlights.value = highlights.value.filter(h => h.id !== id)
-  if (readerStore.readerMode === 'page') nextTick(() => recalcPages())
+  if (readerStore.readerMode === 'page') { const v = ++recalcVersion; nextTick(() => { if (v === recalcVersion) recalcPages() }) }
 }
 
 function getChapterTitle(chapterId: string) {
@@ -1275,8 +1324,6 @@ const ttsEngine = computed(() => isMobilePlatform.value ? 'speech' : 'edge')
 
 // ---- 状态 ----
 const isSpeechError = ref(false)
-const retryCount = ref(0)
-const MAX_RETRY = 3  // 最大重试 3 次
 const voiceCache = ref<Array<{ id: string; name: string; gender: string; style: string }>>([])
 const isVoicesLoaded = ref(false)
 let ttsAbort: AbortController | null = null
@@ -1284,6 +1331,16 @@ let ttsAbort: AbortController | null = null
 // ---- Edge TTS 配置 ----
 const TTS_PROXY_URL = 'http://localhost:3004/api/tts'
 let proxyCheckTimer: number | null = null
+
+// ---- Edge TTS 缓冲池参数 ----
+const TTS_FETCH_TIMEOUT = 15000      // 单句合成 fetch 超时 15s（首次冷启动可能较慢）
+const TTS_PREFETCH_AHEAD = 3         // 向前预取的句数（滑动窗口大小）
+const TTS_RETRY_BEFORE_SKIP = 1      // 单句合成失败重试次数，仍失败则跳到下一句
+// 已合成音频缓存：index -> { blob, url }
+// 用滑动窗口预取多句，保证播放当前句时后面几句已就绪，避免卡顿
+const audioCache = new Map<number, { blob: Blob; url: string }>()
+// 正在合成中的句子 index（避免对同一句重复发起请求）
+const pendingSet = new Set<number>()
 
 // Edge 增强音色（仅代理可用时展示）
 const EDGE_VOICES = [
@@ -1418,7 +1475,6 @@ let ttsGeneration = 0  // 每 start/stop 递增，用于打断幽灵链
 
 // ---- Edge TTS 引擎 ----
 
-let prefetchedAudio: { index: number; blob: Blob; url: string } | null = null
 let currentAudio: HTMLAudioElement | null = null
 
 function releaseCurrentAudio() {
@@ -1432,8 +1488,20 @@ function releaseCurrentAudio() {
     currentAudio = null
   }
 }
-function clearPrefetched() {
-  if (prefetchedAudio) { URL.revokeObjectURL(prefetchedAudio.url); prefetchedAudio = null }
+// 清空整个音频缓存（停止/换音色/换语速时调用）
+function clearAudioCache() {
+  for (const item of audioCache.values()) URL.revokeObjectURL(item.url)
+  audioCache.clear()
+  pendingSet.clear()
+}
+// 丢弃已离开播放窗口的旧缓存，控制内存占用
+function trimAudioCache(keepFrom: number) {
+  for (const idx of Array.from(audioCache.keys())) {
+    if (idx < keepFrom) {
+      URL.revokeObjectURL(audioCache.get(idx)!.url)
+      audioCache.delete(idx)
+    }
+  }
 }
 
 function getRateStr(): string {
@@ -1442,36 +1510,78 @@ function getRateStr(): string {
 }
 
 // ---- Edge TTS 合成（通过本地代理服务器） ----
+// 带独立的超时控制（8s），超时即视为失败，避免干等后端 15s
 async function synthesizeViaEdge(text: string, voice: string): Promise<Blob> {
-  const resp = await fetch(TTS_PROXY_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, voice, rate: getRateStr(), volume: '+0%', pitch: '+0Hz' }),
-    signal: ttsAbort?.signal
-  })
-  if (!resp.ok) {
-    const errBody = await resp.text().catch(() => '')
-    throw new Error(`TTS 代理返回 ${resp.status}: ${errBody}`)
+  const timeoutCtrl = new AbortController()
+  const timer = setTimeout(() => timeoutCtrl.abort(), TTS_FETCH_TIMEOUT)
+  // 任一信号触发都终止请求：全局 ttsAbort（停止朗读）或本句超时
+  const onGlobalAbort = () => timeoutCtrl.abort()
+  ttsAbort?.signal.addEventListener('abort', onGlobalAbort)
+  try {
+    const resp = await fetch(TTS_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice, rate: getRateStr(), volume: '+0%', pitch: '+0Hz' }),
+      signal: timeoutCtrl.signal
+    })
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => '')
+      throw new Error(`TTS 代理返回 ${resp.status}: ${errBody}`)
+    }
+    const ab = await resp.arrayBuffer()
+    return new Blob([ab], { type: 'audio/mpeg' })
+  } catch (err: any) {
+    // 区分"超时"和"被全局 abort（停止朗读）"
+    if (ttsAbort?.signal.aborted) {
+      const e = new Error('aborted')
+      e.name = 'AbortError'
+      throw e
+    }
+    if (timeoutCtrl.signal.aborted) throw new Error('TTS 合成超时')
+    throw err
+  } finally {
+    clearTimeout(timer)
+    ttsAbort?.signal.removeEventListener('abort', onGlobalAbort)
   }
-  const ab = await resp.arrayBuffer()
-  return new Blob([ab], { type: 'audio/mpeg' })
 }
 
+// 合成并写入缓存；若已在合成中则不重复发请求，复用进行中的 Promise
 async function prefetchEdge(index: number) {
   if (ttsAbort?.signal.aborted) return
   if (index >= sentences.value.length) return
   const text = sentences.value[index].replace(/<[^>]*>/g, ' ').trim()
   if (!text) return
+  if (audioCache.has(index) || pendingSet.has(index)) return
+
+  pendingSet.add(index)
+  const gen = ttsGeneration
   try {
     const voice = selectedVoiceName.value.replace('edge:', '')
     const blob = await synthesizeViaEdge(text, voice)
-    if (!ttsAbort?.signal.aborted && blob) {
-      prefetchedAudio = { index, blob, url: URL.createObjectURL(blob) }
+    // 期间若已停止或切换，丢弃结果
+    if (gen !== ttsGeneration || ttsAbort?.signal.aborted) return
+    if (blob && !audioCache.has(index)) {
+      audioCache.set(index, { blob, url: URL.createObjectURL(blob) })
     }
   } catch (err: any) {
-    if (err.name !== 'AbortError') console.warn('[Edge] 预取失败:', err.message)
+    if (err.name !== 'AbortError') console.warn(`[Edge] 预取第${index}句失败:`, err.message)
+  } finally {
+    pendingSet.delete(index)
   }
 }
+
+// 维护滑动窗口：保证 [currentIndex, currentIndex + TTS_PREFETCH_AHEAD] 内的句子都在预取
+function ensurePrefetchWindow(currentIndex: number) {
+  if (ttsAbort?.signal.aborted) return
+  for (let i = currentIndex; i <= currentIndex + TTS_PREFETCH_AHEAD; i++) {
+    if (i < sentences.value.length && !audioCache.has(i) && !pendingSet.has(i)) {
+      prefetchEdge(i)
+    }
+  }
+}
+
+// 单句重试计数（per-index），用于"重试1次后跳过"
+const retryMap = new Map<number, number>()
 
 async function playEdgeSentence(index: number) {
   const gen = ttsGeneration
@@ -1483,10 +1593,12 @@ async function playEdgeSentence(index: number) {
 
   releaseCurrentAudio()
 
+  // 优先用缓存命中；否则现场合成
   let url: string
-  if (prefetchedAudio?.index === index) {
-    url = prefetchedAudio.url
-    prefetchedAudio = null
+  const cached = audioCache.get(index)
+  if (cached) {
+    url = cached.url
+    audioCache.delete(index) // 用完移出缓存，由后续 onended 释放 URL
   } else {
     try {
       const voice = selectedVoiceName.value.replace('edge:', '')
@@ -1496,17 +1608,26 @@ async function playEdgeSentence(index: number) {
     } catch (err: any) {
       if (err.name === 'AbortError') return
       if (gen !== ttsGeneration) return
-      // Edge TTS 失败 → 重试，不降级到系统语音
-      console.warn('[TTS] Edge 合成失败:', err.message)
-      handleEdgeError(index, err.message)
+      console.warn(`[TTS] 第${index}句合成失败:`, err.message)
+      handleEdgeError(index)
       return
     }
   }
+
+  if (gen !== ttsGeneration) {
+    URL.revokeObjectURL(url)
+    return
+  }
+
+  // 播放当前句的同时，提前预取窗口内后续句子
+  ensurePrefetchWindow(index + 1)
+  trimAudioCache(index)
 
   const audio = new Audio(url)
   currentAudio = audio
 
   audio.onplay = () => {
+    if (gen !== ttsGeneration) return
     isReadAloudPlaying.value = true
     ttsState = 'playing'
     currentSentenceIndex.value = index
@@ -1517,29 +1638,35 @@ async function playEdgeSentence(index: number) {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    console.warn('[TTS] Edge 音频播放失败')
-    handleEdgeError(index, '音频播放失败')
+    console.warn(`[TTS] 第${index}句音频播放失败`)
+    handleEdgeError(index)
   }
 
   audio.play().catch(() => {
     if (gen !== ttsGeneration) return
     URL.revokeObjectURL(url)
     currentAudio = null
-    handleEdgeError(index, '音频播放失败')
+    handleEdgeError(index)
   })
 }
 
-// ---- Edge TTS 错误处理（指数退避重试） ----
-function handleEdgeError(index: number, _reason: string) {
+// ---- Edge TTS 错误处理：重试 TTS_RETRY_BEFORE_SKIP 次后跳到下一句 ----
+// 关键改动：不再原地无限重试某一句导致整篇卡死，而是放弃问题句、保证流式体验
+function handleEdgeError(index: number) {
   isSpeechError.value = true
-  retryCount.value++
-  if (retryCount.value <= MAX_RETRY) {
-    const delay = Math.min(500 * Math.pow(2, retryCount.value - 1), 3000)
-    showTtsToast(`朗读异常，${delay/1000}s 后重试 (${retryCount.value}/${MAX_RETRY})...`, 3000)
+  const tries = (retryMap.get(index) || 0) + 1
+  retryMap.set(index, tries)
+
+  if (tries <= TTS_RETRY_BEFORE_SKIP) {
+    const delay = Math.min(500 * Math.pow(2, tries - 1), 2000)
+    showTtsToast(`朗读异常，${delay/1000}s 后重试...`, 2000)
     setTimeout(() => { isSpeechError.value = false; playEdgeSentence(index) }, delay)
   } else {
-    showTtsToast('朗读失败，请检查网络连接或代理设置', 5000)
-    stopReadAloud()
+    // 重试已达上限：跳过该句，继续朗读下一句
+    retryMap.delete(index)
+    showTtsToast(`第${index + 1}句朗读失败，已跳过`, 2500)
+    isSpeechError.value = false
+    advanceToNext(index)
   }
 }
 
@@ -1602,17 +1729,21 @@ async function playSpeechSentence(index: number) {
   window.speechSynthesis.speak(utterance)
 }
 
-// ---- SpeechSynthesis 错误处理 ----
+// ---- SpeechSynthesis 错误处理（per-index，与 Edge 引擎一致） ----
 function handleSpeechError(index: number) {
   isSpeechError.value = true
-  retryCount.value++
-  if (retryCount.value <= MAX_RETRY) {
-    const delay = Math.min(500 * Math.pow(2, retryCount.value - 1), 3000)
-    showTtsToast(`朗读异常，${delay/1000}s 后重试 (${retryCount.value}/${MAX_RETRY})...`, 3000)
+  const tries = (retryMap.get(index) || 0) + 1
+  retryMap.set(index, tries)
+
+  if (tries <= TTS_RETRY_BEFORE_SKIP) {
+    const delay = Math.min(500 * Math.pow(2, tries - 1), 2000)
+    showTtsToast(`朗读异常，${delay/1000}s 后重试...`, 2000)
     setTimeout(() => { isSpeechError.value = false; playSpeechSentence(index) }, delay)
   } else {
-    showTtsToast('朗读失败，请检查语音设置', 5000)
-    stopReadAloud()
+    retryMap.delete(index)
+    showTtsToast(`第${index + 1}句朗读失败，已跳过`, 2500)
+    isSpeechError.value = false
+    advanceToNext(index)
   }
 }
 
@@ -1621,7 +1752,7 @@ function advanceToNext(currentIdx: number) {
   if (currentIdx < sentences.value.length - 1) {
     const next = currentIdx + 1
     if (ttsEngine.value === 'edge') {
-      prefetchEdge(next + 1)
+      // 播放下一句；滑动窗口预取已在 playEdgeSentence 内部维护
       playEdgeSentence(next)
     } else {
       playSpeechSentence(next)
@@ -1632,12 +1763,15 @@ function advanceToNext(currentIdx: number) {
 }
 
 // ---- 自动跳章 ----
+let nextChapterTimer: number | null = null
 function tryNextChapter() {
   if (isAutoAdvancingChapter) return
   if (currentChapter.value < (book.value?.content?.length || 1) - 1) {
     isAutoAdvancingChapter = true
     currentChapter.value++
-    setTimeout(() => {
+    if (nextChapterTimer) clearTimeout(nextChapterTimer)
+    nextChapterTimer = window.setTimeout(() => {
+      nextChapterTimer = null
       isAutoAdvancingChapter = false
       stopReadAloud()
       startReadAloud(0, true) // skipVoiceLoad
@@ -1653,12 +1787,12 @@ function stopReadAloud() {
   ttsAbort?.abort()
   ttsAbort = null
   releaseCurrentAudio()
-  clearPrefetched()
+  clearAudioCache()
+  retryMap.clear()
   stopProxyHealthCheck()
   stopSpeechSynthesis()
   isReadAloudPlaying.value = false
   isSpeechError.value = false
-  retryCount.value = 0
   ttsState = 'idle'
 }
 
@@ -1674,11 +1808,15 @@ async function startReadAloud(startIndex: number, skipVoiceLoad = false) {
   }
 
   if (ttsEngine.value === 'edge') {
+    // 代理不可用时提示用户，但仍尝试播放（可能是代理刚启动，延迟检测）
+    if (!isProxyAvailable.value) {
+      showTtsToast('TTS 代理未连接，朗读可能异常', 3000)
+    }
     ttsAbort = new AbortController()
     startProxyHealthCheck()
     showTtsToast('开始朗读', 1500)
+    // 播放第一句的同时启动滑动窗口预取后续几句
     playEdgeSentence(startIndex)
-    prefetchEdge(startIndex + 1)
   } else {
     showTtsToast('开始朗读', 1500)
     playSpeechSentence(startIndex)
@@ -1729,18 +1867,25 @@ function onParagraphClick(idx: number) {
   // 防止误触：如果正在播放的句子就是点击的句子，不处理
   if (currentSentenceIndex.value === idx) return
 
+  // 递增 generation 斩断所有在飞的预取和待执行的 error retry setTimeout
+  ttsGeneration++
+  ttsAbort?.abort()
+  ttsAbort = null
+
   // 停止当前播放
   releaseCurrentAudio()
-  clearPrefetched()
-  stopSpeechSynthesis()
-  retryCount.value = 0
+  retryMap.clear()
+  // 丢弃跳转点之前的旧缓存，避免内存堆积
+  trimAudioCache(idx)
 
   // 设置新的起始位置并继续朗读
   currentSentenceIndex.value = idx
+  scrollToSentence(idx) // 翻页模式：翻到目标句所在页（滚动模式：滚动追踪）
   if (ttsEngine.value === 'edge') {
+    ttsAbort = new AbortController()
     playEdgeSentence(idx)
-    prefetchEdge(idx + 1)
   } else {
+    stopSpeechSynthesis()
     playSpeechSentence(idx)
   }
 }
@@ -1766,8 +1911,18 @@ function updateSettings() {
   }
 }
 
-// 滚动到高亮句子
+// 滚动到高亮句子（滚动模式），或在翻页模式下自动翻到包含该句的页
 function scrollToSentence(index: number) {
+  // 翻页模式：根据 recalcPages 生成的映射，自动翻到目标句所在页
+  if (readerStore.readerMode === 'page' && pageModeAvailable.value) {
+    const targetPage = sentenceToPage.get(index)
+    if (targetPage && targetPage !== pageNum.value) {
+      pageNum.value = targetPage
+    }
+    return
+  }
+
+  // 滚动模式：DOM 滚动追踪
   const el = sentenceRefs.value[index]
   const container = mainRef.value
   if (!el || !container) return
@@ -2047,7 +2202,15 @@ function onTocClick(idx: number) {
 
 watch([() => readerStore.readerMode, () => readerStore.fontSize, () => currentChapter.value], () => {
   if (readerStore.readerMode === 'page' && pageModeAvailable.value) {
-    nextTick(() => { setTimeout(recalcPages, 50) })
+    const v = ++recalcVersion
+    nextTick(() => {
+      if (v !== recalcVersion) return
+      recalcPages()
+      // 模式切换后，根据当前朗读句/阅读位置定位页码
+      if (currentSentenceIndex.value > 0 && sentenceToPage.has(currentSentenceIndex.value)) {
+        pageNum.value = sentenceToPage.get(currentSentenceIndex.value)!
+      }
+    })
   }
 })
 
@@ -2056,27 +2219,31 @@ watch(() => bookFormat.value, (fmt) => {
     readerStore.setReaderMode('scroll')
   }
   if (fmt && pageModeAvailable.value && readerStore.readerMode === 'page') {
-    nextTick(() => { setTimeout(recalcPages, 50) })
+    const v = ++recalcVersion
+    nextTick(() => { if (v === recalcVersion) recalcPages() })
   }
 })
 
 let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
-  nextTick(() => {
-    if (readerStore.readerMode === 'page' && pageModeAvailable.value) setTimeout(recalcPages, 100)
-  })
   resizeObserver = new ResizeObserver(() => {
     if (readerStore.readerMode === 'page' && pageModeAvailable.value) recalcPages()
   })
   const vp = document.querySelector('.page-viewport') as HTMLElement
   if (vp) resizeObserver.observe(vp)
+  // 初始进入翻页模式时重算分页
+  if (readerStore.readerMode === 'page' && pageModeAvailable.value) {
+    const v = ++recalcVersion
+    nextTick(() => { if (v === recalcVersion) recalcPages() })
+  }
 })
-
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   if (timeTimer) clearInterval(timeTimer)
   if (readingTimeTimer) clearInterval(readingTimeTimer)
   if (fullNavTimer) clearTimeout(fullNavTimer)
+  if (nextChapterTimer) { clearTimeout(nextChapterTimer); nextChapterTimer = null }
+  if (ttsToastTimer) { clearTimeout(ttsToastTimer); ttsToastTimer = null }
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('fullscreenchange', onFs)
   document.removeEventListener('keydown', handlePageKeydown)
@@ -2922,6 +3089,26 @@ onBeforeUnmount(() => {
   border-radius: 0 0 3px 3px;
   background: #3b82f6;
 }
+/* 朗读播放中：图标变蓝 + 呼吸指示灯 */
+.bot-btn.tts-playing { color: #3b82f6; }
+.bot-btn.tts-playing::after {
+  content: ''; position: absolute; top: 6px; right: 6px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 4px rgba(59,130,246,0.6);
+  animation: bot-tts-dot 1.6s ease-in-out infinite;
+}
+@keyframes bot-tts-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.6); }
+}
+/* 朗读暂停中：图标变橙 + 常亮指示灯 */
+.bot-btn.tts-paused { color: #f59e0b; }
+.bot-btn.tts-paused::after {
+  content: ''; position: absolute; top: 6px; right: 6px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #f59e0b;
+}
 .bot-divider {
   width: 1px;
   height: 28px;
@@ -3096,7 +3283,7 @@ onBeforeUnmount(() => {
   left: 50%;
   transform: translateX(-50%);
   width: 90vw;
-  max-width: 520px;
+  max-width: 360px;
   max-height: 40vh;
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(16px);
@@ -3160,26 +3347,144 @@ onBeforeUnmount(() => {
 
 /* ===== 朗读面板 - 水平紧凑布局 ===== */
 .read-aloud-panel { display: flex; flex-direction: column; gap: 8px; }
-.read-aloud-header { display: flex; align-items: center; justify-content: space-between; }
-.read-aloud-title { font-size: 13px; font-weight: 600; color: #1e293b; }
-.read-aloud-status { font-size: 11px; color: #94a3b8; }
-.read-aloud-status.playing { color: #3b82f6; }
-.read-aloud-status.error { color: #ef4444; }
-.read-aloud-controls { display: flex; justify-content: center; }
-.control-btn.primary {
-  width: 44px; height: 44px; border-radius: 50%; border: none;
-  background: #3b82f6; color: #fff; cursor: pointer; display: flex;
-  align-items: center; justify-content: center; transition: all 0.2s;
+
+/* ===== 朗读面板 - 精致渐变现代风 ===== */
+/* 播放主控卡 */
+.ra-hero-card {
+  padding: 14px 14px 12px;
+  background: linear-gradient(135deg, #f0f6ff 0%, #eef2ff 60%, #f5f3ff 100%);
+  border-color: rgba(59,130,246,0.15);
+  position: relative; overflow: hidden;
+  transition: background 0.4s ease;
 }
-.control-btn.primary:hover { background: #2563eb; transform: scale(1.05); }
-.control-btn.primary:active { transform: scale(0.95); }
-.control-btn.primary:disabled { background: #94a3b8; cursor: not-allowed; }
-.read-aloud-settings { display: flex; flex-direction: column; gap: 6px; }
-.setting-row { display: flex; align-items: center; gap: 8px; }
-.setting-row label { font-size: 12px; color: #64748b; min-width: 36px; flex-shrink: 0; }
-.setting-row select { flex: 1; height: 30px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0 8px; font-size: 12px; background: #fff; }
-.setting-row input[type="range"] { flex: 1; }
-.setting-value { font-size: 11px; color: #64748b; min-width: 28px; text-align: right; }
+.ra-hero-card.is-playing {
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 55%, #ede9fe 100%);
+  border-color: rgba(59,130,246,0.3);
+}
+.ra-hero-card.is-error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fef3f2 100%);
+  border-color: rgba(239,68,68,0.2);
+}
+/* 卡片顶部装饰光晕 */
+.ra-hero-card::before {
+  content: ''; position: absolute; top: -30px; right: -20px;
+  width: 90px; height: 90px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(59,130,246,0.18), transparent 70%);
+  pointer-events: none;
+}
+
+.ra-hero-top { display: flex; justify-content: center; margin-bottom: 10px; position: relative; }
+.ra-status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(59,130,246,0.12);
+  font-size: 11px; color: #64748b; font-weight: 500;
+}
+.is-playing .ra-status-pill { color: #2563eb; border-color: rgba(59,130,246,0.25); }
+.is-error .ra-status-pill { color: #ef4444; border-color: rgba(239,68,68,0.2); }
+.ra-status-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; flex-shrink: 0;
+}
+.is-playing .ra-status-dot {
+  background: #3b82f6; box-shadow: 0 0 0 0 rgba(59,130,246,0.5);
+  animation: ra-pulse 1.6s ease-out infinite;
+}
+.is-error .ra-status-dot { background: #ef4444; }
+@keyframes ra-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+
+/* 大号播放按钮 */
+.ra-hero-play { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; }
+.ra-play-btn {
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ra-play-btn:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 10px 26px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.3); }
+.ra-play-btn:active { transform: translateY(0) scale(0.96); }
+.ra-play-btn:disabled { background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%); box-shadow: none; cursor: not-allowed; }
+/* 播放中：按钮呼吸脉动 + 渐变变深 */
+.is-playing .ra-play-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 20px rgba(37,99,235,0.5), inset 0 1px 0 rgba(255,255,255,0.2), 0 0 0 0 rgba(59,130,246,0.4);
+  animation: ra-btn-pulse 2s ease-in-out infinite;
+}
+.is-playing .ra-play-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  box-shadow: 0 10px 28px rgba(37,99,235,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+@keyframes ra-btn-pulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(37,99,235,0.5), inset 0 1px 0 rgba(255,255,255,0.2), 0 0 0 0 rgba(59,130,246,0.4); transform: scale(1); }
+  50% { box-shadow: 0 6px 20px rgba(37,99,235,0.5), inset 0 1px 0 rgba(255,255,255,0.2), 0 0 0 8px rgba(59,130,246,0); transform: scale(1.03); }
+}
+/* 错误态按钮 */
+.is-error .ra-play-btn {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  box-shadow: 0 6px 18px rgba(239,68,68,0.4);
+}
+
+/* 播放中的声波动效 */
+.ra-wave { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
+.ra-wave span {
+  display: block; width: 3px; border-radius: 2px;
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  animation: ra-wave-bar 1s ease-in-out infinite;
+}
+.ra-wave span:nth-child(1) { height: 40%; animation-delay: 0s; }
+.ra-wave span:nth-child(2) { height: 75%; animation-delay: 0.15s; }
+.ra-wave span:nth-child(3) { height: 100%; animation-delay: 0.3s; }
+.ra-wave span:nth-child(4) { height: 60%; animation-delay: 0.45s; }
+.ra-wave span:nth-child(5) { height: 35%; animation-delay: 0.6s; }
+@keyframes ra-wave-bar { 0%, 100% { transform: scaleY(0.4); opacity: 0.7; } 50% { transform: scaleY(1); opacity: 1; } }
+
+.ra-hero-hint { text-align: center; margin-top: 10px; font-size: 11px; color: #94a3b8; letter-spacing: 0.2px; }
+
+/* 音色胶囊按钮网格 */
+.ra-voice-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;
+}
+.ra-voice-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 9px; border-radius: 10px;
+  border: 1.5px solid #e8edf3; background: rgba(255,255,255,0.7);
+  cursor: pointer; transition: all 0.2s; text-align: left;
+  font-family: inherit;
+}
+.ra-voice-chip:hover { border-color: #93c5fd; background: rgba(59,130,246,0.05); transform: translateY(-1px); }
+.ra-voice-chip.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(99,102,241,0.06));
+  box-shadow: 0 3px 10px rgba(59,130,246,0.15);
+}
+.ra-voice-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: #fff;
+}
+.ra-voice-avatar.f { background: linear-gradient(135deg, #f472b6, #ec4899); }
+.ra-voice-avatar.m { background: linear-gradient(135deg, #38bdf8, #0ea5e9); }
+.ra-voice-info { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.ra-voice-name { font-size: 12px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ra-voice-chip.active .ra-voice-name { color: #2563eb; }
+.ra-voice-style { font-size: 10px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 语速行 */
+.ra-rate-row { margin-top: 6px; padding: 0 2px; }
+.ra-rate-row input[type="range"] { flex: 1; height: 4px; -webkit-appearance: none; background: #e2e8f0; border-radius: 2px; outline: none; }
+.ra-rate-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  box-shadow: 0 2px 6px rgba(59,130,246,0.4); cursor: pointer; transition: transform 0.15s;
+}
+.ra-rate-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
 /* ===== 书架面板 ===== */
 .shelf-panel { min-height: 120px; }
@@ -3323,51 +3628,6 @@ onBeforeUnmount(() => {
   transform: translateY(-1px);
 }
 .danger-btn:active { transform: scale(0.98); }
-
-/* ===== 朗读面板 ===== */
-.read-aloud-panel { display: flex; flex-direction: column; gap: 12px; }
-.read-aloud-header { display: flex; justify-content: space-between; align-items: center; }
-.read-aloud-title { font-size: 14px; font-weight: 600; color: #1e293b; }
-.read-aloud-status { font-size: 11px; color: #94a3b8; font-weight: 500; }
-.read-aloud-status.playing { color: #3b82f6; }
-.read-aloud-controls { display: flex; gap: 8px; justify-content: center; padding: 8px 0; }
-.control-btn {
-  width: 44px; height: 44px; border: none; border-radius: 10px;
-  background: rgba(0,0,0,0.04); cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: #64748b; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
-}
-.control-btn:hover { background: rgba(0,0,0,0.08); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
-.control-btn:active { transform: translateY(0) scale(0.96); }
-.control-btn.primary {
-  width: 52px; height: 52px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #fff;
-  box-shadow: 0 4px 16px rgba(59,130,246,0.3); border-radius: 14px;
-}
-.control-btn.primary:hover { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.4); }
-.control-btn.primary:active { transform: translateY(0) scale(0.96); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
-.control-btn:disabled {
-  opacity: 0.4; cursor: not-allowed;
-}
-.read-aloud-settings { display: flex; flex-direction: column; gap: 10px; }
-.setting-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.setting-row.voice-row { flex-direction: column; gap: 6px; align-items: center; }
-.setting-row label { font-size: 12px; color: #64748b; flex-shrink: 0; font-weight: 500; }
-.setting-row select {
-  padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-  background: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500; color: #1e293b; outline: none;
-  cursor: pointer; appearance: auto; max-width: 160px;
-  transition: border-color 0.2s;
-}
-.setting-row select:hover { border-color: #3b82f6; }
-.setting-row select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-.setting-row input[type="range"] {
-  flex: 1; height: 4px; appearance: none; background: #e2e8f0; border-radius: 2px; outline: none;
-}
-.setting-row input[type="range"]::-webkit-slider-thumb {
-  appearance: none; width: 16px; height: 16px; background: #3b82f6; border-radius: 50%;
-  cursor: pointer; transition: transform 0.15s; box-shadow: 0 1px 4px rgba(59,130,246,0.3);
-}
-.setting-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-.setting-value { font-size: 11px; color: #3b82f6; font-weight: 600; width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* 段落高亮 - 朗读追踪 */
 .reader-content p.read-aloud-active,
@@ -3529,6 +3789,10 @@ onBeforeUnmount(() => {
   background: rgba(59,130,246,0.15);
   color: #60a5fa;
 }
+.theme-dark .bot-btn.tts-playing { color: #60a5fa; }
+.theme-dark .bot-btn.tts-playing::after { background: #60a5fa; box-shadow: 0 0 4px rgba(96,165,250,0.6); }
+.theme-dark .bot-btn.tts-paused { color: #fbbf24; }
+.theme-dark .bot-btn.tts-paused::after { background: #fbbf24; }
 .theme-dark .tool-btn.active::before { background: #60a5fa; }
 .theme-dark .annotation-item { background: #2a2a2a; border-color: #444; }
 .theme-dark .annotation-text { color: #ccc; }
@@ -3545,6 +3809,32 @@ onBeforeUnmount(() => {
 .theme-dark .close-btn { background: rgba(255,255,255,0.08); color: #94a3b8; }
 .theme-dark .close-btn:hover { background: rgba(255,255,255,0.15); color: #e2e8f0; }
 .theme-dark .panel-card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
+/* 朗读面板 - 暗色适配 */
+.theme-dark .ra-hero-card {
+  background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(99,102,241,0.1) 60%, rgba(139,92,246,0.1) 100%);
+  border-color: rgba(96,165,250,0.2);
+}
+.theme-dark .ra-hero-card.is-playing { background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(99,102,241,0.18)); border-color: rgba(96,165,250,0.4); }
+.theme-dark .ra-hero-card::before { background: radial-gradient(circle, rgba(96,165,250,0.22), transparent 70%); }
+.theme-dark .ra-status-pill { background: rgba(255,255,255,0.08); color: #94a3b8; border-color: rgba(255,255,255,0.1); }
+.theme-dark .is-playing .ra-status-pill { color: #60a5fa; }
+.theme-dark .ra-hero-hint { color: #64748b; }
+.theme-dark .ra-voice-chip { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.08); }
+.theme-dark .ra-voice-chip:hover { background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3); }
+.theme-dark .ra-voice-chip.active { background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(99,102,241,0.1)); border-color: rgba(96,165,250,0.5); }
+.theme-dark .ra-voice-name { color: #e2e8f0; }
+.theme-dark .ra-voice-chip.active .ra-voice-name { color: #93c5fd; }
+.theme-dark .ra-voice-style { color: #64748b; }
+.theme-dark .ra-rate-row input[type="range"] { background: rgba(255,255,255,0.12); }
+.theme-dark .ra-hero-card.is-error { background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.06)); border-color: rgba(239,68,68,0.25); }
+.theme-dark .is-playing .ra-play-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 6px 20px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 0 0 rgba(96,165,250,0.4);
+}
+.theme-dark .is-error .ra-play-btn {
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+  box-shadow: 0 6px 18px rgba(239,68,68,0.5);
+}
 .theme-dark .shelf-card { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.08); }
 .theme-dark .shelf-card:hover { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
 .theme-dark .shelf-name { color: #e2e8f0; }
