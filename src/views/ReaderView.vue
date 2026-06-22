@@ -301,19 +301,12 @@
 
     <!-- 底部控制栏 -->
     <div class="bottom-bar" v-show="!uiHidden" @click.stop>
-        <button class="bot-btn" @click="goHome" title="返回首页">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="bot-label">首页</span>
-        </button>
         <button class="bot-btn" @click="goToLibrary" title="返回书架">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           </svg>
-          <span class="bot-label">返回</span>
+          <span class="bot-label">书架</span>
         </button>
         <div class="bot-divider"></div>
         <button class="bot-btn" @click="showTocPanel=!showTocPanel" :class="{ active: showTocPanel }" title="目录">
@@ -665,10 +658,6 @@ import {
 const route = useRoute()
 const router = useRouter()
 const readerStore = useReaderStore()
-
-const goHome = () => {
-  router.push('/')
-}
 
 const goToLibrary = () => {
   router.push('/library')
