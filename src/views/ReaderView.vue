@@ -1,13 +1,5 @@
 <template>
   <div class="reader-view" :class="themeClass">
-    <!-- 悬浮返回首页按钮（左上角，毛玻璃 FAB） -->
-    <button class="back-fab" @click="router.push('/')" :class="{ 'is-hidden': uiHidden }" title="返回首页" aria-label="返回首页">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
-      <span class="back-fab-label">首页</span>
-    </button>
     <div class="reader-body" ref="bodyRef">
       <!-- 左侧目录（仅展开时显示，作为叠加层） -->
       <aside class="reader-sidebar" v-show="!uiHidden && showTocPanel" :style="{ width: sidebarWidth + 'px' }">
@@ -309,6 +301,14 @@
 
     <!-- 底部控制栏 -->
     <div class="bottom-bar" v-show="!uiHidden" @click.stop>
+        <button class="bot-btn" @click="router.push('/')" title="返回首页">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <path d="M9 22V12h6v10"></path>
+          </svg>
+          <span class="bot-label">首页</span>
+        </button>
+        <div class="bot-divider"></div>
         <button class="bot-btn" @click="showTocPanel=!showTocPanel" :class="{ active: showTocPanel }" title="目录">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="5" x2="21" y2="5"></line>
@@ -2305,46 +2305,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .reader-view {
-  height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
 }
-
-/* ===== 悬浮返回按钮（FAB）— UI/UX Pro Max 规范 ===== */
-/* 位置：左上角 | 触摸目标 ≥ 44px | 毛玻璃 | 沉浸模式自动隐藏 */
-.back-fab {
-  position: fixed; top: 12px; left: 12px; z-index: 300;
-  display: flex; align-items: center; gap: 4px;
-  height: 36px; padding: 0 12px 0 8px;
-  border: 1px solid rgba(0,0,0,0.08); border-radius: 20px;
-  background: rgba(255,255,255,0.75);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  cursor: pointer; color: #475569;
-  font-size: 13px; font-weight: 500; font-family: inherit;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  outline: none;
-}
-.back-fab:hover {
-  background: rgba(255,255,255,0.92);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  transform: translateX(-2px);
-  color: #1e293b;
-}
-.back-fab:active { transform: scale(0.95); }
-.back-fab:focus-visible {
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.3);
-}
-.back-fab.is-hidden { opacity: 0; pointer-events: none; transform: translateX(-10px); }
-.back-fab svg { flex-shrink: 0; opacity: 0.7; transition: opacity 0.2s; }
-.back-fab:hover svg { opacity: 1; }
-.back-fab-label { letter-spacing: 0.3px; }
-
-.theme-dark .back-fab {
-  background: rgba(30,30,30,0.75); border-color: rgba(255,255,255,0.08);
-  color: #94a3b8; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-}
-.theme-dark .back-fab:hover { background: rgba(40,40,40,0.92); color: #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-.theme-green .back-fab { background: rgba(232,240,227,0.8); border-color: #d4e8c8; }
-.theme-parchment .back-fab { background: rgba(245,230,200,0.8); border-color: #d4c5a9; }
 
 .reader-toolbar {
   height: 44px; padding: 0 16px; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
