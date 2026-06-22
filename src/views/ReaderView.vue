@@ -1,11 +1,12 @@
 <template>
   <div class="reader-view" :class="themeClass">
-    <!-- 悬浮返回按钮（左上角，毛玻璃 FAB） -->
-    <button class="back-fab" @click="goToLibrary" :class="{ 'is-hidden': uiHidden }" title="返回书架" aria-label="返回书架">
+    <!-- 悬浮返回首页按钮（左上角，毛玻璃 FAB） -->
+    <button class="back-fab" @click="router.push('/')" :class="{ 'is-hidden': uiHidden }" title="返回首页" aria-label="返回首页">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="15 18 9 12 15 6"></polyline>
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
       </svg>
-      <span class="back-fab-label">书架</span>
+      <span class="back-fab-label">首页</span>
     </button>
     <div class="reader-body" ref="bodyRef">
       <!-- 左侧目录（仅展开时显示，作为叠加层） -->
