@@ -301,14 +301,6 @@
 
     <!-- 底部控制栏 -->
     <div class="bottom-bar" v-show="!uiHidden" @click.stop>
-        <button class="bot-btn" @click="goToLibrary" title="返回书架">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          <span class="bot-label">书架</span>
-        </button>
-        <div class="bot-divider"></div>
         <button class="bot-btn" @click="showTocPanel=!showTocPanel" :class="{ active: showTocPanel }" title="目录">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="5" x2="21" y2="5"></line>
@@ -458,6 +450,10 @@
                 <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 <p>暂无书籍</p>
               </div>
+              <button class="shelf-goto-btn" @click="goToLibrary">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                <span>返回书架</span>
+              </button>
             </div>
 
             <!-- 设置 -->
@@ -3574,6 +3570,17 @@ onBeforeUnmount(() => {
 .shelf-meta { display: flex; gap: 8px; align-items: center; }
 .shelf-pct { font-size: 11px; font-weight: 600; color: #3b82f6; }
 .shelf-time { font-size: 10px; color: #94a3b8; }
+.shelf-goto-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 10px 0; margin-top: 10px;
+  border: 1.5px dashed #cbd5e1; border-radius: 10px;
+  background: transparent; cursor: pointer;
+  font-size: 13px; font-weight: 500; color: #64748b;
+  transition: all 0.2s; font-family: inherit;
+}
+.shelf-goto-btn:hover { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.04); }
+.theme-dark .shelf-goto-btn { border-color: rgba(255,255,255,0.12); color: #94a3b8; }
+.theme-dark .shelf-goto-btn:hover { border-color: #60a5fa; color: #60a5fa; background: rgba(96,165,250,0.06); }
 
 /* ===== 设置面板 - 紧凑网格 ===== */
 .settings-panel { display: flex; flex-direction: column; gap: 0; }
