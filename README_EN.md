@@ -66,7 +66,8 @@ Ebook Reader is a pure frontend single-page application that supports multiple e
 - Customizable bookmark titles
 
 ### 🔊 Read Aloud
-- **Edge TTS Engine**: Desktop defaults to Edge TTS with 6 Chinese neural voices (Xiaoxiao, Xiaoyi, Yunjian, Yunxi, Yunxia, Yunyang)
+- **Edge TTS Engine**: Desktop defaults to Edge TTS with 6 Chinese neural voices, proxy auto-starts with Vite
+- **TTS Simplified**: Uses local proxy server (port 3004) only, auto-started by Vite dev server, no manual setup needed
 - **Sliding Window Prefetch**: Prefetches next 3 sentences while current one plays, eliminating gaps and stuttering
 - **Skip on Fail**: Retries once per sentence then auto-skips, never gets stuck on one sentence
 - **Server-Side Retry**: Auto-retries up to 2 times when Edge TTS returns empty audio
@@ -156,6 +157,16 @@ npm run dev
 
 Open `http://localhost:5173` after startup.
 
+### Read Aloud
+
+Read Aloud uses Edge TTS via a local proxy server (port 3004) which **auto-starts** with the Vite dev server. No manual setup needed.
+
+```bash
+npm run dev
+```
+
+The proxy auto-detects system proxy settings. Electron builds have TTS built-in.
+
 ### Production Build
 
 ```bash
@@ -163,16 +174,6 @@ npm run build
 ```
 
 Build output directory: `dist/`
-
-### Read Aloud (Optional Enhancement)
-
-Read Aloud defaults to the browser's built-in SpeechSynthesis engine — no configuration needed. For higher-quality Edge TTS voices, optionally start the proxy server:
-
-```bash
-npm run server
-```
-
-The proxy runs at `http://localhost:3004` and the frontend will auto-detect and switch.
 
 ---
 
@@ -548,15 +549,15 @@ A: OPFS supports Chrome 102+, Edge 102+, Firefox 111+, Safari 17.4+. You can che
 
 ### Q: How does Read Aloud work?
 
-A: Read Aloud uses the browser's built-in SpeechSynthesis engine by default — just open the Read Aloud panel in any book. No server setup required. For higher-quality Edge TTS voices (Xiaoxiao, Yunxi, etc.), optionally start the proxy server (`npm run server`) and the app will auto-detect and switch.
+A: Read Aloud uses Edge TTS via a local proxy server (port 3004) that auto-starts with the Vite dev server. Open any book and click the Read Aloud button in the bottom control bar. No server setup required.
 
 ### Q: Which browsers support Read Aloud?
 
-A: SpeechSynthesis is supported in all major browsers (Chrome, Edge, Firefox, Safari). Edge TTS enhanced voices require the proxy server and work across all modern browsers.
+A: All modern browsers (Chrome, Edge, Firefox, Safari). TTS uses a local proxy (`localhost:3004`) to call Edge TTS, works in Firefox without issues.
 
 ### Q: Does Read Aloud work in the Electron version?
 
-A: Yes. The Electron version has built-in TTS proxy, plus falls back to system voice.
+A: Yes. The Electron version has TTS proxy built-in, no additional configuration needed.
 
 ---
 
@@ -623,6 +624,10 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 - **Font Weight 5-Level**: Multi-layer shadow stacking, Windows Microsoft YaHei optimized
 - **Toolbar Compact Size**: Buttons, icons, color dots unified to smaller sizes
 - **Default Font**: KaiTi (楷体) as default on first open
+- **Bottom Bar Glassmorphism**: `rgba(255,255,255,0.12)` ultra-transparent background + `blur(28px)`, background text visible through
+- **Bottom Bar Slide Animation**: 300ms spring easing for enter + 200ms ease-in for exit, info bar 50ms delayed stagger
+- **Page Nav Buttons Visual Upgrade**: Always semi-transparent visible, hover magnification + glass background
+- **Info Bar Sync**: Info bars hide with bottom bar when clicking center to toggle UI
 - **Favicon Update**: Replaced with transparent icon (no white border)
 
 #### Bug Fixes
@@ -668,6 +673,7 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 - **Persistent Annotations**: Annotations visible when toolbar is collapsed
 - **Annotation Undo**: Undo last annotation or clear all
 - **Pen Width Selection**: 5-level pen width (1/2/3/4/6px)
+- **PDF Zoom Refactor**: Removed CSS `zoom`, uses `BASE_RENDER_SCALE=2.0` hi-res rendering + `transform: scale()` GPU compositing; slider uses rAF direct DOM calls for real-time smooth zooming
 
 #### Improvements
 - **Storage Refactor**: Switched to LocalStorage, isolated by file content hash
@@ -717,10 +723,11 @@ A: Yes. The Electron version has built-in TTS proxy, plus falls back to system v
 - **Build Config**: Optimized Vite config with AllowedHosts for remote preview
 - **Base Path Fix**: Fixed `base: './'` causing broken resource paths in production
 - **Code Cleanup**: Removed temporary server files, keeping only http-server.js
+- **TTS Auto-Start**: Vite plugin auto-starts TTS proxy server on dev server launch, no manual `npm run server` needed
 
 #### Bug Fixes
 - Fixed TypeScript type definition errors
-- Fixed reading time tracking race condition
+- Fixed reading time saving overwriting reading position (`saveReadingTime` setting `position` to 0 caused jump position loss)
 
 ### 📄 Early Versions (v0.1.0)
 

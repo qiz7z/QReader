@@ -53,7 +53,9 @@
 - **响应式布局**: 自适应窗口大小，移动端友好
 
 ### 🔊 朗读功能
-- **Edge TTS 引擎**: 桌面端默认使用 Edge TTS，集成 6 个中文神经音色（晓晓、晓依、云健、云希、云夏、云扬）
+- **Edge TTS 引擎**: 桌面端默认使用 Edge TTS，集成 6 个中文神经音色（晓晓、晓依、云健、云希、云夏、云扬），Vite 启动时自动启动代理服务器
+- **WebSocket 直连模式**: 浏览器端直接通过 WebSocket 连接微软 Edge TTS 服务（8 秒超时），直连失败自动回退本地代理
+- **TTS 架构简化**: 移除 WebSocket 直连方案，统一走本地代理服务器，不再有 8 秒超时等待
 - **滑动窗口预取**: 播放当前句时后台预取接下来 3 句，消除句子间停顿和卡顿
 - **失败自动跳过**: 单句合成失败重试 1 次后自动跳到下一句，不再卡死在一句上
 - **服务端重试**: Edge TTS 间歇性空音频时服务端自动重试 2 次
@@ -156,15 +158,17 @@ npm run dev
 
 启动后访问：`http://localhost:5173`
 
-### 朗读功能（可选增强）
+### 朗读功能
 
-朗读功能默认使用浏览器内置 SpeechSynthesis 引擎，无需额外配置即可使用。如需更高音质的 Edge TTS 增强音色，可选项启动代理服务器：
+朗读功能使用 Edge TTS 代理服务器（端口 3004），启动 Vite 开发服务器时会**自动启动**代理：
 
 ```bash
-npm run server
+npm run dev
 ```
 
-代理运行在 `http://localhost:3004`，前端会自动检测并切换至增强音色。
+启动后访问：`http://localhost:5173`
+
+代理服务器会自动检测系统代理（`127.0.0.1:7892`），无需手动配置。TTS 服务在 Electron 打包版中内置，开箱即用。
 
 ### 生产构建
 
@@ -180,7 +184,7 @@ npm run build
 npm run electron:build
 ```
 
-输出：`releases/QReader-1.2.2-Setup.exe`（NSIS 安装版）和 `releases/QReader-1.2.2.exe`（便携版）
+输出：`releases/QReader-1.2.3-Setup.exe`（NSIS 安装版）和 `releases/QReader-1.2.3.exe`（便携版）
 
 ---
 
@@ -471,7 +475,7 @@ npm run build
 npm run electron:build
 ```
 
-输出：`releases/QReader-1.2.2-Setup.exe`（NSIS 安装版）和 `releases/QReader-1.2.2.exe`（便携版）
+输出：`releases/QReader-1.2.3-Setup.exe`（NSIS 安装版）和 `releases/QReader-1.2.3.exe`（便携版）
 
 Electron 版本集成了 TTS 代理服务器，朗读功能开箱即用。
 
@@ -536,15 +540,15 @@ A: OPFS 支持 Chrome 102+、Edge 102+、Firefox 111+、Safari 17.4+。可以在
 
 ### Q: 朗读功能如何使用？
 
-A: 朗读功能默认使用浏览器内置 SpeechSynthesis 引擎，打开任意书籍后点击右侧朗读面板即可开始，无需任何配置。如需更高质量的 Edge TTS 音色（晓晓、云希等），可选项启动代理服务器（`npm run server`），前端会自动检测并切换。
+A: 朗读功能使用 Edge TTS 引擎，打开任意书籍后点击底部控制栏的朗读按钮即可。Vite 启动时会自动运行 TTS 代理服务器（端口 3004），无需手动启动。Electron 打包版内置 TTS 服务，开箱即用。
 
 ### Q: 朗读支持哪些浏览器？
 
-A: SpeechSynthesis 引擎在 Chrome、Edge、Firefox、Safari 等所有主流浏览器上均可用。Edge TTS 增强音色需要通过代理服务器，所有现代浏览器均支持。
+A: 所有现代浏览器均支持（Chrome、Edge、Firefox、Safari）。TTS 通过本地代理服务器（`localhost:3004`）调用 Edge TTS 语音，Firefox 下也能正常工作。
 
 ### Q: Electron 打包后朗读功能正常吗？
 
-A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时也可以使用系统内置语音作为后备。
+A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，无需额外配置。
 
 ---
 
@@ -557,6 +561,8 @@ A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时
 ### ✨ 朗读 (TTS)
 
 #### 新增功能
+- **TTS 纯代理方案**: 移除 WebSocket 直连（Firefox 下不可用），统一走本地代理服务器，不再有 8 秒超时等待
+- **TTS 代理自动启动**: Vite 启动时自动运行代理服务器（`server/http-server.js`），无需手动执行 `npm run server`
 - **滑动窗口预取**: 预取从 1 句改为 3 句（Map 缓存 + pendingSet 防重复），消除朗读卡顿
 - **失败自动跳过**: 每句重试 1 次后跳到下一句，不再原地卡死
 - **前端 15s 超时**: fetch 独立超时控制，替代后端 15s 干等
@@ -601,7 +607,11 @@ A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时
 - **主题色统一**: 主色调切换为 Tailwind Blue (`#3b82f6`)
 - **字体粗细默认调整**: 第 3 档（font-weight 600），阅读体验更舒适
 - **字体粗细渲染优化**: 改用 `-webkit-text-stroke`，消除 text-shadow 重影
-- **底部功能栏**: 透明背景、章节号恢复、主题适配
+- **界面动画升级**: 底部栏和信息栏使用 spring 缓动曲线滑入滑出动画
+- **底部栏毛玻璃效果**: `backdrop-filter: blur(28px)` 毛玻璃 + 饱和度增强
+- **底部信息栏联动**: 点击中间隐藏 UI 时信息栏同步隐藏
+- **翻页按钮可视化**: 翻页箭头始终半透明可见，hover 放大 + 毛玻璃背景
+- **底部控制栏**: 透明背景、章节号恢复、主题适配
 - **翻章按钮立体效果**: 渐变背景 + 底部阴影 + 按压反馈
 - **按钮悬停动效**: 上浮 + 阴影 + 缩放反馈，cubic-bezier 缓动函数
 - **面板过渡动画**: 右侧面板展开/收起使用 0.3s cubic-bezier 过渡
@@ -657,6 +667,7 @@ A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时
 - **标注常驻显示**: 收起标注工具栏后标注内容仍可见
 - **标注撤销功能**: 支持撤销上一笔标注和清除全部标注
 - **画笔粗细调节**: 标注工具支持 5 档画笔粗细选择 (1/2/3/4/6px)
+- **PDF 缩放重构**: 移除 CSS `zoom`，改用 `BASE_RENDER_SCALE=2.0` 高清渲染 + `transform: scale()` GPU 合成缩放，滑块 rAF 直接操作 DOM，拖拽实时响应无卡顿
 
 #### 优化改进
 - **标注存储重构**: 切换至 LocalStorage，按文件 hash 隔离标注数据
@@ -702,6 +713,7 @@ A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时
 ### 🔧 构建 / 配置
 
 #### 优化改进
+- **TTS 代理自动启动**: vite.config.ts 新增 Vite 插件，开发服务器启动时自动运行 TTS 代理，无需手动启动
 - **PDF.js Worker**: 离线版本本地化，不依赖 CDN
 - **构建配置**: 优化 Vite 配置，添加 AllowedHosts 支持远程预览
 - **base 路径修复**: 修复 `base: './'` 导致构建产物资源引用错误的问题
@@ -709,7 +721,7 @@ A: 正常。Electron 版本在主进程中集成了 TTS 代理服务器，同时
 
 #### 问题修复
 - 修复 TypeScript 类型定义错误
-- 修复阅读时长追踪竞态条件
+- 修复阅读时长保存覆盖阅读位置（`saveReadingTime` 将 `position` 设为 0 导致跳转位置丢失）
 
 ### 📄 早期版本（v0.1.0）
 
