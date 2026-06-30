@@ -46,8 +46,9 @@
             <!-- 魔法星芒 -->
             <path d="M30 8 L32 4 L34 8 L38 10 L34 12 L32 16 L30 12 L26 10 Z" fill="#1890ff" opacity="0.6"/>
           </svg>
-          <h1 class="brand-name">我的藏书阁</h1>
+          <h1 class="brand-name">我的书库</h1>
         </div>
+        <SearchBar v-model="searchQuery" @update:modelValue="handleSearch" />
       </div>
       <div class="header-stats">
         <div class="stat-item">
@@ -56,7 +57,12 @@
         </div>
       </div>
       <div class="header-actions">
-        <SearchBar v-model="searchQuery" @update:modelValue="handleSearch" />
+        <button class="import-btn" @click="triggerImport" title="导入书籍">
+          <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+            <path d="M12 3v12m0-12 4 4m-4-4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 14v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
         <button class="clear-all-btn" @click="handleClearAll" title="清除所有数据">
           <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
             <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -65,18 +71,25 @@
         </button>
       </div>
     </header>
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept=".txt,.md,.epub,.pdf,.mobi,.docx"
+      multiple
+      hidden
+      @change="handleFileSelect"
+    />
     <main class="library-content">
-      <UploadButton @book-imported="handleBookImported" />
       <BookGrid
-        v-if="hasBooks"
+        v-if="!isLoading"
         :books="filteredBooksWithProgress"
         :importing-books="importingBooks"
+        :class="{ 'has-books': hasBooks }"
         @book-click="handleBookClick"
         @book-delete="handleBookDelete"
+        @import-click="triggerImport"
+        @import-drop="handleImportDrop"
       />
-      <div v-if="!hasBooks && !isLoading" class="empty-library">
-        <p>书架是空的，点击上方"导入书籍"开始阅读</p>
-      </div>
     </main>
 
     <!-- 清除数据弹窗 -->
@@ -134,11 +147,11 @@
 
 <script setup lang="ts">
 import { useReaderStore } from '@/stores/reader'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLibraryStore } from '@/stores/library'
 import { StorageService } from '@/services/StorageService'
-import UploadButton from '@/components/UploadButton.vue'
+import { FormatParserService } from '@/services/FormatParserService'
 import BookGrid from '@/components/BookGrid.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import type { BookRecord, ProgressRecord } from '@/types'
@@ -188,6 +201,76 @@ function particleStyle(_index: number) {
     '--duration': `${duration}s`,
     '--left': `${left}%`,
     '--size': `${size}px`,
+  }
+}
+
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const triggerImport = () => {
+  fileInputRef.value?.click()
+}
+
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    importFiles(Array.from(target.files))
+  }
+}
+
+const handleImportDrop = (files: FileList) => {
+  importFiles(Array.from(files))
+}
+
+async function importFiles(files: File[]) {
+  for (const file of files) {
+    const format = FormatParserService.getFormat(file.name)
+
+    if (!FormatParserService.supportsFormat(format)) {
+      alert(`不支持的文件格式：${file.name}`)
+      continue
+    }
+
+    const importId = libraryStore.addImportingBook(file.name)
+    await nextTick()
+
+    try {
+      libraryStore.updateImportProgress(importId, 5)
+
+      const arrayBuffer = await file.arrayBuffer()
+      libraryStore.updateImportProgress(importId, 30)
+      await nextTick()
+
+      const parsedBook = await FormatParserService.parse(file)
+      libraryStore.updateImportProgress(importId, 65)
+      await nextTick()
+
+      libraryStore.updateImportProgress(importId, 80)
+      await nextTick()
+
+      const bookRecord: BookRecord = {
+        id: parsedBook.id,
+        title: parsedBook.title,
+        author: parsedBook.author,
+        format,
+        fileSize: file.size,
+        cover: parsedBook.cover,
+        rawFile: arrayBuffer,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+
+      await StorageService.saveBook(bookRecord)
+      await StorageService.saveParsedBook(parsedBook.id, parsedBook)
+      libraryStore.updateImportProgress(importId, 95)
+      await nextTick()
+
+      libraryStore.removeImportingBook(importId)
+      handleBookImported(bookRecord)
+    } catch (error) {
+      libraryStore.removeImportingBook(importId)
+      console.error('[Upload] Error importing file:', error)
+      alert(`解析文件失败：${file.name}\n${(error as Error).message}`)
+    }
   }
 }
 
@@ -249,8 +332,19 @@ async function executeClear() {
 
 onMounted(() => {
   loadBooks()
-  loadTotalReadingTime()
+  // 延迟加载，确保 ReaderView 的异步保存已完成
+  setTimeout(() => loadTotalReadingTime(), 50)
+  // 监听窗口焦点变化，确保返回书库时阅读时长数据最新
+  window.addEventListener('focus', handleWindowFocus)
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('focus', handleWindowFocus)
+})
+
+async function handleWindowFocus() {
+  await loadTotalReadingTime()
+}
 
 async function loadBooks() {
   isLoading.value = true
@@ -729,6 +823,7 @@ function formatReadingTime(seconds: number): string {
   align-items: center;
   gap: 12px;
   position: relative;
+  flex-shrink: 0;
 }
 
 .logo-icon {
@@ -749,6 +844,8 @@ function formatReadingTime(seconds: number): string {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-shadow: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .header-actions {
@@ -789,32 +886,62 @@ function formatReadingTime(seconds: number): string {
   font-family: Georgia, 'Times New Roman', serif;
 }
 
+.import-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(100, 140, 200, 0.18);
+  border-radius: 999px;
+  background: rgba(14, 26, 50, 0.75);
+  color: #7cb3f5;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.import-btn:hover,
+.import-btn:focus-visible {
+  background: rgba(14, 26, 50, 0.9);
+  border-color: rgba(124, 179, 245, 0.42);
+  color: #a8d0ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(70, 120, 200, 0.15);
+}
+
+.import-btn:active {
+  transform: scale(0.96);
+}
+
 .clear-all-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(139, 90, 43, 0.3);
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(255, 250, 240, 0.6), rgba(245, 230, 200, 0.5));
-  color: #5a3f2a;
+  border: 1px solid rgba(100, 140, 200, 0.18);
+  border-radius: 999px;
+  background: rgba(14, 26, 50, 0.75);
+  color: #8ea4c4;
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(139, 90, 43, 0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
-.clear-all-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 250, 0.8), rgba(250, 240, 220, 0.7));
-  border-color: rgba(191, 149, 63, 0.4);
-  color: #3a2a10;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(191, 149, 63, 0.2);
+.clear-all-btn:hover,
+.clear-all-btn:focus-visible {
+  background: rgba(14, 26, 50, 0.9);
+  border-color: rgba(124, 179, 245, 0.42);
+  color: #c8d8f0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(70, 120, 200, 0.15);
 }
 
 .clear-all-btn:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 .library-content {
@@ -980,6 +1107,266 @@ function formatReadingTime(seconds: number): string {
   .logo-icon {
     width: 28px;
     height: 28px;
+  }
+}
+
+/* ============================================
+   Moonlit night sky — 与首页统一风格
+   ============================================ */
+.library-view {
+  max-width: none;
+  min-height: 100dvh;
+  padding: 28px clamp(18px, 4vw, 48px) 56px;
+  background:
+    radial-gradient(circle at 78% 12%, rgba(200, 216, 240, 0.18) 0%, rgba(200, 216, 240, 0.08) 8%, transparent 22%),
+    radial-gradient(circle at 78% 12%, rgba(240, 244, 255, 0.12) 0%, transparent 18%),
+    radial-gradient(ellipse at 50% 0%, rgba(30, 50, 100, 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #070b14 0%, #0c1527 35%, #0f1a30 70%, #121e38 100%);
+  color: #c8d8f0;
+  position: relative;
+}
+
+.library-view::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 35%, rgba(200, 220, 255, 0.28) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 10%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 22%, rgba(180, 210, 255, 0.22) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 68% 8%, rgba(255, 255, 255, 0.32) 0%, transparent 100%),
+    radial-gradient(1px 1px at 82% 30%, rgba(200, 220, 255, 0.25) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 52%, rgba(255, 255, 255, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 48%, rgba(180, 210, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 42%, rgba(255, 255, 255, 0.22) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 55%, rgba(200, 220, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 72%, rgba(255, 255, 255, 0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 68%, rgba(180, 210, 255, 0.12) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 60% 65%, rgba(255, 255, 255, 0.14) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 72%, rgba(200, 220, 255, 0.1) 0%, transparent 100%);
+  animation: none;
+}
+
+.magic-particles,
+.library-ornament {
+  display: none;
+}
+
+.library-header {
+  max-width: 1220px;
+  margin: 0 auto 28px;
+  padding: 18px;
+  gap: 16px;
+  border-radius: var(--qr-radius-xl);
+  border: 1px solid rgba(100, 140, 200, 0.18);
+  background: rgba(14, 26, 50, 0.75);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(100, 140, 200, 0.08);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.library-header::before {
+  display: none;
+}
+
+.header-left {
+  gap: 14px;
+}
+
+.home-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(100, 140, 200, 0.18);
+  border-radius: 999px;
+  background: rgba(14, 26, 50, 0.75);
+  color: #c8d8f0;
+  font-family: inherit;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.home-btn:hover,
+.home-btn:focus-visible {
+  background: rgba(14, 26, 50, 0.9);
+  border-color: rgba(100, 140, 200, 0.3);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.logo-icon {
+  color: var(--qr-primary);
+  filter: none;
+}
+
+.logo-icon path[stroke="#c9a84c"] {
+  stroke: currentColor;
+}
+
+.logo-icon path[fill="#1890ff"] {
+  fill: currentColor;
+}
+
+.brand-name {
+  font-family: inherit;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.02em;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: #c8d8f0;
+}
+
+.header-stats {
+  margin-left: auto;
+}
+
+.stat-item {
+  min-height: 52px;
+  padding: 8px 16px;
+  border: 1px solid rgba(100, 140, 200, 0.18);
+  border-radius: var(--qr-radius-md);
+  background: rgba(14, 26, 50, 0.75);
+}
+
+.stat-label {
+  color: #8ea4c4;
+}
+
+.stat-value {
+  color: #c8d8f0;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-actions {
+  gap: 10px;
+  flex: 0 1 auto;
+}
+
+.clear-all-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 999px;
+  background: rgba(14, 26, 50, 0.75);
+  color: #f87171;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.clear-all-btn:hover,
+.clear-all-btn:focus-visible {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+.library-content {
+  max-width: 1220px;
+  margin: 0 auto;
+  gap: 24px;
+}
+
+.empty-library {
+  padding: 52px 24px;
+  border: 1px dashed rgba(100, 140, 200, 0.2);
+  border-radius: var(--qr-radius-xl);
+  background: rgba(14, 26, 50, 0.75);
+  color: #8ea4c4;
+  font-style: normal;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.empty-library h2 {
+  margin: 0 0 10px;
+  color: #c8d8f0;
+  font-size: 22px;
+}
+
+.empty-library p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.modal-box {
+  background: rgba(14, 26, 50, 0.95);
+  border: 1px solid rgba(100, 140, 200, 0.2);
+  border-radius: var(--qr-radius-xl);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  font-family: inherit;
+}
+
+.modal-title,
+.option-label {
+  color: #c8d8f0;
+}
+
+.modal-desc,
+.option-hint {
+  color: #8ea4c4;
+}
+
+.modal-option:hover {
+  background: rgba(124, 179, 245, 0.1);
+  border-color: rgba(124, 179, 245, 0.25);
+}
+
+.modal-option input[type="checkbox"] {
+  accent-color: #7cb3f5;
+}
+
+.modal-btn {
+  min-height: 40px;
+  border-radius: 999px;
+}
+
+.modal-btn.confirm {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.25);
+}
+
+.modal-btn.confirm:hover {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+@media (max-width: 860px) {
+  .library-header {
+    align-items: stretch;
+  }
+
+  .header-stats {
+    margin-left: 0;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .header-left :deep(.search-bar) {
+    flex: 1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .library-view {
+    padding: 18px 14px 36px;
+  }
+
+  .library-header {
+    border-radius: var(--qr-radius-lg);
+  }
+
+  .header-left,
+  .header-actions {
+    flex-wrap: wrap;
   }
 }
 </style>

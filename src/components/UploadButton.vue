@@ -1,15 +1,24 @@
 <template>
   <div
-    class="upload-button"
+    class="upload-card"
     :class="{ 'is-dragging': isDragging }"
+    role="button"
+    tabindex="0"
+    aria-label="导入电子书文件"
     @dragover.prevent="isDragging = true"
     @dragleave.prevent="isDragging = false"
     @drop.prevent="handleDrop"
     @click="triggerFileInput"
+    @keydown.enter.prevent="triggerFileInput"
+    @keydown.space.prevent="triggerFileInput"
   >
-    <span class="upload-icon">+</span>
-    <span class="upload-text">导入书籍</span>
-    <p class="upload-hint">支持 TXT、EPUB、PDF、MOBI、DOCX、MD</p>
+    <div class="upload-card-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="upload-card-text">导入书籍</div>
+    <div class="upload-card-hint">拖拽或点击添加</div>
     <input
       ref="fileInput"
       type="file"
@@ -38,6 +47,10 @@ const emit = defineEmits<{
 const triggerFileInput = () => {
   fileInput.value?.click()
 }
+
+defineExpose({
+  triggerFileInput
+})
 
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -116,95 +129,71 @@ async function importFiles(files: File[]) {
 </script>
 
 <style scoped>
-.upload-button {
+.upload-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 200px;
-  padding: 32px 24px;
-  border: 2px solid rgba(191, 149, 63, 0.3);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s;
-  background: linear-gradient(135deg, rgba(255, 250, 240, 0.8), rgba(245, 230, 200, 0.6));
-  color: #3a2a10;
-  box-shadow: 0 4px 16px rgba(191, 149, 63, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-  position: relative;
+  gap: 12px;
+  background: rgba(14, 26, 50, 0.75);
+  border-radius: var(--qr-radius-lg);
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(100, 140, 200, 0.08);
+  cursor: pointer;
+  transition: transform var(--qr-transition), box-shadow var(--qr-transition), border-color var(--qr-transition), background var(--qr-transition);
+  border: 1px dashed rgba(100, 140, 200, 0.25);
+  outline: none;
+  aspect-ratio: 3 / 4.2;
+  padding: 16px;
 }
 
-.upload-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 120px;
-  height: 120px;
-  margin: -60px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(191, 149, 63, 0.4) 0%, rgba(191, 149, 63, 0.12) 30%, transparent 70%);
-  transform: scale(0);
-  opacity: 0;
-  transition: transform 0.6s cubic-bezier(0.08, 0.82, 0.17, 1), opacity 0.4s;
-  pointer-events: none;
+.upload-card:hover,
+.upload-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 24px rgba(70, 120, 200, 0.15), 0 0 0 1px rgba(124, 179, 245, 0.25);
+  border-color: rgba(124, 179, 245, 0.42);
+  background: rgba(14, 26, 50, 0.9);
 }
 
-.upload-button:hover::before {
-  transform: scale(3);
-  opacity: 1;
-  box-shadow:
-    50px -35px 0 -8px rgba(191, 149, 63, 0.08),
-    -40px 30px 0 -6px rgba(191, 149, 63, 0.05),
-    60px 40px 0 -14px rgba(191, 149, 63, 0.04),
-    -55px -40px 0 -10px rgba(191, 149, 63, 0.06),
-    0 -50px 0 -4px rgba(191, 149, 63, 0.03);
-}
-
-.upload-button:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 250, 0.9), rgba(250, 240, 220, 0.8));
-  border-color: rgba(191, 149, 63, 0.5);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(191, 149, 63, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+.upload-card:focus-visible {
+  box-shadow: 0 0 0 3px rgba(124, 179, 245, 0.28), 0 6px 24px rgba(70, 120, 200, 0.15);
 }
 
 .is-dragging {
-  transform: scale(1.03);
-  background: linear-gradient(135deg, rgba(255, 255, 250, 0.95), rgba(245, 240, 230, 0.9));
-  border-color: rgba(191, 149, 63, 0.6);
-  box-shadow: 0 8px 32px rgba(191, 149, 63, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px) scale(1.01);
+  background: rgba(14, 26, 50, 0.9);
+  border-color: #7cb3f5;
+  box-shadow: 0 0 0 3px rgba(124, 179, 245, 0.28), 0 6px 24px rgba(70, 120, 200, 0.15);
 }
 
-.upload-icon {
-  font-size: 48px;
-  line-height: 1;
-  opacity: 0.7;
-  position: relative;
-  z-index: 1;
-  color: #5a3f2a;
-  font-weight: 300;
+.upload-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7cb3f5;
+  background: rgba(124, 179, 245, 0.1);
+  border: 1px dashed rgba(124, 179, 245, 0.3);
 }
 
-.upload-text {
-  margin-top: 10px;
-  font-size: 24px;
-  font-weight: 700;
-  font-family: KaiTi, STKaiti, '楷体', serif;
-  letter-spacing: 3px;
-  position: relative;
-  z-index: 1;
-  color: #3a2a10;
-  text-shadow: 0 1px 2px rgba(191, 149, 63, 0.2);
+.upload-card-icon svg {
+  width: 28px;
+  height: 28px;
 }
 
-.upload-hint {
-  margin: 6px 0 0;
+.upload-card-text {
   font-size: 14px;
-  font-weight: 600;
-  font-family: 'Times New Roman', Times, KaiTi, STKaiti, '楷体', serif;
-  color: rgba(58, 42, 16, 0.5);
-  position: relative;
-  z-index: 1;
-  font-style: italic;
+  font-weight: 700;
+  color: #c8d8f0;
+  text-align: center;
+}
+
+.upload-card-hint {
+  font-size: 12px;
+  color: #5e7294;
+  text-align: center;
 }
 </style>

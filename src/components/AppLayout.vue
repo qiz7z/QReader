@@ -15,7 +15,7 @@ const themeClass = computed(() => `theme-${readerStore.theme}`)
 <style scoped>
 .app-layout {
   min-height: 100vh;
-  background-color: #f9f9f9;
+  background-color: #0c1527;
   transition: background-color 0.3s, color 0.3s;
 }
 </style>

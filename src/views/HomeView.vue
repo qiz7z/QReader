@@ -20,9 +20,9 @@
             </h1>
           </div>
           <p class="subtitle">
-            <span class="subtitle-cn">魔法藏书阁</span>
+            <span class="subtitle-cn">安静阅读系统</span>
             <span class="subtitle-separator">·</span>
-            <span class="subtitle-en">Magic Library</span>
+            <span class="subtitle-en">Calm Reading OS</span>
           </p>
         </div>
 
@@ -75,7 +75,7 @@
                 <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M8 4v16M12 4v16M16 4v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
-              <span class="button-text">进入藏书阁</span>
+              <span class="button-text">进入书库</span>
               <svg class="button-icon-right" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -104,7 +104,7 @@
           <p class="footer-text">
             <span>© 2025 QReader</span>
             <span class="footer-bullet">•</span>
-            <span>魔法阅读体验</span>
+            <span>本地优先的安静阅读体验</span>
           </p>
         </footer>
       </div>
@@ -168,31 +168,36 @@ function particleStyle(_index: number) {
   top: var(--top);
   width: var(--size);
   height: var(--size);
-  background: radial-gradient(circle, rgba(191, 149, 63, 0.6) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(200, 216, 240, 0.9) 0%, rgba(180, 200, 240, 0.4) 40%, transparent 70%);
   border-radius: 50%;
-  animation: float var(--duration) ease-in infinite;
+  animation: twinkle calc(var(--duration) * 2) ease-in-out infinite;
   animation-delay: var(--delay);
-  box-shadow: 0 0 10px rgba(191, 149, 63, 0.4);
+  box-shadow: 0 0 calc(var(--size) * 2) rgba(200, 216, 240, 0.3);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 /* ============================================
-   CSS 变量系统 - 魔法学院主题
+   CSS 变量系统 - 月明星稀主题
    ============================================ */
 .home-view {
-  --color-bg: #1a1f2e;
-  --color-bg-card: #2d3548;
-  --color-text-primary: #e8e4d0;
-  --color-text-secondary: #b8a888;
-  --color-text-tertiary: #8b7355;
-  --color-border: #c9a84c;
-  --color-brand: linear-gradient(135deg, #c9a84c 0%, #bf953f 50%, #aa771c 100%);
-  --color-brand-solid: #c9a84c;
-  --color-accent: #1890ff;
-  --color-gold: #c9a84c;
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(191, 149, 63, 0.1);
-  --shadow-hover: 0 4px 16px rgba(191, 149, 63, 0.2), 0 0 0 1px rgba(191, 149, 63, 0.2);
-  --shadow-button: 0 4px 16px rgba(191, 149, 63, 0.3);
-  --shadow-button-hover: 0 6px 24px rgba(191, 149, 63, 0.4);
+  --color-bg: #0c1527;
+  --color-bg-card: rgba(14, 26, 50, 0.75);
+  --color-text-primary: #c8d8f0;
+  --color-text-secondary: #8ea4c4;
+  --color-text-tertiary: #5e7294;
+  --color-border: rgba(100, 140, 200, 0.18);
+  --color-brand: linear-gradient(135deg, #7cb3f5 0%, #5a9cf4 50%, #4a8ce3 100%);
+  --color-brand-solid: #7cb3f5;
+  --color-accent: #bfa85a;
+  --color-gold: #bfa85a;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(100, 140, 200, 0.08);
+  --shadow-hover: 0 6px 24px rgba(70, 120, 200, 0.15), 0 0 0 1px rgba(100, 140, 200, 0.15);
+  --shadow-button: 0 4px 18px rgba(124, 179, 245, 0.25);
+  --shadow-button-hover: 0 8px 28px rgba(124, 179, 245, 0.35);
 }
 
 /* ============================================
@@ -202,13 +207,13 @@ function particleStyle(_index: number) {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 40px 24px;
-  background: 
-    linear-gradient(180deg, rgba(15, 20, 31, 0.85) 0%, rgba(26, 31, 46, 0.85) 50%, rgba(37, 32, 48, 0.85) 100%),
-    url('/background.png');
-  background-size: cover;
-  background-position: center;
+  align-items: flex-start;
+  padding: 60px 24px 40px;
+  background:
+    radial-gradient(circle at 78% 12%, rgba(200, 216, 240, 0.18) 0%, rgba(200, 216, 240, 0.08) 8%, transparent 22%),
+    radial-gradient(circle at 78% 12%, rgba(240, 244, 255, 0.12) 0%, transparent 18%),
+    radial-gradient(ellipse at 50% 0%, rgba(30, 50, 100, 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #070b14 0%, #0c1527 35%, #0f1a30 70%, #121e38 100%);
   color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
@@ -220,9 +225,21 @@ function particleStyle(_index: number) {
   inset: 0;
   z-index: -1;
   background-image:
-    radial-gradient(ellipse at 30% 20%, rgba(191, 149, 63, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(24, 144, 255, 0.06) 0%, transparent 50%);
-  animation: bgGlow 15s ease-in-out infinite;
+    radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 35%, rgba(200, 220, 255, 0.28) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 10%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 22%, rgba(180, 210, 255, 0.22) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 68% 8%, rgba(255, 255, 255, 0.32) 0%, transparent 100%),
+    radial-gradient(1px 1px at 82% 30%, rgba(200, 220, 255, 0.25) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 52%, rgba(255, 255, 255, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 48%, rgba(180, 210, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 42%, rgba(255, 255, 255, 0.22) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 55%, rgba(200, 220, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 72%, rgba(255, 255, 255, 0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 68%, rgba(180, 210, 255, 0.12) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 60% 65%, rgba(255, 255, 255, 0.14) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 72%, rgba(200, 220, 255, 0.1) 0%, transparent 100%);
+  animation: none;
 }
 
 @keyframes bgGlow {
@@ -275,12 +292,13 @@ function particleStyle(_index: number) {
 .logo-image {
   width: 90px;
   height: 90px;
-  filter: drop-shadow(0 0 16px rgba(191, 149, 63, 0.4));
+  filter: drop-shadow(0 0 16px rgba(124, 179, 245, 0.4))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
   transition: filter 0.3s ease;
 }
 
 .logo-wrapper:hover .logo-image {
-  filter: drop-shadow(0 0 24px rgba(191, 149, 63, 0.6));
+  filter: drop-shadow(0 0 24px rgba(124, 179, 245, 0.6));
 }
 
 .brand-title {
@@ -294,23 +312,23 @@ function particleStyle(_index: number) {
 }
 
 .brand-title-text {
-  /* 简洁金属渐变 */
+  /* 月光渐变 */
   background: linear-gradient(
     180deg,
-    #f4e59c 0%,
-    #c9a84c 40%,
-    #bf953f 60%,
-    #aa771c 100%
+    #f0f4ff 0%,
+    #c8d8f0 40%,
+    #a8bdd8 60%,
+    #8ea4c4 100%
   );
   background-size: 100% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  /* 清晰阴影 */
+  /* 月光光晕 */
   filter: 
-    drop-shadow(0 1px 0 rgba(150, 100, 50, 0.4))
-    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3))
-    drop-shadow(0 0 12px rgba(191, 149, 63, 0.4));
+    drop-shadow(0 1px 0 rgba(180, 200, 240, 0.3))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4))
+    drop-shadow(0 0 16px rgba(124, 179, 245, 0.35));
   position: relative;
   z-index: 2;
 }
@@ -322,8 +340,8 @@ function particleStyle(_index: number) {
   top: -18px;
   left: -28px;
   font-size: 20px;
-  color: #c9a84c;
-  text-shadow: 0 0 8px rgba(191, 149, 63, 0.6);
+  color: #7cb3f5;
+  text-shadow: 0 0 10px rgba(124, 179, 245, 0.6);
   animation: starFloat 4s ease-in-out infinite;
 }
 
@@ -334,8 +352,8 @@ function particleStyle(_index: number) {
   bottom: -18px;
   right: -28px;
   font-size: 20px;
-  color: #c9a84c;
-  text-shadow: 0 0 8px rgba(191, 149, 63, 0.6);
+  color: #7cb3f5;
+  text-shadow: 0 0 10px rgba(124, 179, 245, 0.6);
   animation: starFloat 4s ease-in-out infinite reverse;
 }
 
@@ -361,7 +379,7 @@ function particleStyle(_index: number) {
   opacity: 0.4;
   background: radial-gradient(
     ellipse at center,
-    rgba(191, 149, 63, 0.3) 0%,
+    rgba(124, 179, 245, 0.25) 0%,
     transparent 70%
   );
   animation: glowPulse 3s ease-in-out infinite;
@@ -393,8 +411,8 @@ function particleStyle(_index: number) {
 }
 
 .subtitle-separator {
-  color: var(--color-gold);
-  opacity: 0.6;
+  color: var(--color-accent);
+  opacity: 0.5;
 }
 
 .subtitle-en {
@@ -420,7 +438,7 @@ function particleStyle(_index: number) {
   background: var(--color-bg-card);
   border-radius: 16px;
   box-shadow: var(--shadow-card);
-  border: 1px solid rgba(191, 149, 63, 0.15);
+  border: 1px solid var(--color-border);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -445,12 +463,12 @@ function particleStyle(_index: number) {
 .feature-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-hover);
-  border-color: rgba(191, 149, 63, 0.3);
+  border-color: rgba(124, 179, 245, 0.25);
 }
 
 .feature-card:hover .feature-icon-wrapper {
   animation: iconFloat 1.5s ease-in-out infinite;
-  box-shadow: 0 0 28px rgba(191, 149, 63, 0.35);
+  box-shadow: 0 0 28px rgba(124, 179, 245, 0.3);
 }
 
 @keyframes iconFloat {
@@ -466,9 +484,9 @@ function particleStyle(_index: number) {
   height: 56px;
   margin-bottom: 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(191, 149, 63, 0.15) 0%, rgba(170, 119, 28, 0.15) 100%);
-  color: var(--color-gold);
-  box-shadow: 0 0 20px rgba(191, 149, 63, 0.2);
+  background: linear-gradient(135deg, rgba(124, 179, 245, 0.15) 0%, rgba(90, 156, 244, 0.12) 100%);
+  color: #7cb3f5;
+  box-shadow: 0 0 20px rgba(124, 179, 245, 0.15);
 }
 
 .feature-icon {
@@ -506,10 +524,10 @@ function particleStyle(_index: number) {
 .cta-button {
   position: relative;
   padding: 18px 48px;
-  border: 1px solid rgba(191, 149, 63, 0.3);
+  border: 1px solid rgba(124, 179, 245, 0.3);
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(191, 149, 63, 0.2) 0%, rgba(170, 119, 28, 0.2) 100%);
-  color: var(--color-gold);
+  background: linear-gradient(135deg, rgba(124, 179, 245, 0.2) 0%, rgba(90, 156, 244, 0.2) 100%);
+  color: #7cb3f5;
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
@@ -523,8 +541,8 @@ function particleStyle(_index: number) {
 .cta-button:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-button-hover);
-  background: linear-gradient(135deg, rgba(191, 149, 63, 0.3) 0%, rgba(170, 119, 28, 0.3) 100%);
-  border-color: rgba(191, 149, 63, 0.5);
+  background: linear-gradient(135deg, rgba(124, 179, 245, 0.3) 0%, rgba(90, 156, 244, 0.3) 100%);
+  border-color: rgba(124, 179, 245, 0.5);
 }
 
 .cta-button:active {
@@ -532,7 +550,7 @@ function particleStyle(_index: number) {
 }
 
 .cta-button:focus {
-  outline: 3px solid rgba(191, 149, 63, 0.3);
+  outline: 3px solid rgba(124, 179, 245, 0.3);
   outline-offset: 2px;
 }
 
@@ -568,7 +586,7 @@ function particleStyle(_index: number) {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(191, 149, 63, 0.3),
+    rgba(124, 179, 245, 0.25),
     transparent
   );
   animation: shimmer 3s infinite;
@@ -609,23 +627,23 @@ function particleStyle(_index: number) {
 .line-segment {
   width: 80px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
-  box-shadow: 0 0 8px rgba(191, 149, 63, 0.3);
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  box-shadow: 0 0 8px rgba(191, 168, 90, 0.3);
 }
 
 .line-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-gold);
+  background: var(--color-accent);
   position: relative;
-  box-shadow: 0 0 10px rgba(191, 149, 63, 0.6);
+  box-shadow: 0 0 10px rgba(191, 168, 90, 0.6);
   animation: dotGlow 3s ease-in-out infinite;
 }
 
 @keyframes dotGlow {
-  0%, 100% { box-shadow: 0 0 10px rgba(191, 149, 63, 0.6); }
-  50% { box-shadow: 0 0 16px rgba(191, 149, 63, 1); }
+  0%, 100% { box-shadow: 0 0 10px rgba(191, 168, 90, 0.6); }
+  50% { box-shadow: 0 0 16px rgba(191, 168, 90, 1); }
 }
 
 .line-dot::before,
@@ -635,7 +653,7 @@ function particleStyle(_index: number) {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--color-gold);
+  background: var(--color-accent);
   opacity: 0.5;
 }
 
@@ -780,4 +798,9 @@ function particleStyle(_index: number) {
     display: none;
   }
 }
+
+/* ============================================
+   Calm Reading OS visual override
+   （已废弃：首页直接用夜空背景，无需白色方块）
+   ============================================ */
 </style>

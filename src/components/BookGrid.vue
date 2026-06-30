@@ -28,7 +28,12 @@
       v-for="book in books"
       :key="book.id"
       class="book-card"
+      role="button"
+      tabindex="0"
+      :aria-label="`打开 ${book.title}`"
       @click="$emit('bookClick', book.id)"
+      @keydown.enter.prevent="$emit('bookClick', book.id)"
+      @keydown.space.prevent="$emit('bookClick', book.id)"
     >
       <div class="book-cover">
         <img :src="getCoverUrl(book)" alt="封面" />
@@ -46,15 +51,43 @@
         <p class="book-time" v-if="book.progress?.readingTime">{{ formatReadingTime(book.progress.readingTime) }}</p>
         <p class="book-time" v-else-if="book.updatedAt">{{ formatTime(book.updatedAt) }}</p>
       </div>
-      <button class="delete-btn" @click.stop="confirmDelete(book.id)">
-        删除
+      <button class="delete-btn" aria-label="删除书籍" title="删除书籍" @click.stop="confirmDelete(book.id)">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
       </button>
+    </div>
+    <div
+      class="book-card import-card"
+      :class="{ 'is-dragging': isDragging }"
+      role="button"
+      tabindex="0"
+      aria-label="导入新书"
+      @dragover.prevent="isDragging = true"
+      @dragleave.prevent="isDragging = false"
+      @drop.prevent="handleDrop"
+      @click="$emit('importClick')"
+      @keydown.enter.prevent="$emit('importClick')"
+      @keydown.space.prevent="$emit('importClick')"
+    >
+      <div class="book-cover import-cover">
+        <div class="import-icon-wrap">
+          <svg class="import-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="book-info import-info">
+        <h3 class="book-title">导入书籍</h3>
+        <p class="book-meta">点击或拖拽添加</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, reactive, watch } from 'vue'
+import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import type { BookRecord, ProgressRecord } from '@/types'
 import type { ImportingBook } from '@/stores/library'
 
@@ -70,7 +103,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'bookClick', bookId: string): void
   (e: 'bookDelete', bookId: string): void
+  (e: 'importClick'): void
+  (e: 'importDrop', files: FileList): void
 }>()
+
+const isDragging = ref(false)
+
+const handleDrop = (event: DragEvent) => {
+  isDragging.value = false
+  if (event.dataTransfer?.files.length) {
+    emit('importDrop', event.dataTransfer.files)
+  }
+}
 
 // 平滑进度动画
 const animatedProgress = reactive<Record<string, number>>({})
@@ -256,8 +300,8 @@ function confirmDelete(bookId: string) {
 <style scoped>
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 22px;
 }
 
 @media (max-width: 768px) {
@@ -276,28 +320,126 @@ function confirmDelete(bookId: string) {
 
 .book-card {
   position: relative;
-  background: linear-gradient(135deg, #fffef8, #fffdf0);
-  border-radius: 8px;
+  background: rgba(14, 26, 50, 0.75);
+  border-radius: var(--qr-radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.12), inset 0 0 0 1px rgba(191, 149, 63, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(100, 140, 200, 0.08);
   cursor: pointer;
-  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
-  border: 1px solid rgba(191, 149, 63, 0.1);
+  transition: transform var(--qr-transition), box-shadow var(--qr-transition), border-color var(--qr-transition), background var(--qr-transition);
+  border: 1px solid rgba(100, 140, 200, 0.18);
+  outline: none;
 }
 
-.book-card:hover {
+.book-card:hover,
+.book-card:focus-visible {
   transform: translateY(-4px);
-  box-shadow: 0 6px 20px rgba(191, 149, 63, 0.2), inset 0 0 0 1px rgba(191, 149, 63, 0.15);
-  border-color: rgba(191, 149, 63, 0.25);
+  box-shadow: 0 6px 24px rgba(70, 120, 200, 0.15), 0 0 0 1px rgba(100, 140, 200, 0.15);
+  border-color: rgba(124, 179, 245, 0.25);
+  background: rgba(14, 26, 50, 0.9);
+}
+
+.book-card:focus-visible {
+  box-shadow: 0 0 0 3px rgba(124, 179, 245, 0.28), 0 6px 24px rgba(70, 120, 200, 0.15);
+}
+
+.import-card {
+  position: relative;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: var(--qr-radius-lg);
+  background: linear-gradient(160deg, rgba(30, 27, 75, 0.5) 0%, rgba(45, 40, 90, 0.4) 50%, rgba(30, 27, 75, 0.5) 100%);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.06), inset 0 0 30px rgba(139, 92, 246, 0.03);
+  overflow: hidden;
+}
+
+.import-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.05), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.04), transparent 50%);
+  pointer-events: none;
+}
+
+.import-card:hover,
+.import-card:focus-visible {
+  border-color: rgba(139, 92, 246, 0.4);
+  background: linear-gradient(160deg, rgba(30, 27, 75, 0.65) 0%, rgba(45, 40, 90, 0.55) 50%, rgba(30, 27, 75, 0.65) 100%);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.12), 0 0 20px rgba(139, 92, 246, 0.06), inset 0 0 30px rgba(139, 92, 246, 0.05);
+  transform: translateY(-2px);
+}
+
+.import-card.is-dragging {
+  border-color: #a78bfa;
+  background: linear-gradient(160deg, rgba(30, 27, 75, 0.75) 0%, rgba(45, 40, 90, 0.65) 50%, rgba(30, 27, 75, 0.75) 100%);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2), 0 0 24px rgba(139, 92, 246, 0.1);
+  transform: translateY(-2px);
+}
+
+.import-cover {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(45, 40, 90, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.import-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(124, 58, 237, 0.08));
+  border: 1.5px solid rgba(139, 92, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--qr-transition);
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.06);
+}
+
+.import-card:hover .import-icon-wrap,
+.import-card:focus-visible .import-icon-wrap {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(124, 58, 237, 0.18));
+  border-color: rgba(139, 92, 246, 0.45);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.12);
+  transform: scale(1.05);
+}
+
+.import-card.is-dragging .import-icon-wrap {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.28), rgba(124, 58, 237, 0.22));
+  border-color: #a78bfa;
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.18);
+  transform: scale(1.08);
+}
+
+.import-icon {
+  width: 24px;
+  height: 24px;
+  color: #a78bfa;
+  opacity: 0.9;
+}
+
+.import-info {
+  background: linear-gradient(180deg, rgba(30, 27, 75, 0.3), rgba(45, 40, 90, 0.2));
+}
+
+.import-info .book-title {
+  color: #d4d0f0;
+  font-weight: 600;
+}
+
+.import-info .book-meta {
+  color: #a5a0d4;
+  font-style: normal;
 }
 
 .book-cover {
   width: 100%;
-  height: 240px;
+  height: 242px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #d4c8b0, #c4b498);
+  background: linear-gradient(135deg, #1a2540, #0f1a30);
   overflow: hidden;
   position: relative;
 }
@@ -320,9 +462,9 @@ function confirmDelete(bookId: string) {
 }
 
 .progress-bar-track {
-  height: 3px;
-  background: rgba(58, 42, 16, 0.3);
-  border-radius: 2px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
   overflow: hidden;
   backdrop-filter: blur(2px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -330,16 +472,16 @@ function confirmDelete(bookId: string) {
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #c9a84c, #fcf6ba, #bf953f);
+  background: linear-gradient(90deg, #7cb3f5, #5a9cf4);
   transition: width 0.3s ease;
-  border-radius: 2px;
-  box-shadow: 0 0 6px rgba(191, 149, 63, 0.4);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(124, 179, 245, 0.42);
 }
 
 .progress-text {
   font-size: 11px;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(58, 42, 16, 0.8), 0 0 8px rgba(191, 149, 63, 0.5);
+  color: #c8d8f0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   text-align: left;
   font-weight: 600;
   font-family: Georgia, serif;
@@ -347,149 +489,90 @@ function confirmDelete(bookId: string) {
 }
 
 .book-info {
-  padding: 12px;
-  background: linear-gradient(135deg, rgba(255, 254, 248, 0.9), rgba(249, 245, 232, 0.7));
+  padding: 14px 14px 16px;
+  background: linear-gradient(180deg, rgba(14, 26, 50, 0.85), rgba(14, 26, 50, 0.75));
 }
 
-.book-title {
-  margin: 0 0 4px;
-  font-size: 14px;
-  color: #3a2a10;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: 'KaiTi', 'STKaiti', '楷体', serif;
+.import-info {
+  background: linear-gradient(180deg, rgba(30, 27, 75, 0.7), rgba(45, 40, 90, 0.6));
+}
+
+.import-info .book-title {
+  color: #c8d8f0;
   font-weight: 600;
 }
 
-.book-author {
-  margin: 0 0 4px;
-  font-size: 12px;
-  color: #6b5340;
+.import-info .book-meta {
+  color: #8ea4c4;
+  font-style: normal;
+}
+
+.book-title {
+  margin: 0 0 5px;
+  font-size: 14px;
+  color: #c8d8f0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-style: italic;
+  font-weight: 700;
+}
+
+.book-author {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #8ea4c4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
 }
 
 .book-meta {
-  margin: 0 0 2px;
+  margin: 0 0 3px;
   font-size: 12px;
-  color: #8b7355;
-  font-family: 'Times New Roman', Times, serif;
+  color: #5e7294;
 }
 
 .book-time {
   margin: 0;
   font-size: 11px;
-  color: #a89578;
-  font-style: italic;
+  color: #5e7294;
 }
 
 .delete-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 4px 8px;
-  background-color: rgba(139, 90, 43, 0.9);
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: rgba(14, 26, 50, 0.85);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 12px;
   opacity: 0;
-  transition: opacity 0.2s, background-color 0.2s;
+  transition: opacity var(--qr-transition-fast), background var(--qr-transition-fast), transform var(--qr-transition-fast);
   z-index: 1;
-  font-family: KaiTi, STKaiti, '楷体', serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
 }
 
-.book-card:hover .delete-btn {
+.delete-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.book-card:hover .delete-btn,
+.book-card:focus-within .delete-btn {
   opacity: 1;
 }
 
 .delete-btn:hover {
-  background-color: rgba(91, 59, 28, 0.95);
-  box-shadow: 0 2px 8px rgba(139, 90, 43, 0.3);
-}
-
-.book-title {
-  margin: 0 0 4px;
-  font-size: 14px;
-  color: #333;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.book-author {
-  margin: 0 0 4px;
-  font-size: 12px;
-  color: #666;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.book-meta {
-  margin: 0 0 2px;
-  font-size: 12px;
-  color: #999;
-}
-
-.book-time {
-  margin: 0;
-  font-size: 11px;
-  color: #bbb;
-}
-
-.book-title {
-  margin: 0 0 4px;
-  font-size: 14px;
-  color: #333;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.book-author {
-  margin: 0 0 4px;
-  font-size: 12px;
-  color: #666;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.book-meta {
-  margin: 0 0 2px;
-  font-size: 12px;
-  color: #999;
-}
-
-.book-time {
-  margin: 0;
-  font-size: 11px;
-  color: #bbb;
-}
-
-.delete-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 4px 8px;
-  background-color: rgba(255, 77, 79, 0.9);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  z-index: 1;
-}
-
-.book-card:hover .delete-btn {
-  opacity: 1;
+  background: rgba(248, 113, 113, 0.2);
+  transform: scale(1.04);
 }
 
 .importing-card {
@@ -498,12 +581,12 @@ function confirmDelete(bookId: string) {
 
 .importing-card:hover {
   transform: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--qr-shadow-sm);
 }
 
 .importing-cover {
   position: relative;
-  background: linear-gradient(135deg, #f5f0eb 0%, #e8e0d0 100%);
+  background: linear-gradient(135deg, #f8efe2 0%, #e9dcc9 100%);
   flex-direction: column;
   gap: 8px;
 }
@@ -533,8 +616,8 @@ function confirmDelete(bookId: string) {
 
 .import-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #bf953f, #fcf6ba, #aa771c);
-  border-radius: 0 2px 2px 0;
+  background: linear-gradient(90deg, var(--qr-primary), #60a5fa);
+  border-radius: 0 999px 999px 0;
   position: relative;
   overflow: hidden;
 }

@@ -32,7 +32,7 @@ import type { PdfAnnotation, Point } from '@/utils/annotationStorage'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
-const BASE_RENDER_SCALE = 3.0
+const BASE_RENDER_SCALE = 2.0
 
 const props = defineProps<{
   rawFile: ArrayBuffer | null
@@ -69,11 +69,12 @@ const eraserPoints = ref<Point[]>([])
 const erasedIds = ref<Set<string>>(new Set())
 const eraserPageNum = ref(0)
 
-const zoomRatio = computed(() => props.scale / BASE_RENDER_SCALE)
+// zoomRatio 不再使用，保留 BASE_RENDER_SCALE 作为渲染分辨率基准
 
-const pagesStyle = computed(() => ({
-  zoom: `${zoomRatio.value}`,
-}))
+// scale 变化时同步（用于 +/- 按钮等非拖拽场景）
+watch(() => props.scale, (s) => resizeCanvases(s))
+
+const pagesStyle = computed(() => ({}))
 
 function setCanvasRef(pageNum: number, el: any) {
   if (!el) return
@@ -112,17 +113,19 @@ async function renderPage(pageNum: number) {
   try {
     const page = await pdfDoc.getPage(pageNum)
     const dpr = Number(window.devicePixelRatio || 1)
-    const viewport = page.getViewport({ scale: BASE_RENDER_SCALE })
+    // 渲染分辨率固定为 BASE_RENDER_SCALE（保证高清）
+    const renderViewport = page.getViewport({ scale: BASE_RENDER_SCALE })
 
-    canvas.width = Math.floor(viewport.width * dpr)
-    canvas.height = Math.floor(viewport.height * dpr)
-    canvas.style.width = `${viewport.width}px`
-    canvas.style.height = `${viewport.height}px`
+    canvas.width = Math.floor(renderViewport.width * dpr)
+    canvas.height = Math.floor(renderViewport.height * dpr)
+    // CSS 尺寸固定为 BASE_RENDER_SCALE 下的尺寸（缩放由 transform 处理）
+    canvas.style.width = `${renderViewport.width}px`
+    canvas.style.height = `${renderViewport.height}px`
 
     const ctx = canvas.getContext('2d')!
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    const task = page.render({ canvasContext: ctx, viewport })
+    const task = page.render({ canvasContext: ctx, viewport: renderViewport })
     renderTasks.set(pageNum, task)
     await task.promise
     renderTasks.delete(pageNum)
@@ -143,6 +146,32 @@ async function renderPage(pageNum: number) {
     if (e?.name !== 'RenderingCancelledException') {
       console.warn('Render error:', e.message)
     }
+  }
+}
+
+// 缩放：使用 CSS transform（纯 GPU 合成，不触发 layout/paint）
+let basePagesHeight = 0  // .pdf-pages 未缩放时的原始高度
+
+function resizeCanvases(scale: number) {
+  const r = scale / BASE_RENDER_SCALE
+  const pagesEl = document.querySelector('.pdf-pages') as HTMLElement
+  if (!pagesEl) return
+
+  // 首次调用时记录原始高度（ratio=1 时）
+  if (basePagesHeight === 0) {
+    // 临时清除 transform 和 height 以获取真实高度
+    pagesEl.style.transform = ''
+    pagesEl.style.height = ''
+    basePagesHeight = pagesEl.offsetHeight
+  }
+
+  // transform: 纯 GPU 操作，不触发 layout/paint
+  pagesEl.style.transform = `scale(${r})`
+  pagesEl.style.transformOrigin = 'top center'
+
+  // 高度补偿：transform 不影响布局，手动设置高度让滚动区域正确
+  if (basePagesHeight > 0) {
+    pagesEl.style.height = `${basePagesHeight * r}px`
   }
 }
 
@@ -461,6 +490,7 @@ async function loadPDF() {
     const doc = await pdfjsLib.getDocument({ data: props.rawFile }).promise
     pdfDoc = doc
     totalPages.value = doc.numPages
+    basePagesHeight = 0  // 重置高度缓存，下次 resizeCanvases 时重新测量
     loading.value = false
   } catch (err: any) {
     error.value = '加载失败：' + err.message
@@ -493,7 +523,8 @@ function scrollToPage(pageNum: number) {
 }
 
 defineExpose({
-  scrollToPage
+  scrollToPage,
+  resizeCanvases
 })
 </script>
 
@@ -541,6 +572,7 @@ defineExpose({
   align-items: center;
   gap: 24px;
   padding: 40px 20px;
+  will-change: transform;
 }
 
 .pdf-page-wrapper {

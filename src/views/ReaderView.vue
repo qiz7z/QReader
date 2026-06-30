@@ -142,7 +142,7 @@
       
       <div class="pdf-zoom-controls">
         <button class="zoom-btn" @click="adjustZoom(-0.25)">−</button>
-        <input type="range" class="zoom-slider" min="0.5" max="2.7" step="0.05" v-model.number="pdfScale" />
+        <input type="range" class="zoom-slider" min="0.5" max="2.7" step="0.05" :value="pdfScale" @input="onZoomInput" />
         <button class="zoom-btn" @click="adjustZoom(0.25)">+</button>
         <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
       </div>
@@ -161,7 +161,7 @@
           :ref="el => setSentenceRef(el as HTMLElement | null, idx)"
           :class="{ 'read-aloud-active': isReadAloudPlaying && idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }"
           v-html="paragraph"
-          @click="onParagraphClick(idx)"
+          @click="onParagraphClick(idx, $event)"
         />
         <!-- 章节末尾翻章按钮 -->
         <div v-if="book && bookFormat !== 'pdf'" class="chapter-end-nav">
@@ -186,12 +186,12 @@
         <div class="page-viewport" :style="contentStyle" @mouseup="handleTextSelection">
           <div class="page-col-left">
             <template v-for="(item, i) in currentPageData?.left || []" :key="'l'+pageNum+'-'+i">
-              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }" @click="onParagraphClick(item.idx)"/>
+              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }" @click="onParagraphClick(item.idx, $event)"/>
             </template>
           </div>
           <div class="page-col-right">
             <template v-for="(item, i) in currentPageData?.right || []" :key="'r'+pageNum+'-'+i">
-              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }" @click="onParagraphClick(item.idx)"/>
+              <p v-html="item.html" :class="{ 'read-aloud-active': isReadAloudPlaying && item.idx === currentSentenceIndex, 'clickable-during-tts': isTtsActive }" @click="onParagraphClick(item.idx, $event)"/>
             </template>
           </div>
         </div>
@@ -225,7 +225,7 @@
             </svg>
           </button>
         </div>
-        <div v-if="!isFullscreen && !uiHidden" class="page-indicator-bar">
+        <div v-if="!isFullscreen" class="page-indicator-bar" :class="{ hidden: uiHidden }">
           <div class="indicator-left">
             <span class="info-time">{{ currentTime }}</span>
             <span class="info-divider">|</span>
@@ -258,7 +258,7 @@
         <!-- 翻页模式右下角翻章按钮已移除，章节跳转统一在底部功能栏 -->
 
         <!-- 底部阅读信息（滚动模式） -->
-        <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page' && !uiHidden" class="reader-info-bar">
+        <div v-if="book && bookFormat !== 'pdf' && readerStore.readerMode !== 'page'" class="reader-info-bar" :class="{ hidden: uiHidden }">
           <div class="info-left">
             <span class="info-time">{{ currentTime }}</span>
             <span class="info-divider">|</span>
@@ -300,7 +300,7 @@
     </div>
 
     <!-- 底部控制栏 -->
-    <div class="bottom-bar" v-show="!uiHidden" @click.stop>
+    <div class="bottom-bar" :class="{ hidden: uiHidden }" @click.stop>
         <button class="bot-btn" @click="router.push('/')" title="返回首页">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -372,9 +372,18 @@
         <div v-if="rightPanel" class="bottom-panel" :class="rightPanel" @click.stop>
           <div class="bottom-panel-hd">
             <span>{{ rightPanel === 'shelf' ? '书架' : rightPanel === 'readAloud' ? '朗读' : rightPanel === 'annotations' ? '划线笔记' : rightPanel === 'bookmarks' ? '书签' : '阅读设置' }}</span>
-            <button class="close-btn" @click="rightPanel = ''">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
+            <div class="panel-hd-actions">
+              <button v-if="rightPanel === 'shelf'" class="shelf-goto-btn" @click="rightPanel=''; goToLibrary()" title="返回书架页面">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>全部</span>
+              </button>
+              <button class="close-btn" @click="rightPanel = ''">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
           </div>
           <div class="bottom-panel-bd">
             <!-- 朗读面板 -->
@@ -401,7 +410,7 @@
                     <span></span><span></span><span></span><span></span><span></span>
                   </div>
                 </div>
-                <div class="ra-hero-hint">{{ isReadAloudPlaying ? '点击暂停 · 可点正文段落跳转' : '点击播放，开始聆听' }}</div>
+                <div class="ra-hero-hint">{{ isReadAloudPlaying ? '点击当前段落停止 · 点其他段落跳转' : '点击播放，开始聆听' }}</div>
               </div>
 
               <!-- 音色选择卡：胶囊按钮网格 -->
@@ -458,11 +467,7 @@
                 <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 <p>暂无书籍</p>
               </div>
-              <button class="shelf-goto-btn" @click="goToLibrary">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                <span>返回书架</span>
-              </button>
-            </div>
+          </div>
 
             <!-- 设置 -->
             <div v-if="rightPanel === 'settings'" class="settings-panel">
@@ -676,6 +681,17 @@ const currentChapter = ref(0)
 const isFullscreen = ref(false)
 const pageModeAvailable = computed(() => bookFormat.value && bookFormat.value !== 'pdf')
 const pdfScale = ref(2.0)
+let zoomRafId = 0
+
+function onZoomInput(e: Event) {
+  const val = Math.max(0.5, Math.min(2.7, +(e.target as HTMLInputElement).value))
+  pdfScale.value = val
+  // 直接调用 PdfReader 的 resizeCanvases，绕过 Vue 异步调度
+  if (zoomRafId) cancelAnimationFrame(zoomRafId)
+  zoomRafId = requestAnimationFrame(() => {
+    pdfReaderRef.value?.resizeCanvases(val)
+  })
+}
 
 // 实时时钟
 const currentTime = ref('')
@@ -713,22 +729,22 @@ async function saveReadingTime() {
   const totalReadingTime = (currentProgress?.readingTime || 0) + timeToSave
   await StorageService.saveProgress({
     bookId: bookId.value,
-    chapterId: book.value.content?.[currentChapter.value]?.id || String(currentChapter.value),
-    position: 0,
-    percentage: book.value.content.length > 0 ? (currentChapter.value / book.value.content.length) * 100 : 0,
+    chapterId: currentProgress?.chapterId || book.value.content?.[currentChapter.value]?.id || String(currentChapter.value),
+    position: currentProgress?.position ?? 0,
+    percentage: currentProgress?.percentage ?? 0,
     updatedAt: Date.now(),
     readingTime: totalReadingTime,
   })
   lastSavedTime = sessionReadingTime.value
 }
-function stopReadingTimeTracker() {
+async function stopReadingTimeTracker() {
   if (readingTimeTimer) {
     clearInterval(readingTimeTimer)
     readingTimeTimer = undefined
   }
   // 离开时保存最终时长
   if (sessionReadingTime.value > 0 && sessionReadingTime.value > lastSavedTime && bookId.value) {
-    saveReadingTime()
+    await saveReadingTime()
   }
   sessionReadingTime.value = 0
 }
@@ -772,7 +788,8 @@ const highlighterWidth = ref(20) // 荧光笔宽度
 const currentFileId = ref('')
 
 function adjustZoom(delta: number) {
-  pdfScale.value = Math.max(0.5, Math.min(2.7, +(pdfScale.value + delta).toFixed(2)))
+  const val = Math.max(0.5, Math.min(2.7, +(pdfScale.value + delta).toFixed(2)))
+  pdfScale.value = val
 }
 const pdfReaderRef = ref<InstanceType<typeof PdfReader> | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
@@ -1036,7 +1053,7 @@ const isTtsActive = computed(() => ttsState === 'playing' || ttsState === 'pause
 const isProxyAvailable = ref<boolean | null>(null)
 const themes = [
   { l: '白天', v: 'light' as const },
-  { l: '夜间', v: 'dark' as const },
+  { l: '星空', v: 'dark' as const },
   { l: '护眼', v: 'green' as const },
   { l: '羊皮卷', v: 'parchment' as const },
 ]
@@ -1897,32 +1914,44 @@ function toggleReadAloud() {
   }
 }
 
-// 点击段落跳转朗读
-function onParagraphClick(idx: number) {
-  if (ttsState === 'idle') return  // 未在朗读时不响应
+// 点击段落：仅在朗读激活时生效（暂停/跳转/恢复），空闲时不响应
+function onParagraphClick(idx: number, e: MouseEvent) {
+  if (ttsState === 'idle') return  // 未在朗读时不响应，事件正常冒泡
 
-  // 防止误触：如果正在播放的句子就是点击的句子，不处理
-  if (currentSentenceIndex.value === idx) return
+  // 朗读激活时阻止冒泡，防止 handleMainClick 关闭面板
+  e.stopPropagation()
 
-  // 递增 generation 斩断所有在飞的预取和待执行的 error retry setTimeout
+  // 正在朗读且点击的是当前段落：停止朗读（用户不想继续了）
+  if (ttsState === 'playing' && currentSentenceIndex.value === idx) {
+    stopReadAloud()
+    return
+  }
+
+  // 暂停状态且点击的是当前段落：恢复
+  if (ttsState === 'paused' && currentSentenceIndex.value === idx) {
+    resumeReadAloud()
+    return
+  }
+
+  // 朗读中/暂停中点击不同段落：跳转到该段继续朗读
   ttsGeneration++
   ttsAbort?.abort()
   ttsAbort = null
-
-  // 停止当前播放
   releaseCurrentAudio()
   retryMap.clear()
-  // 丢弃跳转点之前的旧缓存，避免内存堆积
   trimAudioCache(idx)
 
-  // 设置新的起始位置并继续朗读
   currentSentenceIndex.value = idx
-  scrollToSentence(idx) // 翻页模式：翻到目标句所在页（滚动模式：滚动追踪）
+  scrollToSentence(idx)
   if (ttsEngine.value === 'edge') {
     ttsAbort = new AbortController()
+    ttsState = 'playing'
+    isReadAloudPlaying.value = true
     playEdgeSentence(idx)
   } else {
     stopSpeechSynthesis()
+    ttsState = 'playing'
+    isReadAloudPlaying.value = true
     playSpeechSentence(idx)
   }
 }
@@ -2271,9 +2300,13 @@ watch(() => bookFormat.value, (fmt) => {
 })
 
 let resizeObserver: ResizeObserver | null = null
+let recalcDebounceTimer: number | undefined
 onMounted(() => {
   resizeObserver = new ResizeObserver(() => {
-    if (readerStore.readerMode === 'page' && pageModeAvailable.value) recalcPages()
+    if (readerStore.readerMode === 'page' && pageModeAvailable.value) {
+      if (recalcDebounceTimer) clearTimeout(recalcDebounceTimer)
+      recalcDebounceTimer = window.setTimeout(recalcPages, 100)
+    }
   })
   const vp = document.querySelector('.page-viewport') as HTMLElement
   if (vp) resizeObserver.observe(vp)
@@ -2313,7 +2346,7 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; font-size: 15px; font-weight: 500; z-index: 20; color: #333; gap: 16px; position: relative;
 }
-.theme-dark .reader-toolbar { background: rgba(26,26,26,0.85); border-color: rgba(255,255,255,0.06); color: #e0e0e0; }
+.theme-dark .reader-toolbar { background: rgba(10,14,32,0.85); border-color: rgba(100,150,255,0.1); color: #c8daf8; }
 
 .toolbar-title {
   font-family: "Times New Roman", Times, KaiTi, STKaiti, "楷体", serif;
@@ -2496,6 +2529,10 @@ onBeforeUnmount(() => {
   page-break-inside: avoid;
 }
 .page-indicator-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -2503,7 +2540,21 @@ onBeforeUnmount(() => {
   padding: 6px 20px;
   font-size: 13px;
   color: #999;
-  background: rgba(0,0,0,0.05);
+  background: rgba(8,12,30,0.4);
+  border: 1px solid rgba(60,100,200,0.08);
+  color: #8ea4c4;
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  z-index: 5;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.2s 0.05s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.page-indicator-bar.hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.15s ease, transform 0.18s ease-in;
+  pointer-events: none;
 }
 .indicator-left {
   display: flex;
@@ -2809,6 +2860,15 @@ onBeforeUnmount(() => {
   font-family: 'Georgia', 'Times New Roman', serif;
   font-weight: 500;
   letter-spacing: 0.5px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.25s 0.05s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.reader-info-bar.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.15s ease, transform 0.18s ease-in;
+  pointer-events: none;
 }
 .info-left {
   display: flex;
@@ -2880,24 +2940,26 @@ onBeforeUnmount(() => {
 }
 
 .theme-dark .reader-info-bar {
-  background: transparent;
-  border: none;
-  color: #999;
+  background: rgba(8,12,30,0.4);
+  border: 1px solid rgba(60,100,200,0.08);
+  backdrop-filter: blur(12px) saturate(1.3);
+  color: #8ea4c4;
 }
 .theme-dark .info-right .chapter-input {
-  background: transparent;
-  border-color: rgba(255,255,255,0.2);
-  color: #ddd;
+  background: rgba(8,12,30,0.4);
+  border-color: rgba(60,100,200,0.15);
+  color: #c8daf8;
 }
 .theme-dark .info-right .chapter-indicator {
-  color: #999;
+  color: #8ea4c4; background: rgba(10,15,40,0.8); border-color: rgba(60,100,200,0.1);
 }
 .theme-dark .info-right .chapter-indicator:hover {
-  color: #1890ff;
+  color: #93c5fd; background: rgba(10,15,40,0.9); border-color: rgba(80,120,220,0.2);
 }
 .theme-dark .reader-chapter-bar {
-  background: rgba(40,40,40,0.8);
-  border-color: rgba(255,255,255,0.08);
+  background: rgba(8,12,30,0.8);
+  border-color: rgba(60,100,200,0.08);
+  color: #8ea4c4;
 }
 .theme-green .reader-info-bar {
   background: transparent;
@@ -3080,24 +3142,38 @@ onBeforeUnmount(() => {
 /* ===== 底部控制栏 ===== */
 .bottom-bar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(0,0,0,0.06);
+  bottom: 12px;
+  left: 50%;
+  right: auto;
+  width: min(94vw, 680px);
+  min-height: 66px;
+  background: rgba(255, 252, 246, 0.82);
+  backdrop-filter: blur(24px) saturate(1.12);
+  -webkit-backdrop-filter: blur(24px) saturate(1.12);
+  border: 1px solid var(--qr-border);
+  border-radius: 999px;
+  box-shadow: var(--qr-shadow-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   z-index: 200;
-  padding: 0 16px;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  padding: 9px 14px;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity 0.25s ease, transform 0.3s var(--qr-ease);
+  pointer-events: auto;
 }
+.bottom-bar.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(calc(100% + 24px));
+  transition: opacity 0.15s ease, transform 0.2s ease-in;
+  pointer-events: none;
+}
+/* 底部栏滑入滑出 */
 .bot-btn {
-  width: 52px;
+  width: 54px;
+  min-width: 54px;
   height: 48px;
   border: none;
   background: transparent;
@@ -3106,35 +3182,37 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  border-radius: 10px;
+  gap: 3px;
+  border-radius: 999px;
   flex-shrink: 0;
-  color: #888;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--qr-text-secondary);
+  transition: background var(--qr-transition-fast), color var(--qr-transition-fast), transform var(--qr-transition-fast);
   position: relative;
 }
 .bot-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
 .bot-label {
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 650;
   line-height: 1;
-  letter-spacing: 0.3px;
-  opacity: 0.7;
-  font-family: "Inter", "Kaiti SC", "STKaiti", "KaiTi", sans-serif;
+  letter-spacing: 0.2px;
+  opacity: 0.76;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-shadow: none;
 }
-.bot-btn:hover { background: rgba(0,0,0,0.05); color: #333; transform: translateY(-1px); }
+.bot-btn:hover .bot-label { opacity: 1; }
+.bot-btn:hover { background: rgba(59,130,246,0.08); color: var(--qr-text-primary); transform: translateY(-1px); }
 .bot-btn:active { transform: translateY(0) scale(0.96); }
-.bot-btn.active { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.bot-btn.active { background: var(--qr-primary-soft); color: var(--qr-primary); }
 .bot-btn.active::before {
   content: '';
   position: absolute;
-  top: 0;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
+  width: 18px;
   height: 3px;
-  border-radius: 0 0 3px 3px;
-  background: #3b82f6;
+  border-radius: 999px;
+  background: var(--qr-primary);
 }
 /* 朗读播放中：图标变蓝 + 呼吸指示灯 */
 .bot-btn.tts-playing { color: #3b82f6; }
@@ -3335,44 +3413,44 @@ onBeforeUnmount(() => {
 /* ===== 底部弹出面板 ===== */
 .bottom-panel {
   position: fixed;
-  bottom: 64px;
+  bottom: 92px;
   left: 50%;
   transform: translateX(-50%);
-  width: 90vw;
-  max-width: 360px;
-  max-height: 40vh;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 16px 16px 0 0;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+  width: min(92vw, 390px);
+  max-height: min(48vh, 460px);
+  background: rgba(255, 252, 246, 0.88);
+  backdrop-filter: blur(24px) saturate(1.1);
+  -webkit-backdrop-filter: blur(24px) saturate(1.1);
+  border-radius: var(--qr-radius-xl);
+  border: 1px solid var(--qr-border);
+  box-shadow: var(--qr-shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 110;
 }
 .bottom-panel-hd {
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--qr-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 700;
+  color: var(--qr-text-primary);
   flex-shrink: 0;
 }
 .close-btn {
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
   border: none;
-  background: rgba(0,0,0,0.04);
-  border-radius: 8px;
+  background: rgba(31,41,55,0.05);
+  border-radius: 999px;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--qr-text-secondary);
   display: flex; align-items: center; justify-content: center;
   transition: all 0.2s;
 }
-.close-btn:hover { background: rgba(0,0,0,0.08); color: #475569; }
+.close-btn:hover { background: rgba(31,41,55,0.09); color: var(--qr-text-primary); }
 .close-btn:active { transform: scale(0.92); }
 .bottom-panel-bd { flex: 1; overflow-y: auto; padding: 12px; min-height: 0; }
 
@@ -3382,21 +3460,21 @@ onBeforeUnmount(() => {
 
 /* ===== 紧凑面板卡片 ===== */
 .panel-card {
-  background: rgba(255,255,255,0.7);
-  border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 10px;
-  padding: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--qr-border);
+  border-radius: var(--qr-radius-md);
+  padding: 13px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .panel-card + .panel-card { margin-top: 10px; }
 .card-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--qr-text-secondary);
+  text-transform: none;
+  letter-spacing: 0.3px;
   margin-bottom: -2px;
 }
 .panel-card.card-danger { border-color: rgba(239,68,68,0.15); }
@@ -3407,15 +3485,19 @@ onBeforeUnmount(() => {
 /* ===== 朗读面板 - 精致渐变现代风 ===== */
 /* 播放主控卡 */
 .ra-hero-card {
-  padding: 14px 14px 12px;
-  background: linear-gradient(135deg, #f0f6ff 0%, #eef2ff 60%, #f5f3ff 100%);
-  border-color: rgba(59,130,246,0.15);
+  padding: 16px 14px 14px;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(59,130,246,0.12), transparent 42%),
+    rgba(255,255,255,0.62);
+  border-color: rgba(59,130,246,0.16);
   position: relative; overflow: hidden;
-  transition: background 0.4s ease;
+  transition: background 0.4s ease, border-color var(--qr-transition-fast);
 }
 .ra-hero-card.is-playing {
-  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 55%, #ede9fe 100%);
-  border-color: rgba(59,130,246,0.3);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(59,130,246,0.2), transparent 44%),
+    linear-gradient(135deg, rgba(219,234,254,0.76) 0%, rgba(255,255,255,0.68) 100%);
+  border-color: rgba(59,130,246,0.32);
 }
 .ra-hero-card.is-error {
   background: linear-gradient(135deg, #fef2f2 0%, #fef3f2 100%);
@@ -3536,7 +3618,7 @@ onBeforeUnmount(() => {
 .ra-voice-style { font-size: 10px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 语速行 */
-.ra-rate-row { margin-top: 6px; padding: 0 2px; }
+.ra-rate-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; padding: 0 2px; }
 .ra-rate-row input[type="range"] { flex: 1; height: 4px; -webkit-appearance: none; background: #e2e8f0; border-radius: 2px; outline: none; }
 .ra-rate-row input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
@@ -3544,9 +3626,36 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 6px rgba(59,130,246,0.4); cursor: pointer; transition: transform 0.15s;
 }
 .ra-rate-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.ra-rate-row .setting-value { min-width: 36px; text-align: center; font-size: 13px; font-weight: 600; color: #3b82f6; font-variant-numeric: tabular-nums; }
 
 /* ===== 书架面板 ===== */
 .shelf-panel { min-height: 120px; }
+/* 头部 "返回书架" 按钮 */
+.shelf-goto-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.6);
+  color: #64748b;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.shelf-goto-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59,130,246,0.06);
+}
+.panel-hd-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .shelf-grid { display: flex; flex-direction: column; gap: 6px; }
 .shelf-card {
   display: flex; flex-direction: row; align-items: center; gap: 12px;
@@ -3579,17 +3688,6 @@ onBeforeUnmount(() => {
 .shelf-meta { display: flex; gap: 8px; align-items: center; }
 .shelf-pct { font-size: 11px; font-weight: 600; color: #3b82f6; }
 .shelf-time { font-size: 10px; color: #94a3b8; }
-.shelf-goto-btn {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; padding: 10px 0; margin-top: 10px;
-  border: 1.5px dashed #cbd5e1; border-radius: 10px;
-  background: transparent; cursor: pointer;
-  font-size: 13px; font-weight: 500; color: #64748b;
-  transition: all 0.2s; font-family: inherit;
-}
-.shelf-goto-btn:hover { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.04); }
-.theme-dark .shelf-goto-btn { border-color: rgba(255,255,255,0.12); color: #94a3b8; }
-.theme-dark .shelf-goto-btn:hover { border-color: #60a5fa; color: #60a5fa; background: rgba(96,165,250,0.06); }
 
 /* ===== 设置面板 - 紧凑网格 ===== */
 .settings-panel { display: flex; flex-direction: column; gap: 0; }
@@ -3901,52 +3999,166 @@ onBeforeUnmount(() => {
 .theme-dark .annotation-filter-select { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
 .theme-dark .annotation-filter-select:hover { border-color: #60a5fa; }
 .theme-dark .group-value { color: #60a5fa; background: rgba(96,165,250,0.12); }
-.theme-dark .bookmark-item { background: #2a2a2a; border-color: #444; }
-.theme-dark .bookmark-item:hover { background: rgba(24,144,255,0.08); border-color: rgba(24,144,255,0.25); }
-.theme-dark .bookmark-title { color: #ccc; }
-.theme-dark .bm-add-btn { border-color: #555; color: #999; }
-.theme-dark .bm-add-btn:hover { border-color: #1890ff; color: #1890ff; background: rgba(24,144,255,0.1); }
-.theme-dark .bottom-panel, .theme-dark .full-toc { background: rgba(30,30,30,0.95); border-color: rgba(255,255,255,0.08); backdrop-filter: blur(16px); }
-.theme-dark .bottom-panel-hd { border-color: rgba(255,255,255,0.06); color: #e2e8f0; }
-.theme-dark .bottom-bar { background: rgba(30,30,30,0.9); border-color: rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
-.theme-dark .close-btn { background: rgba(255,255,255,0.08); color: #94a3b8; }
-.theme-dark .close-btn:hover { background: rgba(255,255,255,0.15); color: #e2e8f0; }
-.theme-dark .panel-card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
+.theme-dark .bookmark-item { background: rgba(10,15,40,0.7); border-color: rgba(60,100,200,0.1); }
+.theme-dark .bookmark-item:hover { background: rgba(60,100,200,0.08); border-color: rgba(80,120,220,0.2); }
+.theme-dark .bookmark-title { color: #c8daf8; }
+.theme-dark .bm-add-btn { border-color: rgba(60,100,200,0.15); color: #8ea4c4; }
+.theme-dark .bm-add-btn:hover { border-color: #7ca3f5; color: #7ca3f5; background: rgba(124,163,245,0.1); }
+.theme-dark .bottom-panel, .theme-dark .full-toc { background: rgba(8,12,28,0.4); border-color: rgba(60,100,200,0.08); backdrop-filter: blur(28px) saturate(1.4); }
+.theme-dark .bottom-panel-hd { border-color: rgba(60,100,200,0.06); color: #c8daf8; }
+.theme-dark .bottom-bar { background: rgba(8,12,28,0.25); border-color: rgba(60,100,200,0.06); backdrop-filter: blur(28px) saturate(1.5); box-shadow: 0 -1px 0 rgba(80,120,200,0.06), 0 -8px 40px rgba(0,0,0,0.5); }
+.theme-dark .close-btn { background: rgba(60,100,200,0.06); color: #8ea4c4; }
+.theme-dark .close-btn:hover { background: rgba(60,100,200,0.12); color: #c8daf8; }
+.theme-dark .panel-card { background: rgba(60,100,200,0.04); border-color: rgba(60,100,200,0.08); }
 /* 朗读面板 - 暗色适配 */
-.theme-dark .ra-hero-card {
-  background: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(99,102,241,0.14) 60%, rgba(139,92,246,0.14) 100%);
-  border-color: rgba(96,165,250,0.25);
+.theme-dark .settings-panel {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--qr-text-primary);
 }
-.theme-dark .ra-hero-card.is-playing { background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(99,102,241,0.24)); border-color: rgba(96,165,250,0.5); }
-.theme-dark .ra-hero-card::before { background: radial-gradient(circle, rgba(96,165,250,0.3), transparent 70%); }
-.theme-dark .ra-status-pill { background: rgba(255,255,255,0.08); color: #94a3b8; border-color: rgba(255,255,255,0.1); }
-.theme-dark .is-playing .ra-status-pill { color: #60a5fa; }
-.theme-dark .ra-hero-hint { color: #64748b; }
-.theme-dark .ra-voice-chip { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.08); }
-.theme-dark .ra-voice-chip:hover { background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3); }
-.theme-dark .ra-voice-chip.active { background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(99,102,241,0.1)); border-color: rgba(96,165,250,0.5); }
-.theme-dark .ra-voice-name { color: #e2e8f0; }
+.theme-dark .setting-group {
+  border-color: rgba(255, 255, 255, 0.04);
+}
+.theme-dark .group-label {
+  color: #94a3b8;
+}
+.theme-dark .mode-switch {
+  background: rgba(255, 255, 255, 0.06);
+}
+.theme-dark .mode-btn {
+  color: #94a3b8;
+}
+.theme-dark .mode-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #60a5fa;
+}
+.theme-dark .size-control button {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+}
+.theme-dark .size-control button:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.08);
+}
+.theme-dark .size-dots .dot {
+  background: rgba(255, 255, 255, 0.12);
+}
+.theme-dark .size-dots .dot.active {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  box-shadow: 0 2px 6px rgba(96, 165, 250, 0.4);
+}
+.theme-dark .font-btn {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+}
+.theme-dark .font-btn:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+.theme-dark .font-btn.active {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  color: #60a5fa;
+}
+.theme-dark .danger-btn {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+}
+.theme-dark .danger-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* 朗读面板 - 星空适配 */
+.theme-dark .ra-hero-card {
+  background:
+    radial-gradient(circle at 82% 0%, rgba(100, 160, 255, 0.16), transparent 45%),
+    radial-gradient(circle at 20% 90%, rgba(80, 100, 200, 0.08), transparent 30%),
+    rgba(8, 12, 28, 0.78);
+  border-color: rgba(80, 130, 230, 0.18);
+}
+.theme-dark .ra-hero-card.is-playing {
+  background:
+    radial-gradient(circle at 82% 0%, rgba(100, 160, 255, 0.24), transparent 45%),
+    radial-gradient(circle at 20% 90%, rgba(80, 100, 200, 0.12), transparent 35%),
+    rgba(8, 12, 28, 0.85);
+  border-color: rgba(80, 130, 230, 0.3);
+}
+.theme-dark .ra-hero-card.is-error {
+  background: rgba(8, 12, 28, 0.78);
+  border-color: rgba(239, 68, 68, 0.18);
+}
+.theme-dark .ra-status-pill {
+  background: rgba(60, 100, 200, 0.08);
+  border-color: rgba(60, 100, 200, 0.06);
+  color: #8ea4c4;
+}
+.theme-dark .is-playing .ra-status-pill {
+  color: #7ca3f5;
+  border-color: rgba(100, 160, 255, 0.18);
+}
+.theme-dark .ra-hero-hint {
+  color: #5e7294;
+}
+.theme-dark .ra-voice-chip {
+  border-color: rgba(60, 100, 200, 0.12);
+  background: rgba(60, 100, 200, 0.04);
+}
+.theme-dark .ra-voice-chip:hover {
+  border-color: rgba(100, 160, 255, 0.3);
+  background: rgba(100, 160, 255, 0.06);
+}
+.theme-dark .ra-voice-chip.active {
+  border-color: #7ca3f5;
+  background: rgba(100, 160, 255, 0.08);
+}
+.theme-dark .ra-voice-name { color: #c8daf8; }
+.theme-dark .ra-voice-style { color: #5e7294; }
+.theme-dark .is-playing .ra-voice-name { color: #7ca3f5; }
+.theme-dark .ra-rate-row input[type="range"] {
+  background: rgba(60, 100, 200, 0.1);
+}
+.theme-dark .ra-rate-row input[type="range"]::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #7ca3f5 0%, #4a80e0 100%);
+}
+.theme-dark .ra-rate-row .setting-value { color: #7ca3f5; }
+.theme-dark .ra-hero-card {
+  background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(74,128,224,0.1) 60%, rgba(60,100,200,0.1) 100%);
+  border-color: rgba(80,130,230,0.2);
+}
+.theme-dark .ra-hero-card.is-playing { background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(74,128,224,0.18)); border-color: rgba(80,130,230,0.35); }
+.theme-dark .ra-hero-card::before { background: radial-gradient(circle, rgba(80,130,230,0.25), transparent 70%); }
+.theme-dark .ra-status-pill { background: rgba(60,100,200,0.08); color: #8ea4c4; border-color: rgba(60,100,200,0.06); }
+.theme-dark .is-playing .ra-status-pill { color: #7ca3f5; }
+.theme-dark .ra-hero-hint { color: #5e7294; }
+.theme-dark .ra-voice-chip { background: rgba(60,100,200,0.05); border-color: rgba(60,100,200,0.1); }
+.theme-dark .ra-voice-chip:hover { background: rgba(80,130,230,0.08); border-color: rgba(80,130,230,0.25); }
+.theme-dark .ra-voice-chip.active { background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(74,128,224,0.08)); border-color: rgba(80,130,230,0.3); }
+.theme-dark .ra-voice-name { color: #c8daf8; }
 .theme-dark .ra-voice-chip.active .ra-voice-name { color: #93c5fd; }
-.theme-dark .ra-voice-style { color: #64748b; }
-.theme-dark .ra-rate-row input[type="range"] { background: rgba(255,255,255,0.12); }
-.theme-dark .ra-hero-card.is-error { background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.06)); border-color: rgba(239,68,68,0.25); }
+.theme-dark .ra-voice-style { color: #5e7294; }
+.theme-dark .ra-rate-row input[type="range"] { background: rgba(60,100,200,0.12); }
+.theme-dark .ra-rate-row .setting-value { color: #93c5fd; }
 .theme-dark .is-playing .ra-play-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 6px 20px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 0 0 rgba(96,165,250,0.4);
+  background: linear-gradient(135deg, #4a80e0 0%, #3b6cc8 100%);
+  box-shadow: 0 6px 20px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 0 rgba(100,160,255,0.3);
 }
 .theme-dark .is-error .ra-play-btn {
   background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
-  box-shadow: 0 6px 18px rgba(239,68,68,0.5);
+  box-shadow: 0 6px 18px rgba(239,68,68,0.4);
 }
-.theme-dark .shelf-card { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.08); }
-.theme-dark .shelf-card:hover { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
-.theme-dark .shelf-name { color: #e2e8f0; }
-.theme-dark .weight-btn { background: #3a3a3a; border-color: #555; color: #ccc; }
-.theme-dark .weight-btn.active { background: #1890ff; color: #fff; border-color: #1890ff; }
+.theme-dark .shelf-card { background: rgba(60,100,200,0.06); border-color: rgba(60,100,200,0.08); }
+.theme-dark .shelf-card:hover { background: rgba(80,130,230,0.1); border-color: rgba(80,130,230,0.25); }
+.theme-dark .shelf-name { color: #c8daf8; }
+.theme-dark .weight-btn { background: rgba(20,28,50,0.7); border-color: rgba(60,100,200,0.1); color: #8ea4c4; }
+.theme-dark .weight-btn.active { background: #3b6cc8; color: #fff; border-color: #4a80e0; }
 .theme-dark .theme-grid .theme-btn:first-child { background: #555; color: #ccc; border-color: #666; }
-.theme-dark .theme-grid .theme-btn:first-child.active { border-color: #1890ff; }
-.theme-dark .theme-grid .theme-btn:nth-child(2) { background: #1a1a1a; color: #ddd; }
-.theme-dark .theme-grid .theme-btn:nth-child(2).active { border-color: #1890ff; }
+.theme-dark .theme-grid .theme-btn:first-child.active { border-color: #3b6cc8; }
+.theme-dark .theme-grid .theme-btn:nth-child(2) { background: linear-gradient(180deg, #0a0f20 0%, #050810 100%); color: #8ea4c4; }
+.theme-dark .theme-grid .theme-btn:nth-child(2).active { border-color: #3b6cc8; }
 .theme-dark .theme-grid .theme-btn:nth-child(3) { background: #3a4a3a; color: #b8d8b0; }
 .theme-dark .theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; }
 .theme-dark .size-control button {
@@ -3979,7 +4191,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 4px rgba(64,169,255,0.2);
 }
 .theme-dark .chapter-nav-btn {
-  background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); color: #999;
+  background: rgba(10,15,40,0.7); border-color: rgba(80,120,220,0.12); color: #8ea4c4;
 }
 .theme-dark .chapter-nav-btn:hover:not(:disabled) {
   border-color: #40a9ff; color: #40a9ff; background: rgba(64,169,255,0.15);
@@ -4040,8 +4252,8 @@ onBeforeUnmount(() => {
 .theme-green .bookmark-title { color: #3a5a3a; }
 .theme-green .bm-add-btn { border-color: #c8dba0; color: #7aa86a; }
 .theme-green .bm-add-btn:hover { border-color: #5a9e42; color: #5a9e42; background: rgba(90,158,66,0.06); }
-.theme-green .bottom-bar { background: rgba(232,240,227,0.92); border-color: #d4e8c8; backdrop-filter: blur(12px); }
-.theme-green .bottom-panel, .theme-green .full-toc { background: rgba(232,240,227,0.92); border-color: #d4e8c8; backdrop-filter: blur(16px); }
+.theme-green .bottom-bar { background: rgba(232,240,227,0.12); border-color: rgba(180,210,160,0.5); backdrop-filter: blur(28px) saturate(1.8); box-shadow: 0 -1px 0 rgba(0,0,0,0.06), 0 -8px 40px rgba(0,0,0,0.08); }
+.theme-green .bottom-panel, .theme-green .full-toc { background: rgba(232,240,227,0.45); border-color: #d4e8c8; backdrop-filter: blur(16px); }
 .theme-green .shelf-card { background: #f0f7eb; border-color: #d4e8c8; }
 .theme-green .weight-btn { background: #f0f7eb; border-color: #c8dba0; }
 .theme-green .weight-btn.active { background: #5a9e42; color: #fff; border-color: #5a9e42; }
@@ -4158,8 +4370,8 @@ onBeforeUnmount(() => {
 .theme-parchment .bookmark-title { color: #3d2a00; }
 .theme-parchment .bm-add-btn { border-color: #c9b894; color: #7a6a4a; }
 .theme-parchment .bm-add-btn:hover { border-color: #8b6914; color: #8b6914; background: rgba(139,105,20,0.06); }
-.theme-parchment .bottom-bar { background: rgba(245,230,200,0.92); border-color: #d4c5a9; backdrop-filter: blur(12px); }
-.theme-parchment .bottom-panel, .theme-parchment .full-toc { background: rgba(245,230,200,0.92); border-color: #d4c5a9; backdrop-filter: blur(16px); }
+.theme-parchment .bottom-bar { background: rgba(245,230,200,0.12); border-color: rgba(200,180,150,0.5); backdrop-filter: blur(28px) saturate(1.8); box-shadow: 0 -1px 0 rgba(0,0,0,0.06), 0 -8px 40px rgba(0,0,0,0.08); }
+.theme-parchment .bottom-panel, .theme-parchment .full-toc { background: rgba(245,230,200,0.45); border-color: #d4c5a9; backdrop-filter: blur(16px); }
 .theme-parchment .bottom-panel-hd { border-color: #d4c5a9; }
 .theme-parchment .shelf-card { background: #f0e6d0; border-color: #d4c5a9; }
 .theme-parchment .shelf-name { color: #3d2a00; }
