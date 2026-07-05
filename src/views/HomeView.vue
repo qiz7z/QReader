@@ -304,7 +304,7 @@ function particleStyle(_index: number) {
 .brand-title {
   font-size: 56px;
   font-weight: 700;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
   letter-spacing: 8px;
   line-height: 1;
   position: relative;
@@ -403,7 +403,7 @@ function particleStyle(_index: number) {
   font-weight: 400;
   color: var(--color-text-secondary);
   letter-spacing: 3px;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
 }
 
 .subtitle-cn {
@@ -500,7 +500,7 @@ function particleStyle(_index: number) {
   font-weight: 600;
   color: var(--color-text-primary);
   letter-spacing: 1px;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
 }
 
 .feature-desc {
@@ -535,7 +535,7 @@ function particleStyle(_index: number) {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-button);
   letter-spacing: 4px;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
 }
 
 .cta-button:hover {
@@ -604,7 +604,7 @@ function particleStyle(_index: number) {
   margin: 0;
   font-size: 14px;
   color: var(--color-text-tertiary);
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
 }
 
 .hint-icon {
@@ -680,7 +680,7 @@ function particleStyle(_index: number) {
   margin: 0;
   font-size: 13px;
   color: var(--color-text-tertiary);
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
 }
 
 .footer-bullet {

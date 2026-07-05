@@ -48,59 +48,230 @@
   background: var(--qr-bg);
 }
 
-/* Starry Sky theme — deep space blue-violet with star fields */
+/* Starry Sky theme — deep space blue-violet with animated star fields */
 .theme-dark {
-  --qr-bg: #050810;
-  --qr-bg-soft: #0a0f1e;
-  --qr-surface: rgba(12, 18, 40, 0.88);
-  --qr-surface-solid: #0b1028;
-  --qr-surface-muted: rgba(18, 28, 56, 0.55);
-  --qr-border: rgba(80, 120, 220, 0.12);
-  --qr-border-strong: rgba(100, 150, 255, 0.25);
-  --qr-text-primary: #c8daf8;
-  --qr-text-secondary: #7e9ac0;
-  --qr-text-muted: #4a6088;
-  --qr-primary: #7ca3f5;
-  --qr-primary-hover: #93c5fd;
-  --qr-primary-soft: rgba(124, 163, 245, 0.12);
-  --qr-accent: #bfa85a;
-  --qr-danger: #f87171;
-  --qr-shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.5);
-  --qr-shadow-md: 0 16px 40px rgba(0, 0, 0, 0.55);
-  --qr-shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.65);
-  --qr-focus: 0 0 0 3px rgba(124, 163, 245, 0.3);
+  --qr-bg: #03060c;
+  --qr-bg-soft: #080c1a;
+  --qr-surface: rgba(10, 15, 35, 0.9);
+  --qr-surface-solid: #080c1a;
+  --qr-surface-muted: rgba(15, 22, 50, 0.6);
+  --qr-border: rgba(70, 110, 210, 0.15);
+  --qr-border-strong: rgba(90, 130, 255, 0.28);
+  --qr-text-primary: #d0def8;
+  --qr-text-secondary: #7a92be;
+  --qr-text-muted: #445878;
+  --qr-primary: #6c95f0;
+  --qr-primary-hover: #8fb5ff;
+  --qr-primary-soft: rgba(108, 149, 240, 0.12);
+  --qr-accent: #c4a84a;
+  --qr-danger: #e85555;
+  --qr-shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.55);
+  --qr-shadow-md: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --qr-shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.7);
+  --qr-focus: 0 0 0 3px rgba(108, 149, 240, 0.35);
   --qr-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --qr-transition-fast: 160ms var(--qr-ease);
   --qr-transition: 240ms var(--qr-ease);
 }
 
-* {
+.theme-dark body {
+  background:
+    /* Milky Way band */
+    radial-gradient(ellipse 120% 60% at 30% 20%, rgba(40,60,130,0.5) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 70% 65%, rgba(50,70,150,0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 40%, rgba(30,50,110,0.3) 0%, transparent 55%),
+    /* Base gradient */
+    linear-gradient(180deg, #010308 0%, #050a18 40%, #0a1030 100%);
+  position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* --- Star field layers: 3 passes for depth --- */
+.theme-dark body::before,
+.theme-dark body::after,
+.theme-dark html::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Layer 1: bright foreground stars (16) */
+.theme-dark html::before {
+  z-index: 1;
+  background:
+    radial-gradient(circle 1.8px at 5% 8%,  rgba(220,232,255,1) 0%, transparent 100%),
+    radial-gradient(circle 1.4px at 12% 25%, rgba(180,200,240,0.9) 0%, transparent 100%),
+    radial-gradient(circle 2px at 22% 55%, rgba(200,218,255,0.95) 0%, transparent 100%),
+    radial-gradient(circle 1.2px at 30% 15%, rgba(160,184,220,0.8) 0%, transparent 100%),
+    radial-gradient(circle 1.6px at 38% 78%, rgba(210,224,255,0.85) 0%, transparent 100%),
+    radial-gradient(circle 1.3px at 45% 32%, rgba(175,198,238,0.75) 0%, transparent 100%),
+    radial-gradient(circle 2.2px at 55% 68%, rgba(220,230,255,0.95) 0%, transparent 100%),
+    radial-gradient(circle 1.1px at 62% 10%, rgba(155,180,220,0.7) 0%, transparent 100%),
+    radial-gradient(circle 1.7px at 70% 45%, rgba(200,218,255,0.9) 0%, transparent 100%),
+    radial-gradient(circle 1.4px at 78% 85%, rgba(180,200,240,0.8) 0%, transparent 100%),
+    radial-gradient(circle 1.9px at 85% 22%, rgba(210,225,255,0.92) 0%, transparent 100%),
+    radial-gradient(circle 1px at 92% 58%, rgba(165,190,230,0.7) 0%, transparent 100%),
+    radial-gradient(circle 1.5px at 18% 88%, rgba(195,215,255,0.85) 0%, transparent 100%),
+    radial-gradient(circle 1.2px at 50% 42%, rgba(175,198,238,0.75) 0%, transparent 100%),
+    radial-gradient(circle 1.8px at 8% 72%, rgba(205,220,255,0.88) 0%, transparent 100%),
+    radial-gradient(circle 1.3px at 65% 28%, rgba(185,205,242,0.8) 0%, transparent 100%);
+  animation: twinkle-bright 3.5s ease-in-out infinite alternate;
+}
+
+/* Layer 2: medium stars (20) */
+.theme-dark body::before {
+  z-index: 1;
+  background:
+    radial-gradient(circle 0.9px at 3% 18%, rgba(200,215,255,0.6) 0%, transparent 100%),
+    radial-gradient(circle 0.7px at 10% 42%, rgba(180,200,240,0.5) 0%, transparent 100%),
+    radial-gradient(circle 1px at 16% 8%,  rgba(210,222,255,0.65) 0%, transparent 100%),
+    radial-gradient(circle 0.8px at 25% 65%, rgba(190,208,248,0.55) 0%, transparent 100%),
+    radial-gradient(circle 0.9px at 33% 38%, rgba(200,215,255,0.6) 0%, transparent 100%),
+    radial-gradient(circle 0.7px at 40% 82%, rgba(175,195,235,0.5) 0%, transparent 100%),
+    radial-gradient(circle 1.1px at 48% 15%, rgba(215,225,255,0.65) 0%, transparent 100%),
+    radial-gradient(circle 0.8px at 56% 52%, rgba(185,202,242,0.55) 0%, transparent 100%),
+    radial-gradient(circle 1px at 63% 92%, rgba(205,218,255,0.6) 0%, transparent 100%),
+    radial-gradient(circle 0.7px at 72% 25%, rgba(180,198,238,0.5) 0%, transparent 100%),
+    radial-gradient(circle 0.9px at 80% 62%, rgba(195,210,250,0.6) 0%, transparent 100%),
+    radial-gradient(circle 0.8px at 88% 38%, rgba(185,205,245,0.55) 0%, transparent 100%),
+    radial-gradient(circle 1.1px at 96% 82%, rgba(210,220,255,0.65) 0%, transparent 100%),
+    radial-gradient(circle 0.7px at 6% 95%, rgba(170,192,232,0.45) 0%, transparent 100%),
+    radial-gradient(circle 0.9px at 20% 48%, rgba(195,212,252,0.58) 0%, transparent 100%),
+    radial-gradient(circle 0.8px at 42% 55%, rgba(185,200,240,0.52) 0%, transparent 100%),
+    radial-gradient(circle 1px at 58% 75%, rgba(200,218,255,0.62) 0%, transparent 100%),
+    radial-gradient(circle 0.7px at 75% 12%, rgba(175,195,235,0.48) 0%, transparent 100%),
+    radial-gradient(circle 0.9px at 90% 5%,  rgba(190,208,248,0.55) 0%, transparent 100%),
+    radial-gradient(circle 0.8px at 35% 95%, rgba(180,198,240,0.5) 0%, transparent 100%);
+  animation: twinkle-medium 2.5s ease-in-out infinite alternate;
+}
+
+/* Layer 3: distant faint star dust (24) */
+.theme-dark body::after {
+  z-index: 1;
+  background:
+    radial-gradient(circle 0.4px at 2% 30%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 8% 52%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(circle 0.5px at 14% 12%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 20% 72%, rgba(255,255,255,0.28) 0%, transparent 100%),
+    radial-gradient(circle 0.4px at 26% 42%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 32% 88%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(circle 0.5px at 38% 22%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 44% 62%, rgba(255,255,255,0.28) 0%, transparent 100%),
+    radial-gradient(circle 0.4px at 50% 5%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 56% 82%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(circle 0.5px at 62% 38%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 68% 72%, rgba(255,255,255,0.28) 0%, transparent 100%),
+    radial-gradient(circle 0.4px at 74% 18%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 82% 52%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(circle 0.5px at 88% 92%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 94% 28%, rgba(255,255,255,0.28) 0%, transparent 100%),
+    radial-gradient(circle 0.4px at 4% 82%, rgba(255,255,255,0.32) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 18% 28%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(circle 0.5px at 30% 58%, rgba(255,255,255,0.38) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 46% 92%, rgba(255,255,255,0.22) 0%, transparent 100%),
+    radial-gradient(circle 0.4px at 60% 12%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 76% 48%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(circle 0.5px at 92% 68%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(circle 0.3px at 52% 35%, rgba(255,255,255,0.28) 0%, transparent 100%);
+  animation: twinkle-dim 2s ease-in-out infinite alternate;
+}
+
+/* Bright stars: noticeable pulse */
+@keyframes twinkle-bright {
+  0%   { opacity: 0.6; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+/* Medium stars: quick shimmer */
+@keyframes twinkle-medium {
+  0%   { opacity: 0.5; }
+  33%  { opacity: 0.85; }
+  66%  { opacity: 0.45; }
+  100% { opacity: 0.95; }
+}
+
+/* Dim stars: constant haze flicker */
+@keyframes twinkle-dim {
+  0%   { opacity: 0.55; }
+  50%  { opacity: 0.8; }
+  100% { opacity: 0.5; }
+}
+
+/* --- Milky Way luminous band --- */
+.theme-dark #app::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+  background:
+    /* Main diagonal band */
+    radial-gradient(ellipse 100% 35% at 25% 35%, rgba(50,80,180,0.7) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 30% at 72% 65%, rgba(60,90,200,0.5) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 25% at 50% 50%, rgba(40,70,160,0.4) 0%, transparent 60%),
+    /* Secondary glow patches */
+    radial-gradient(circle 200px at 35% 25%, rgba(70,100,210,0.25) 0%, transparent 100%),
+    radial-gradient(circle 180px at 65% 75%, rgba(80,110,220,0.2) 0%, transparent 100%);
+}
+
+/* --- Tree Canopy Bokeh for Eye-Comfort (theme-green) --- */
+.theme-green body {
+  background:
+    radial-gradient(ellipse 110% 50% at 20% 30%, rgba(180,210,150,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 45% at 75% 70%, rgba(160,195,130,0.35) 0%, transparent 50%),
+    linear-gradient(170deg, #e6f0dd 0%, #d8e8d0 40%, #c8dcc0 100%);
+  position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Canopy light spots — subtle green bokeh (very low opacity, only behind margins) */
+
+/* Slow horizontal drift for canopy light spots */
+@keyframes canopy-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(8px, -4px) scale(1.02); }
+  100% { transform: translate(-6px, 3px) scale(0.99); }
+}
+
+/* Gentle upward float for pollen particles */
+@keyframes pollen-float {
+  0%   { transform: translate(0, 0); opacity: 0.5; }
+  50%  { transform: translate(4px, -8px); opacity: 0.75; }
+  100% { transform: translate(-3px, 5px); opacity: 0.45; }
+}
+
+/* Viewport lock — fill entire screen without any page-level scrolling */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  min-width: 320px;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.9), transparent 28%),
-    radial-gradient(circle at 88% 12%, rgba(59, 130, 246, 0.08), transparent 32%),
-    linear-gradient(180deg, var(--qr-bg) 0%, var(--qr-bg-soft) 100%);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  transition: background 0.4s ease, color 0.4s ease;
+  overscroll-behavior-y: none;
 }
 
-.theme-dark body {
-  background:
-    radial-gradient(circle at 82% 18%, rgba(140, 180, 255, 0.18) 0%, transparent 25%),
-    radial-gradient(circle at 22% 65%, rgba(160, 190, 240, 0.08) 0%, transparent 22%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 1%),
-    linear-gradient(180deg, #03060c 0%, #060a14 35%, #0a0f20 65%, #0e1228 100%);
-}
-
+/* position:fixed with inset:0 is the most reliable cross-browser way to fill viewport */
 #app {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 button {

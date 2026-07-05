@@ -300,8 +300,9 @@ function confirmDelete(bookId: string) {
 <style scoped>
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(5, 176px);
+  gap: 28px 30px;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {

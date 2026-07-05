@@ -35,18 +35,16 @@
           <span class="home-text">首页</span>
         </button>
         <div class="brand">
-          <svg class="logo-icon" viewBox="0 0 40 40" fill="none">
-            <!-- 魔法书图标 -->
-            <path d="M8 8 C8 6, 10 4, 14 4 L32 4 C34 4, 36 6, 36 8 L36 32 C36 34, 34 36, 32 36 L14 36 C10 36, 8 34, 8 32 Z" stroke="#c9a84c" stroke-width="1.5" fill="none"/>
-            <path d="M14 4 L14 36" stroke="#c9a84c" stroke-width="1.5"/>
-            <path d="M18 10 L28 10" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
-            <path d="M18 15 L28 15" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
-            <path d="M18 20 L26 20" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
-            <path d="M18 25 L26 25" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round"/>
-            <!-- 魔法星芒 -->
-            <path d="M30 8 L32 4 L34 8 L38 10 L34 12 L32 16 L30 12 L26 10 Z" fill="#1890ff" opacity="0.6"/>
-          </svg>
-          <h1 class="brand-name">我的书库</h1>
+          <div class="logo-wrapper">
+            <img src="/qreader-icon-transparent.png" alt="QReader" class="logo-image" />
+          </div>
+          <div class="brand-text">
+            <h1 class="brand-title">
+              <span class="brand-title-text">QReader</span>
+              <span class="brand-title-glow"></span>
+            </h1>
+            <p class="brand-subtitle">我的书库</p>
+          </div>
         </div>
         <SearchBar v-model="searchQuery" @update:modelValue="handleSearch" />
       </div>
@@ -505,8 +503,6 @@ function formatReadingTime(seconds: number): string {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  max-width: 1400px;
-  margin: 0 auto;
   position: relative;
   z-index: 1;
 }
@@ -522,7 +518,7 @@ function formatReadingTime(seconds: number): string {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
   color: #c9a84c;
   letter-spacing: 2px;
 }
@@ -558,7 +554,7 @@ function formatReadingTime(seconds: number): string {
   margin: 0 0 12px;
   font-size: 20px;
   font-weight: 600;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
   color: #e8e4d0;
   letter-spacing: 1px;
 }
@@ -582,7 +578,7 @@ function formatReadingTime(seconds: number): string {
   transition: all 0.3s;
   box-shadow: 0 4px 16px rgba(191, 149, 63, 0.3);
   letter-spacing: 2px;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
 }
 
 .empty-state .upload-button:hover {
@@ -614,12 +610,12 @@ function formatReadingTime(seconds: number): string {
 .brand-title {
   font-size: 36px;
   font-weight: 700;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
   background: linear-gradient(135deg, #c9a84c 0%, #bf953f 50%, #aa771c 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: 6px;
+  letter-spacing: 2px;
   filter: drop-shadow(0 2px 8px rgba(191, 149, 63, 0.4));
 }
 
@@ -641,9 +637,11 @@ function formatReadingTime(seconds: number): string {
 }
 
 .library-view {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  min-height: 100vh;
+  padding: 28px 0 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   position: relative;
   z-index: 1;
 }
@@ -720,7 +718,7 @@ function formatReadingTime(seconds: number): string {
   margin: 0 16px;
   font-size: 36px;
   font-weight: 700;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
   background: linear-gradient(135deg, #c9a84c 0%, #bf953f 50%, #aa771c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -732,13 +730,18 @@ function formatReadingTime(seconds: number): string {
 }
 
 .library-header {
+  flex-shrink: 0;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  padding: 20px 24px;
+  padding: 24px 32px;
   border-radius: 12px;
   border: 1px solid rgba(191, 149, 63, 0.2);
   background: linear-gradient(135deg, rgba(255, 254, 248, 0.9), rgba(249, 245, 232, 0.7));
@@ -746,6 +749,17 @@ function formatReadingTime(seconds: number): string {
   backdrop-filter: blur(8px);
   position: relative;
   overflow: hidden;
+  z-index: 2;
+}
+
+.header-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .library-header::before {
@@ -826,26 +840,142 @@ function formatReadingTime(seconds: number): string {
   flex-shrink: 0;
 }
 
-.logo-icon {
-  width: 44px;
-  height: 44px;
+.logo-wrapper {
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 4px rgba(191, 149, 63, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.brand-name {
+.logo-image {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px;
+  filter: drop-shadow(0 0 10px rgba(124, 179, 245, 0.35))
+    drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.brand-title {
   margin: 0;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
   letter-spacing: 2px;
-  font-family: 'KaiTi', 'STKaiti', '楷体', serif;
-  background: linear-gradient(135deg, #3a2a10 0%, #5a3f2a 50%, #2d1f10 100%);
+  line-height: 1.1;
+  position: relative;
+  display: inline-block;
+}
+
+.brand-title-text {
+  background: linear-gradient(
+    105deg,
+    #d4c090 0%,
+    #f5e8b0 18%,
+    #c9a84c 36%,
+    #ffe8a0 50%,
+    #c9a84c 64%,
+    #f5e8b0 82%,
+    #8b7355 100%
+  );
+  background-size: 200% auto;
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: none;
-  white-space: nowrap;
-  flex-shrink: 0;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.5px rgba(139, 115, 85, 0.3);
+  filter: 
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.3))
+    drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 0 18px rgba(191, 149, 63, 0.4));
+  position: relative;
+  z-index: 2;
+  animation: shine 5s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+
+.brand-title::before {
+  content: '✦';
+  position: absolute;
+  top: -10px;
+  left: -18px;
+  font-size: 12px;
+  color: #bf953f;
+  text-shadow: 0 0 8px rgba(191, 149, 63, 0.6);
+  animation: starFloat 4s ease-in-out infinite;
+}
+
+.brand-title::after {
+  content: '✦';
+  position: absolute;
+  bottom: -10px;
+  right: -18px;
+  font-size: 12px;
+  color: #bf953f;
+  text-shadow: 0 0 8px rgba(191, 149, 63, 0.6);
+  animation: starFloat 4s ease-in-out infinite reverse;
+}
+
+@keyframes starFloat {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 0.5;
+  }
+  50% { 
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.9;
+  }
+}
+
+.brand-title-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140%;
+  height: 140%;
+  background: radial-gradient(ellipse at center, rgba(191, 149, 63, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.brand-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #8b7355;
+  font-weight: 400;
+  text-align: center;
+}
+
+.brand-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #8ea4c4;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+.header-logo {
+  display: none;
 }
 
 .header-actions {
@@ -947,7 +1077,60 @@ function formatReadingTime(seconds: number): string {
 .library-content {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.empty-library {
+  padding: 60px 20px;
+  color: #8b7355;
+  font-size: 16px;
+  font-style: italic;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(90, 70, 40, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+
+.modal-box {
+  background: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(191, 149, 63, 0.06) 0%, transparent 60%), radial-gradient(ellipse 60% 60% at 80% 80%, rgba(191, 149, 63, 0.05) 0%, transparent 60%), linear-gradient(160deg, #faf6ef 0%, #f5efe4 100%);
+  border: 1px solid rgba(191, 149, 63, 0.25);
+  border-radius: 12px;
+  padding: 28px;
+  width: 520px;
+  max-width: 90vw;
+  box-shadow: 0 12px 40px rgba(139, 115, 85, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  font-family: KaiTi, STKaiti, '楷体', serif;
+}
+
+.modal-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.theme-dark .modal-title {
+  color: #c8d8f0;
+}
+
+.theme-dark .modal-box {
+  background: rgba(14, 26, 50, 0.95);
+  border-color: rgba(100, 140, 200, 0.25);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.theme-dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.55);
 }
 
 .empty-library {
@@ -1098,6 +1281,9 @@ function formatReadingTime(seconds: number): string {
 
 @media (max-width: 600px) {
   .library-header {
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
     flex-direction: column;
     align-items: stretch;
   }
@@ -1116,7 +1302,10 @@ function formatReadingTime(seconds: number): string {
 .library-view {
   max-width: none;
   min-height: 100dvh;
-  padding: 28px clamp(18px, 4vw, 48px) 56px;
+  padding: 28px 40px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   background:
     radial-gradient(circle at 78% 12%, rgba(200, 216, 240, 0.18) 0%, rgba(200, 216, 240, 0.08) 8%, transparent 22%),
     radial-gradient(circle at 78% 12%, rgba(240, 244, 255, 0.12) 0%, transparent 18%),
@@ -1156,16 +1345,25 @@ function formatReadingTime(seconds: number): string {
 }
 
 .library-header {
-  max-width: 1220px;
+  flex-shrink: 0;
+  max-width: 1000px;
   margin: 0 auto 28px;
-  padding: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
   gap: 16px;
-  border-radius: var(--qr-radius-xl);
+  border-radius: 16px;
   border: 1px solid rgba(100, 140, 200, 0.18);
   background: rgba(14, 26, 50, 0.75);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(100, 140, 200, 0.08);
   backdrop-filter: blur(18px) saturate(1.08);
   -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  margin-bottom: 28px;
+  z-index: 2;
 }
 
 .library-header::before {
@@ -1195,26 +1393,57 @@ function formatReadingTime(seconds: number): string {
   transform: translateY(-1px);
 }
 
-.logo-icon {
-  color: var(--qr-primary);
-  filter: none;
+.logo-image {
+  background: rgba(14, 26, 50, 0.55);
+  filter: drop-shadow(0 0 10px rgba(124, 179, 245, 0.35))
+    drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
 }
 
-.logo-icon path[stroke="#c9a84c"] {
-  stroke: currentColor;
+.brand-title {
+  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
+  font-size: 26px;
+  letter-spacing: 2px;
 }
 
-.logo-icon path[fill="#1890ff"] {
-  fill: currentColor;
+.brand-title-text {
+  background: linear-gradient(
+    105deg,
+    #90b8e0 0%,
+    #d8e8ff 18%,
+    #7cb3f5 36%,
+    #e8f0ff 50%,
+    #7cb3f5 64%,
+    #d8e8ff 82%,
+    #5e90c8 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.5px rgba(124, 179, 245, 0.25);
+  filter: 
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 20px rgba(124, 179, 245, 0.45));
+  animation: shine 5s ease-in-out infinite;
 }
 
-.brand-name {
-  font-family: inherit;
-  font-size: clamp(22px, 3vw, 30px);
-  letter-spacing: -0.02em;
-  background: none;
-  -webkit-text-fill-color: currentColor;
-  color: #c8d8f0;
+.brand-title::before {
+  color: #7cb3f5;
+  text-shadow: 0 0 8px rgba(124, 179, 245, 0.6);
+}
+
+.brand-title::after {
+  color: #7cb3f5;
+  text-shadow: 0 0 8px rgba(124, 179, 245, 0.6);
+}
+
+.brand-title-glow {
+  background: radial-gradient(ellipse at center, rgba(124, 179, 245, 0.2) 0%, transparent 70%);
+}
+
+.brand-subtitle {
+  color: #8ea4c4;
 }
 
 .header-stats {
@@ -1263,8 +1492,6 @@ function formatReadingTime(seconds: number): string {
 }
 
 .library-content {
-  max-width: 1220px;
-  margin: 0 auto;
   gap: 24px;
 }
 
