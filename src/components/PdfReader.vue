@@ -59,13 +59,15 @@ const annotationCanvasRefs = new Map<number, HTMLCanvasElement>()
 const renderTasks = new Map<number, any>()
 let pdfDoc: any = null
 
-// 标注相关
+// 标注相关（高频变量用非响应式，避免每点触发依赖追踪）
 const isDrawing = ref(false)
-const currentPoints = ref<Point[]>([])
+let currentPoints: Point[] = []
 const currentPageNum = ref<number>(0)
+let cachedRect: DOMRect | null = null
+let lassoSnapshot: HTMLCanvasElement | null = null
 
 const isErasing = ref(false)
-const eraserPoints = ref<Point[]>([])
+let eraserPoints: Point[] = []
 const erasedIds = ref<Set<string>>(new Set())
 const eraserPageNum = ref(0)
 
@@ -151,28 +153,34 @@ async function renderPage(pageNum: number) {
 
 // 缩放：使用 CSS transform（纯 GPU 合成，不触发 layout/paint）
 let basePagesHeight = 0  // .pdf-pages 未缩放时的原始高度
+let resizeRafId = 0
+let pendingScale = 0
 
 function resizeCanvases(scale: number) {
-  const r = scale / BASE_RENDER_SCALE
-  const pagesEl = document.querySelector('.pdf-pages') as HTMLElement
-  if (!pagesEl) return
+  pendingScale = scale
+  if (resizeRafId) return  // 已调度，合并到同一帧（避免 watch + 直接调用双重触发布局）
+  resizeRafId = requestAnimationFrame(() => {
+    resizeRafId = 0
+    const r = pendingScale / BASE_RENDER_SCALE
+    const pagesEl = document.querySelector('.pdf-pages') as HTMLElement
+    if (!pagesEl) return
 
-  // 首次调用时记录原始高度（ratio=1 时）
-  if (basePagesHeight === 0) {
-    // 临时清除 transform 和 height 以获取真实高度
-    pagesEl.style.transform = ''
-    pagesEl.style.height = ''
-    basePagesHeight = pagesEl.offsetHeight
-  }
+    // 首次调用时记录原始高度（ratio=1 时）
+    if (basePagesHeight === 0) {
+      pagesEl.style.transform = ''
+      pagesEl.style.height = ''
+      basePagesHeight = pagesEl.offsetHeight
+    }
 
-  // transform: 纯 GPU 操作，不触发 layout/paint
-  pagesEl.style.transform = `scale(${r})`
-  pagesEl.style.transformOrigin = 'top center'
+    // transform: 纯 GPU 操作，不触发 layout/paint
+    pagesEl.style.transform = `scale(${r})`
+    pagesEl.style.transformOrigin = 'top center'
 
-  // 高度补偿：transform 不影响布局，手动设置高度让滚动区域正确
-  if (basePagesHeight > 0) {
-    pagesEl.style.height = `${basePagesHeight * r}px`
-  }
+    // 高度补偿：transform 不影响布局，手动设置高度让滚动区域正确
+    if (basePagesHeight > 0) {
+      pagesEl.style.height = `${basePagesHeight * r}px`
+    }
+  })
 }
 
 /**
@@ -226,7 +234,7 @@ function renderAnnotations(pageNum: number, excludeIds?: Set<string>) {
  * 获取鼠标在 Canvas 中的坐标（canvas 内部坐标系）
  */
 function getCanvasPoint(canvas: HTMLCanvasElement, event: MouseEvent): Point {
-  const rect = canvas.getBoundingClientRect()
+  const rect = cachedRect || canvas.getBoundingClientRect()
   return {
     x: (event.clientX - rect.left) * (canvas.width / rect.width),
     y: (event.clientY - rect.top) * (canvas.height / rect.height)
@@ -291,15 +299,22 @@ function handleAnnotationStart(event: MouseEvent) {
   if (!props.annotationMode) return
   const canvas = event.currentTarget as HTMLCanvasElement
   const pageNum = parseInt(canvas.dataset.page || '0')
+  // 缓存 rect，避免每次 mousemove 都触发 getBoundingClientRect（强制布局）
+  cachedRect = canvas.getBoundingClientRect()
   const point = getCanvasPoint(canvas, event)
-  
+
   if (props.eraserMode === 'lasso') {
     isErasing.value = true
     eraserPageNum.value = pageNum
-    eraserPoints.value = [point]
+    eraserPoints = [point]
+    // 快照当前标注层，lasso 预览时用 drawImage 还原，避免逐帧重绘所有标注
+    lassoSnapshot = document.createElement('canvas')
+    lassoSnapshot.width = canvas.width
+    lassoSnapshot.height = canvas.height
+    lassoSnapshot.getContext('2d')!.drawImage(canvas, 0, 0)
     return
   }
-  
+
   if (props.eraserMode === 'line') {
     isErasing.value = true
     eraserPageNum.value = pageNum
@@ -307,10 +322,10 @@ function handleAnnotationStart(event: MouseEvent) {
     checkEraseHit(pageNum, point)
     return
   }
-  
+
   currentPageNum.value = pageNum
   isDrawing.value = true
-  currentPoints.value = [point]
+  currentPoints = [point]
 }
 
 function handleAnnotationMove(event: MouseEvent) {
@@ -320,23 +335,22 @@ function handleAnnotationMove(event: MouseEvent) {
   const point = getCanvasPoint(canvas, event)
   
   if (props.eraserMode === 'lasso' && isErasing.value) {
-    eraserPoints.value.push(point)
+    eraserPoints.push(point)
     const ctx = canvas.getContext('2d')!
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    
-    const pageAnnots = (props.annotations || []).filter(a => a.page === eraserPageNum.value)
-    pageAnnots.forEach(a => renderAnnotation(ctx, a))
-    
-    if (eraserPoints.value.length > 1) {
+    // 用快照还原标注层，O(1) drawImage 替代逐标注重绘
+    if (lassoSnapshot) ctx.drawImage(lassoSnapshot, 0, 0)
+    else ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    if (eraserPoints.length > 1) {
       ctx.beginPath()
       ctx.fillStyle = 'rgba(255, 100, 100, 0.15)'
       ctx.strokeStyle = 'rgba(255, 50, 50, 0.8)'
       ctx.lineWidth = 2
       ctx.setLineDash([8, 4])
-      
-      ctx.moveTo(eraserPoints.value[0].x, eraserPoints.value[0].y)
-      for (let i = 1; i < eraserPoints.value.length; i++) {
-        ctx.lineTo(eraserPoints.value[i].x, eraserPoints.value[i].y)
+
+      ctx.moveTo(eraserPoints[0].x, eraserPoints[0].y)
+      for (let i = 1; i < eraserPoints.length; i++) {
+        ctx.lineTo(eraserPoints[i].x, eraserPoints[i].y)
       }
       ctx.closePath()
       ctx.fill()
@@ -345,25 +359,19 @@ function handleAnnotationMove(event: MouseEvent) {
     }
     return
   }
-  
+
   if (props.eraserMode === 'line' && isErasing.value) {
     checkEraseHit(pageNum, point)
     return
   }
-  
+
   if (!isDrawing.value) return
-  
-  currentPoints.value.push(point)
-  
+
+  currentPoints.push(point)
   const ctx = canvas.getContext('2d')!
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  
-  const pageAnnots = (props.annotations || []).filter(a => a.page === currentPageNum.value)
-  pageAnnots.forEach(a => renderAnnotation(ctx, a))
-  
-  ctx.beginPath()
-  
-  // 荧光笔模式：半透明、更宽
+
+  // 增量绘制：只画上一帧到当前点的线段，不清空、不重绘已有标注
+  // 已有标注在交互开始前已渲染在画布上，新增笔画直接叠加
   if (props.highlighterMode) {
     ctx.globalAlpha = 0.3
     ctx.strokeStyle = props.penColor || '#ffff00'
@@ -373,16 +381,15 @@ function handleAnnotationMove(event: MouseEvent) {
     ctx.strokeStyle = props.penColor || '#ff0000'
     ctx.lineWidth = props.penWidth || 2
   }
-  
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  
-  const pts = currentPoints.value
-  if (pts.length > 0) {
-    ctx.moveTo(pts[0].x, pts[0].y)
-    for (let i = 1; i < pts.length; i++) {
-      ctx.lineTo(pts[i].x, pts[i].y)
-    }
+
+  const pts = currentPoints
+  const n = pts.length
+  if (n >= 2) {
+    ctx.beginPath()
+    ctx.moveTo(pts[n - 2].x, pts[n - 2].y)
+    ctx.lineTo(pts[n - 1].x, pts[n - 1].y)
     ctx.stroke()
     ctx.globalAlpha = 1.0
   }
@@ -390,12 +397,14 @@ function handleAnnotationMove(event: MouseEvent) {
 
 function handleAnnotationUp(_event: MouseEvent) {
   if (!props.annotationMode) return
-  
+
   if (props.eraserMode === 'lasso' && isErasing.value) {
     isErasing.value = false
-    const polygon = [...eraserPoints.value]
-    eraserPoints.value = []
-    
+    cachedRect = null
+    lassoSnapshot = null
+    const polygon = [...eraserPoints]
+    eraserPoints = []
+
     if (polygon.length > 2) {
       const toErase: string[] = []
       const pageAnnots = (props.annotations || []).filter(a => a.page === eraserPageNum.value)
@@ -415,51 +424,45 @@ function handleAnnotationUp(_event: MouseEvent) {
     renderAnnotations(eraserPageNum.value)
     return
   }
-  
+
   if (props.eraserMode === 'line' && isErasing.value) {
     isErasing.value = false
+    cachedRect = null
     erasedIds.value = new Set()
     renderAnnotations(eraserPageNum.value)
     return
   }
-  
+
   if (!isDrawing.value) return
-  
+
   isDrawing.value = false
-  
-  if (currentPoints.value.length > 1) {
-    // 荧光笔模式：使用更大的宽度和记录类型
+  cachedRect = null
+
+  if (currentPoints.length > 1) {
     const annotationType = props.highlighterMode ? 'highlighter' : 'pen'
     const annotationWidth = props.highlighterMode ? (props.highlighterWidth || 20) : (props.penWidth || 2)
-    
+
     emit('annotations-change', [{
       id: '',
       page: currentPageNum.value,
       type: annotationType,
       color: props.penColor || '#ff0000',
       width: annotationWidth,
-      points: currentPoints.value,
+      points: currentPoints,
       createdAt: Date.now()
     }])
-    
-    setTimeout(() => {
-      const canvas = annotationCanvasRefs.get(currentPageNum.value)
-      if (canvas && pdfDoc) {
-        const ctx = canvas.getContext('2d')!
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        const pageAnnots = (props.annotations || []).filter(a => a.page === currentPageNum.value)
-        pageAnnots.forEach(a => renderAnnotation(ctx, a))
-      }
-    }, 50)
+    // 笔画已在绘制过程中增量渲染到画布上；最终一致状态由 annotations 深度监听统一重绘，无需 setTimeout 重画
   }
-  
-  currentPoints.value = []
+
+  currentPoints = []
 }
 
 function handleAnnotationLeave(_event: MouseEvent) {
+  cachedRect = null
+  lassoSnapshot = null
   if (props.eraserMode === 'lasso' && isErasing.value) {
     isErasing.value = false
-    eraserPoints.value = []
+    eraserPoints = []
     renderAnnotations(eraserPageNum.value)
     return
   }
@@ -471,7 +474,7 @@ function handleAnnotationLeave(_event: MouseEvent) {
   }
   if (isDrawing.value) {
     isDrawing.value = false
-    currentPoints.value = []
+    currentPoints = []
   }
 }
 

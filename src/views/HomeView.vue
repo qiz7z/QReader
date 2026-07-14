@@ -1,6 +1,6 @@
 <template>
-  <div class="home-view">
-    <!-- 魔法粒子背景 -->
+  <div class="home-view qr-starfield">
+    <!-- 星空粒子背景 -->
     <div class="magic-particles">
       <div class="particle" v-for="i in 30" :key="i" :style="particleStyle(i)"></div>
     </div>
@@ -75,7 +75,7 @@
                 <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M8 4v16M12 4v16M16 4v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
-              <span class="button-text">进入书库</span>
+              <span class="button-text">進入書庫</span>
               <svg class="button-icon-right" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -121,7 +121,7 @@ const enterLibrary = () => {
   router.push('/library')
 }
 
-// 魔法粒子随机样式生成
+// 星空粒子随机样式生成
 function particleStyle(_index: number) {
   const delay = Math.random() * 5
   const duration = 3 + Math.random() * 4
@@ -209,42 +209,9 @@ function particleStyle(_index: number) {
   justify-content: center;
   align-items: flex-start;
   padding: 60px 24px 40px;
-  background:
-    radial-gradient(circle at 78% 12%, rgba(200, 216, 240, 0.18) 0%, rgba(200, 216, 240, 0.08) 8%, transparent 22%),
-    radial-gradient(circle at 78% 12%, rgba(240, 244, 255, 0.12) 0%, transparent 18%),
-    radial-gradient(ellipse at 50% 0%, rgba(30, 50, 100, 0.35) 0%, transparent 55%),
-    linear-gradient(180deg, #070b14 0%, #0c1527 35%, #0f1a30 70%, #121e38 100%);
   color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
-}
-
-.home-view::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.35) 0%, transparent 100%),
-    radial-gradient(1px 1px at 25% 35%, rgba(200, 220, 255, 0.28) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 40% 10%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
-    radial-gradient(1px 1px at 55% 22%, rgba(180, 210, 255, 0.22) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 68% 8%, rgba(255, 255, 255, 0.32) 0%, transparent 100%),
-    radial-gradient(1px 1px at 82% 30%, rgba(200, 220, 255, 0.25) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 20% 52%, rgba(255, 255, 255, 0.2) 0%, transparent 100%),
-    radial-gradient(1px 1px at 45% 48%, rgba(180, 210, 255, 0.18) 0%, transparent 100%),
-    radial-gradient(1px 1px at 70% 42%, rgba(255, 255, 255, 0.22) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 88% 55%, rgba(200, 220, 255, 0.18) 0%, transparent 100%),
-    radial-gradient(1px 1px at 15% 72%, rgba(255, 255, 255, 0.15) 0%, transparent 100%),
-    radial-gradient(1px 1px at 35% 68%, rgba(180, 210, 255, 0.12) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 60% 65%, rgba(255, 255, 255, 0.14) 0%, transparent 100%),
-    radial-gradient(1px 1px at 80% 72%, rgba(200, 220, 255, 0.1) 0%, transparent 100%);
-  animation: none;
-}
-
-@keyframes bgGlow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.8; }
 }
 
 /* ============================================
@@ -403,7 +370,7 @@ function particleStyle(_index: number) {
   font-weight: 400;
   color: var(--color-text-secondary);
   letter-spacing: 3px;
-  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
+  font-family: 'STKaiti', '华文楷体', 'Kaiti SC', 'KaiTi', serif;
 }
 
 .subtitle-cn {
@@ -500,7 +467,7 @@ function particleStyle(_index: number) {
   font-weight: 600;
   color: var(--color-text-primary);
   letter-spacing: 1px;
-  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
+  font-family: 'STKaiti', '华文楷体', 'Kaiti SC', 'KaiTi', serif;
 }
 
 .feature-desc {
@@ -535,7 +502,7 @@ function particleStyle(_index: number) {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-button);
   letter-spacing: 4px;
-  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
+  font-family: 'STKaiti', '华文楷体', 'Kaiti SC', 'KaiTi', serif;
 }
 
 .cta-button:hover {
@@ -604,7 +571,7 @@ function particleStyle(_index: number) {
   margin: 0;
   font-size: 14px;
   color: var(--color-text-tertiary);
-  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
+  font-family: 'STKaiti', '华文楷体', 'Kaiti SC', 'KaiTi', serif;
 }
 
 .hint-icon {
@@ -680,7 +647,7 @@ function particleStyle(_index: number) {
   margin: 0;
   font-size: 13px;
   color: var(--color-text-tertiary);
-  font-family: 'STLiti', '华文隶书', 'Playfair Display', 'Georgia', serif;
+  font-family: 'STKaiti', '华文楷体', 'Kaiti SC', 'KaiTi', serif;
 }
 
 .footer-bullet {
@@ -775,10 +742,6 @@ function particleStyle(_index: number) {
    ============================================ */
 @media (prefers-reduced-motion: reduce) {
   .logo-wrapper,
-  .bg-mountains,
-  .bg-moon,
-  .cloud,
-  .bird,
   .feature-card:hover,
   .cta-button:hover,
   .button-icon-right,
@@ -798,9 +761,4 @@ function particleStyle(_index: number) {
     display: none;
   }
 }
-
-/* ============================================
-   Calm Reading OS visual override
-   （已废弃：首页直接用夜空背景，无需白色方块）
-   ============================================ */
 </style>

@@ -48,6 +48,42 @@
   background: var(--qr-bg);
 }
 
+/* ============================================
+   共享星空背景 — 月光深空主题
+   用于 HomeView 和 LibraryView
+   ============================================ */
+.qr-starfield {
+  background:
+    radial-gradient(circle at 78% 12%, rgba(200, 216, 240, 0.18) 0%, rgba(200, 216, 240, 0.08) 8%, transparent 22%),
+    radial-gradient(circle at 78% 12%, rgba(240, 244, 255, 0.12) 0%, transparent 18%),
+    radial-gradient(ellipse at 50% 0%, rgba(30, 50, 100, 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #070b14 0%, #0c1527 35%, #0f1a30 70%, #121e38 100%);
+  position: relative;
+}
+
+.qr-starfield::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 35%, rgba(200, 220, 255, 0.28) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 10%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 22%, rgba(180, 210, 255, 0.22) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 68% 8%, rgba(255, 255, 255, 0.32) 0%, transparent 100%),
+    radial-gradient(1px 1px at 82% 30%, rgba(200, 220, 255, 0.25) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 52%, rgba(255, 255, 255, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 48%, rgba(180, 210, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 42%, rgba(255, 255, 255, 0.22) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 55%, rgba(200, 220, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 72%, rgba(255, 255, 255, 0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 68%, rgba(180, 210, 255, 0.12) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 60% 65%, rgba(255, 255, 255, 0.14) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 72%, rgba(200, 220, 255, 0.1) 0%, transparent 100%);
+}
+
 /* Starry Sky theme — deep space blue-violet with animated star fields */
 .theme-dark {
   --qr-bg: #03060c;
@@ -265,6 +301,21 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* ── Selection: theme-aware ── */
+::selection {
+  background: rgba(200, 170, 80, 0.2);
+  color: inherit;
+}
+.theme-dark ::selection {
+  background: rgba(124, 179, 245, 0.25);
+}
+.theme-green ::selection {
+  background: rgba(90, 158, 66, 0.18);
+}
+.theme-parchment ::selection {
+  background: rgba(139, 105, 20, 0.18);
+}
+
 /* position:fixed with inset:0 is the most reliable cross-browser way to fill viewport */
 #app {
   position: fixed;
@@ -324,6 +375,22 @@ input, select, textarea {
 
 .theme-dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 150, 255, 0.35);
+}
+
+.theme-green ::-webkit-scrollbar-thumb {
+  background: rgba(90, 158, 66, 0.2);
+}
+
+.theme-green ::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 158, 66, 0.38);
+}
+
+.theme-parchment ::-webkit-scrollbar-thumb {
+  background: rgba(139, 105, 20, 0.22);
+}
+
+.theme-parchment ::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 105, 20, 0.36);
 }
 
 @media (max-width: 600px) {
