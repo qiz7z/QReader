@@ -343,6 +343,9 @@ function formatReadingTime(seconds: number): string {
   position: relative;
   font-family: 'STKaiti', '华文楷体', 'Kaiti SC', 'KaiTi', serif;
   font-size: 15px;
+  background: rgba(14, 26, 50, 0.92);
+  background-attachment: fixed;
+  overflow-y: auto;
 }
 
 /* ============================================

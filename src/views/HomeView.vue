@@ -204,14 +204,15 @@ function particleStyle(_index: number) {
    基础布局
    ============================================ */
 .home-view {
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding: 60px 24px 40px;
   color: var(--color-text-primary);
   position: relative;
-  overflow: hidden;
 }
 
 /* ============================================

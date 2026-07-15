@@ -112,15 +112,15 @@
 
 .theme-dark body {
   background:
-    /* Milky Way band */
-    radial-gradient(ellipse 120% 60% at 30% 20%, rgba(40,60,130,0.5) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 50% at 70% 65%, rgba(50,70,150,0.4) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 50% 40%, rgba(30,50,110,0.3) 0%, transparent 55%),
-    /* Base gradient */
-    linear-gradient(180deg, #010308 0%, #050a18 40%, #0a1030 100%);
+    /* Solid dark base + Milky Way on top */
+    linear-gradient(180deg, #050a18 0%, #0a1030 40%, #0f1840 100%);
   position: relative;
   overflow-x: hidden;
   min-height: 100vh;
+}
+
+.theme-dark html {
+  background: #050a18;
 }
 
 /* --- Star field layers: 3 passes for depth --- */
@@ -369,12 +369,40 @@ input, select, textarea {
   background: rgba(143, 105, 62, 0.42);
 }
 
+.theme-dark ::-webkit-scrollbar-track {
+  background: rgba(5, 10, 25, 1);
+}
+
 .theme-dark ::-webkit-scrollbar-thumb {
-  background: rgba(80, 120, 220, 0.2);
+  background: rgba(60, 100, 200, 0.45);
 }
 
 .theme-dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 150, 255, 0.35);
+  background: rgba(80, 130, 220, 0.6);
+}
+
+.theme-dark html {
+  background: #050a18;
+}
+
+.theme-dark body {
+  background: linear-gradient(180deg, #050a18 0%, #0a1030 40%, #0f1840 100%);
+  position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* 书库页滚动条强制深色（无论主题） */
+.library-view::-webkit-scrollbar-thumb {
+  background: rgba(60, 100, 200, 0.4);
+}
+
+.library-view::-webkit-scrollbar-thumb:hover {
+  background: rgba(80, 130, 220, 0.6);
+}
+
+.library-view::-webkit-scrollbar-track {
+  background: rgba(5, 10, 25, 0.8);
 }
 
 .theme-green ::-webkit-scrollbar-thumb {
