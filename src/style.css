@@ -13,6 +13,7 @@
   --border: #e7d8c2;
   --shadow: 0 10px 30px rgba(92, 64, 35, 0.08);
   --radius: 14px;
+}
 
   /* Calm Reading OS tokens */
   --qr-bg: #fbf7ef;
@@ -392,17 +393,22 @@ input, select, textarea {
   min-height: 100vh;
 }
 
-/* 书库页滚动条强制深色（无论主题） */
-.library-view::-webkit-scrollbar-thumb {
-  background: rgba(60, 100, 200, 0.4);
-}
-
-.library-view::-webkit-scrollbar-thumb:hover {
-  background: rgba(80, 130, 220, 0.6);
+/* 书库页滚动条 — 强制深色 */
+.library-view::-webkit-scrollbar {
+  width: 8px;
 }
 
 .library-view::-webkit-scrollbar-track {
-  background: rgba(5, 10, 25, 0.8);
+  background: rgba(5, 10, 25, 1) !important;
+}
+
+.library-view::-webkit-scrollbar-thumb {
+  background: rgba(60, 100, 200, 0.45) !important;
+  border-radius: 999px;
+}
+
+.library-view::-webkit-scrollbar-thumb:hover {
+  background: rgba(80, 130, 220, 0.6) !important;
 }
 
 .theme-green ::-webkit-scrollbar-thumb {
@@ -417,8 +423,22 @@ input, select, textarea {
   background: rgba(139, 105, 20, 0.22);
 }
 
-.theme-parchment ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 105, 20, 0.36);
+/* ── 暗色主题自动跟随系统 ── */
+/* 默认亮色（系统亮色或无法检测时） */
+:root {
+  color-scheme: light dark;
+}
+
+/* 系统处于暗色模式且用户未手动覆盖时自动暗色 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme-override="light"]) {
+    --qr-bg: #03060c;
+    --qr-bg-soft: #080c1a;
+    --qr-surface: rgba(10, 15, 35, 0.9);
+    --qr-surface-solid: #080c1a;
+    --qr-surface-muted: rgba(15, 22, 50, 0.6);
+    --qr-border: rgba(70, 110, 210, 0.15);
+  }
 }
 
 @media (max-width: 600px) {
