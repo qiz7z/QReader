@@ -298,34 +298,34 @@
     </div>
 
     <!-- 底部控制栏 -->
-    <div class="bottom-bar" :class="{ hidden: uiHidden }" @click.stop>
-        <button class="bot-btn" @click="router.push('/')" title="返回首页">
-          <span class="bot-han">歸</span>
+    <div class="bottom-bar" :class="{ hidden: uiHidden }" role="toolbar" aria-label="阅读控制" @click.stop>
+        <button type="button" class="bot-btn" @click="router.push('/')" title="返回首页" aria-label="返回首页">
+          <span class="bot-han" aria-hidden="true">歸</span>
         </button>
-        <div class="bot-divider"></div>
-        <button class="bot-btn" @click="showTocPanel=!showTocPanel" :class="{ active: showTocPanel }" title="目录">
-          <span class="bot-han">錄</span>
+        <div class="bot-divider" aria-hidden="true"></div>
+        <button type="button" class="bot-btn" @click="showTocPanel=!showTocPanel" :class="{ active: showTocPanel }" title="目录" aria-label="目录" :aria-pressed="showTocPanel">
+          <span class="bot-han" aria-hidden="true">錄</span>
         </button>
-        <button class="bot-btn" @click="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记">
-          <span class="bot-han">筆</span>
+        <button type="button" class="bot-btn" @click="toggleRight('annotations')" :class="{ active: rightPanel === 'annotations' }" title="划线笔记" aria-label="划线笔记" :aria-pressed="rightPanel === 'annotations'">
+          <span class="bot-han" aria-hidden="true">筆</span>
         </button>
-        <button class="bot-btn" @click="toggleRight('bookmarks')" :class="{ active: rightPanel === 'bookmarks' }" title="书签">
-          <span class="bot-han">簽</span>
+        <button type="button" class="bot-btn" @click="toggleRight('bookmarks')" :class="{ active: rightPanel === 'bookmarks' }" title="书签" aria-label="书签" :aria-pressed="rightPanel === 'bookmarks'">
+          <span class="bot-han" aria-hidden="true">簽</span>
         </button>
-        <button class="bot-btn" @click="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud', 'tts-playing': isReadAloudPlaying, 'tts-paused': isTtsActive && !isReadAloudPlaying }" title="朗读">
-          <span v-if="!isReadAloudPlaying && !(isTtsActive && !isReadAloudPlaying)" class="bot-han">讀</span>
-          <span v-else-if="isTtsActive && !isReadAloudPlaying" class="bot-han bot-han-sm">暫停</span>
-          <span v-else class="bot-han">讀</span>
+        <button type="button" class="bot-btn" @click="toggleRight('readAloud')" :class="{ active: rightPanel === 'readAloud', 'tts-playing': isReadAloudPlaying, 'tts-paused': isTtsActive && !isReadAloudPlaying }" title="朗读" aria-label="朗读" :aria-pressed="rightPanel === 'readAloud'">
+          <span v-if="!isReadAloudPlaying && !(isTtsActive && !isReadAloudPlaying)" class="bot-han" aria-hidden="true">讀</span>
+          <span v-else-if="isTtsActive && !isReadAloudPlaying" class="bot-han bot-han-sm" aria-hidden="true">暫停</span>
+          <span v-else class="bot-han" aria-hidden="true">讀</span>
         </button>
-        <button class="bot-btn" @click="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架">
-          <span class="bot-han">書</span>
+        <button type="button" class="bot-btn" @click="toggleRight('shelf')" :class="{ active: rightPanel === 'shelf' }" title="书架" aria-label="书架" :aria-pressed="rightPanel === 'shelf'">
+          <span class="bot-han" aria-hidden="true">書</span>
         </button>
-        <button class="bot-btn" @click="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置">
-          <span class="bot-han">設</span>
+        <button type="button" class="bot-btn" @click="toggleRight('settings')" :class="{ active: rightPanel === 'settings' }" title="设置" aria-label="设置" :aria-pressed="rightPanel === 'settings'">
+          <span class="bot-han" aria-hidden="true">設</span>
         </button>
-        <div class="bot-divider"></div>
-        <button class="bot-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏阅读'">
-          <span class="bot-han">全</span>
+        <div class="bot-divider" aria-hidden="true"></div>
+        <button type="button" class="bot-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏阅读'" :aria-label="isFullscreen ? '退出全屏' : '全屏阅读'" :aria-pressed="isFullscreen">
+          <span class="bot-han" aria-hidden="true">全</span>
         </button>
       </div>
 
@@ -619,12 +619,13 @@ import PdfReader from '@/components/PdfReader.vue'
 import type { NoteRecord, BookmarkRecord, ParsedBook } from '@/types'
 import {
   getFileIdFromPdf,
-  loadAnnotations,
+  loadAnnotationsAsync,
   addAnnotation,
   deleteAnnotation,
   clearAnnotations,
   type PdfAnnotation
 } from '@/utils/annotationStorage'
+import { sanitizeBookHtml } from '@/utils/sanitize'
 
 const route = useRoute()
 const router = useRouter()
@@ -687,17 +688,21 @@ async function startReadingTimeTracker() {
 async function saveReadingTime() {
   if (!bookId.value || !book.value || sessionReadingTime.value <= lastSavedTime) return
   const timeToSave = sessionReadingTime.value - lastSavedTime
-  const currentProgress = await StorageService.getProgress(bookId.value)
-  const totalReadingTime = (currentProgress?.readingTime || 0) + timeToSave
-  await StorageService.saveProgress({
-    bookId: bookId.value,
-    chapterId: currentProgress?.chapterId || book.value.content?.[currentChapter.value]?.id || String(currentChapter.value),
-    position: currentProgress?.position ?? 0,
-    percentage: currentProgress?.percentage ?? 0,
-    updatedAt: Date.now(),
-    readingTime: totalReadingTime,
-  })
-  lastSavedTime = sessionReadingTime.value
+  try {
+    const currentProgress = await StorageService.getProgress(bookId.value)
+    const totalReadingTime = (currentProgress?.readingTime || 0) + timeToSave
+    await StorageService.saveProgress({
+      bookId: bookId.value,
+      chapterId: currentProgress?.chapterId || book.value.content?.[currentChapter.value]?.id || String(currentChapter.value),
+      position: currentProgress?.position ?? 0,
+      percentage: currentProgress?.percentage ?? 0,
+      updatedAt: Date.now(),
+      readingTime: totalReadingTime,
+    })
+    lastSavedTime = sessionReadingTime.value
+  } catch (e) {
+    console.error('[Reader] 阅读时长保存失败:', e)
+  }
 }
 async function stopReadingTimeTracker() {
   if (readingTimeTimer) {
@@ -1085,11 +1090,17 @@ const contentStyle = computed(() => ({
 async function loadBook(id: string) {
   book.value = null
   currentChapter.value = 0
-  
+
   const rec = await StorageService.getBook(id)
   if (rec) { bookFormat.value = rec.format; rawFile.value = rec.rawFile }
   const loaded = await StorageService.getParsedBook(id)
-  if (loaded) book.value = loaded
+  if (loaded) {
+    // 防御性消毒：覆盖消毒上线前解析存储的旧书（DOMPurify 幂等，对新书无副作用）
+    for (const ch of loaded.content) {
+      ch.content = sanitizeBookHtml(ch.content)
+    }
+    book.value = loaded
+  }
   
   // 加载上次阅读进度 - 从 chapterId 转换为 chapterIndex
   const progress = await StorageService.getProgress(id)
@@ -1103,7 +1114,7 @@ async function loadBook(id: string) {
   // 加载 PDF 标注
   if (rec?.rawFile) {
     currentFileId.value = getFileIdFromPdf(rec.rawFile)
-    pdfAnnotations.value = loadAnnotations(currentFileId.value)
+    pdfAnnotations.value = await loadAnnotationsAsync(currentFileId.value)
   }
   
   await loadHighlights()
@@ -2197,21 +2208,25 @@ onMounted(async () => {
 watch(currentChapter, async () => {
   currentSentenceIndex.value = 0
   sentenceRefs.value = []
-  
+
   // 保存阅读进度
   if (bookId.value && book.value) {
-    const chapter = book.value.content[currentChapter.value]
-    await StorageService.saveProgress({
-      bookId: bookId.value,
-      chapterId: chapter?.id || String(currentChapter.value),
-      position: 0,
-      percentage: book.value.content.length > 0 
-        ? (currentChapter.value / book.value.content.length) * 100 
-        : 0,
-      updatedAt: Date.now()
-    })
+    try {
+      const chapter = book.value.content[currentChapter.value]
+      await StorageService.saveProgress({
+        bookId: bookId.value,
+        chapterId: chapter?.id || String(currentChapter.value),
+        position: 0,
+        percentage: book.value.content.length > 0
+          ? (currentChapter.value / book.value.content.length) * 100
+          : 0,
+        updatedAt: Date.now()
+      })
+    } catch (e) {
+      console.error('[Reader] 章节进度保存失败:', e)
+    }
   }
-  
+
   // 自动跳章时不停止朗读（由 utterance.onend 继续下一章）
   if (!isAutoAdvancingChapter && isReadAloudPlaying.value) {
     stopReadAloud()
@@ -3108,29 +3123,32 @@ onBeforeUnmount(() => {
 .annotation-color-btn:hover { transform: scale(1.15); }
 .annotation-color-btn.active { border-color: #333; box-shadow: 0 0 0 1px #fff, 0 0 0 2px #333; }
 
-/* ===== 底部控制栏 ===== */
+/* ===== 底部控制栏 — Calm Reading OS 悬浮胶囊 ===== */
 .bottom-bar {
   position: fixed;
-  bottom: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
   left: 50%;
   right: auto;
-  width: min(94vw, 720px);
-  min-height: 72px;
-  background: rgba(255, 252, 246, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(180, 160, 120, 0.25);
+  width: min(94vw, 640px);
+  min-height: 64px;
+  background: color-mix(in srgb, var(--qr-surface, rgba(255, 252, 246, 0.92)) 92%, transparent);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  border: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
   border-radius: 999px;
-  box-shadow: 0 4px 20px rgba(180, 160, 120, 0.08), 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow:
+    var(--qr-shadow-md, 0 14px 36px rgba(92, 64, 35, 0.1)),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 4px;
   z-index: 200;
-  padding: 10px 18px;
+  padding: 8px 12px;
   opacity: 1;
   transform: translateX(-50%) translateY(0);
-  transition: opacity 0.25s ease, transform 0.3s var(--qr-ease);
+  transition: opacity var(--qr-transition, 240ms cubic-bezier(0.22, 1, 0.36, 1)),
+              transform var(--qr-transition, 240ms cubic-bezier(0.22, 1, 0.36, 1));
   pointer-events: auto;
 }
 .bottom-bar.hidden {
@@ -3139,67 +3157,206 @@ onBeforeUnmount(() => {
   transition: opacity 0.15s ease, transform 0.2s ease-in;
   pointer-events: none;
 }
-/* 底部栏滑入滑出 */
-/* 底部栏繁体字按钮 */
+
+/* 楷体单字：纸墨气韵 */
 .bot-han {
-  font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
-  font-size: 20px;
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", "Songti SC", serif;
+  font-size: 19px;
   font-weight: 500;
   line-height: 1;
-  color: var(--qr-text-primary, #333);
-  letter-spacing: 0.06em;
-  transition: color var(--qr-transition-fast), letter-spacing var(--qr-transition-fast);
+  color: color-mix(in srgb, var(--qr-text-primary, #1f2937) 82%, var(--qr-accent, #b7791f) 18%);
+  letter-spacing: 0.04em;
+  transition:
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    letter-spacing var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1));
+  pointer-events: none;
+  user-select: none;
 }
 .bot-han-sm {
-  font-size: 14px;
-  letter-spacing: 0.1em;
-  color: #b8860b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--qr-accent, #b7791f);
 }
-/* 繁体字按钮：半透明暖白底 + 细边框 */
+
+/* 圆形柔纸按钮：安静、可触达、有选中锚点 */
 .bot-btn {
-  width: 56px;
-  min-width: 56px;
-  height: 50px;
-  border: 1px solid rgba(180, 160, 120, 0.2);
-  background: rgba(255, 252, 246, 0.75);
-  border-radius: 14px;
+  --bot-size: 46px;
+  width: var(--bot-size);
+  min-width: var(--bot-size);
+  height: var(--bot-size);
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 50%;
   position: relative;
   padding: 0;
+  margin: 0;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   white-space: nowrap;
-  color: var(--qr-text-secondary);
-  transition: all var(--qr-transition-fast);
-  box-shadow: 0 1px 3px rgba(180, 160, 120, 0.06);
+  color: var(--qr-text-secondary, #667085);
+  isolation: isolate;
+  transition:
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1));
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.bot-btn::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 0;
+  height: 2.5px;
+  border-radius: 999px;
+  background: var(--qr-accent, #b7791f);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition:
+    width var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    opacity var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1));
+  pointer-events: none;
 }
 .bot-btn:hover {
-  background: rgba(255, 252, 246, 0.95);
-  border-color: rgba(180, 160, 120, 0.4);
-  box-shadow: 0 2px 8px rgba(180, 160, 120, 0.1);
+  background: color-mix(in srgb, var(--qr-surface-muted, #f3eadc) 72%, transparent);
+  border-color: color-mix(in srgb, var(--qr-border, rgba(143, 105, 62, 0.16)) 80%, transparent);
+  box-shadow: 0 2px 10px rgba(92, 64, 35, 0.06);
   transform: translateY(-1px);
 }
-.bot-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(180, 160, 120, 0.05);
+.bot-btn:hover .bot-han {
+  color: var(--qr-text-primary, #1f2937);
 }
-/* 选中态：暖纸底 + 深褐边 + 字色加深 */
-.bot-btn.active { background: rgba(255, 252, 246, 0.85); border-color: rgba(180, 160, 120, 0.5); box-shadow: 0 1px 3px rgba(180, 160, 120, 0.08); }
-.bot-btn.active .bot-han { color: #6b5d4f; }
-/* 播放中：讀 字变朱砂红 + 字距微放 */
-.bot-btn.tts-playing { color: inherit; background: rgba(255, 250, 235, 0.9); border-color: rgba(184, 134, 11, 0.35); box-shadow: 0 0 8px rgba(184, 134, 11, 0.1); }
-.bot-btn.tts-playing .bot-han { color: #b8860b; letter-spacing: 0.16em; }
-/* 暂停态：讀 → 暂停字变小 + 琥珀边框 */
-.bot-btn.tts-paused { color: inherit; background: rgba(255, 252, 240, 0.9); border-color: rgba(217, 165, 60, 0.3); }
-.bot-btn.tts-paused .bot-han { color: #b8860b; }
+.bot-btn:active {
+  transform: translateY(0) scale(0.94);
+  box-shadow: none;
+}
+.bot-btn:focus {
+  outline: none;
+}
+.bot-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--qr-focus, 0 0 0 3px rgba(59, 130, 246, 0.22));
+  border-color: color-mix(in srgb, var(--qr-primary, #3b82f6) 45%, transparent);
+}
+
+/* 选中态：暖纸浮起 + 底部墨点 */
+.bot-btn.active {
+  background: color-mix(in srgb, var(--qr-surface-solid, #fffaf2) 88%, var(--qr-accent, #b7791f) 6%);
+  border-color: var(--qr-border-strong, rgba(143, 105, 62, 0.28));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 2px 8px rgba(92, 64, 35, 0.08);
+}
+.bot-btn.active .bot-han {
+  color: color-mix(in srgb, var(--qr-text-primary, #1f2937) 70%, var(--qr-accent, #b7791f) 30%);
+  font-weight: 600;
+}
+.bot-btn.active::after {
+  width: 12px;
+  opacity: 0.9;
+}
+
+/* TTS 播放：琥珀呼吸边 */
+.bot-btn.tts-playing {
+  background: color-mix(in srgb, #fff8e8 86%, var(--qr-accent, #b7791f) 8%);
+  border-color: color-mix(in srgb, var(--qr-accent, #b7791f) 42%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--qr-accent, #b7791f) 12%, transparent),
+              0 0 14px color-mix(in srgb, var(--qr-accent, #b7791f) 18%, transparent);
+  animation: bot-tts-pulse 2.4s var(--qr-ease, cubic-bezier(0.22, 1, 0.36, 1)) infinite;
+}
+.bot-btn.tts-playing .bot-han {
+  color: var(--qr-accent, #b7791f);
+  letter-spacing: 0.12em;
+}
+.bot-btn.tts-playing::after {
+  width: 14px;
+  opacity: 1;
+  background: var(--qr-accent, #b7791f);
+}
+/* TTS 暂停 */
+.bot-btn.tts-paused {
+  background: color-mix(in srgb, #fffaf0 90%, transparent);
+  border-color: color-mix(in srgb, var(--qr-accent, #b7791f) 32%, transparent);
+  box-shadow: none;
+  animation: none;
+}
+.bot-btn.tts-paused .bot-han {
+  color: var(--qr-accent, #b7791f);
+}
+.bot-btn.tts-paused::after {
+  width: 8px;
+  opacity: 0.55;
+  background: var(--qr-accent, #b7791f);
+}
+
+@keyframes bot-tts-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--qr-accent, #b7791f) 12%, transparent),
+                0 0 10px color-mix(in srgb, var(--qr-accent, #b7791f) 12%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--qr-accent, #b7791f) 22%, transparent),
+                0 0 18px color-mix(in srgb, var(--qr-accent, #b7791f) 28%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bot-btn,
+  .bot-han,
+  .bottom-bar {
+    transition: none !important;
+  }
+  .bot-btn.tts-playing {
+    animation: none;
+  }
+}
+
 .bot-divider {
   width: 1px;
-  height: 28px;
-  background: rgba(0,0,0,0.08);
+  height: 22px;
+  margin: 0 4px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--qr-border-strong, rgba(143, 105, 62, 0.28)) 20%,
+    var(--qr-border-strong, rgba(143, 105, 62, 0.28)) 80%,
+    transparent 100%
+  );
   flex-shrink: 0;
-  white-space: nowrap;
+  opacity: 0.65;
+}
+
+/* 窄屏：略缩小以保持单行 */
+@media (max-width: 520px) {
+  .bottom-bar {
+    width: min(96vw, 640px);
+    gap: 2px;
+    padding: 6px 8px;
+    min-height: 56px;
+  }
+  .bot-btn {
+    --bot-size: 40px;
+  }
+  .bot-han {
+    font-size: 16px;
+  }
+  .bot-han-sm {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+  .bot-divider {
+    height: 18px;
+    margin: 0 2px;
+  }
 }
 .highlighter-btn.active {
   background: rgba(255, 255, 0, 0.25);
@@ -3652,32 +3809,89 @@ onBeforeUnmount(() => {
   padding: 0 4px; margin-left: 4px; font-variant-numeric: tabular-nums;
 }
 
-/* 紧凑 +/- 控制按钮 */
+/* 紧凑 +/- 控制按钮 — Calm paper chip */
 .size-control { display: flex; align-items: center; gap: 8px; }
 .size-control button {
-  width: 30px; height: 30px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-  background: rgba(255,255,255,0.8); cursor: pointer;
-  font-size: 15px; font-weight: 400; color: #64748b;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
+  border-radius: 10px;
+  background: var(--qr-surface-solid, #fffaf2);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--qr-text-secondary, #667085);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 .size-control button:hover {
-  border-color: #3b82f6; color: #3b82f6;
-  background: rgba(59,130,246,0.06);
-  box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+  border-color: color-mix(in srgb, var(--qr-primary, #3b82f6) 50%, transparent);
+  color: var(--qr-primary, #3b82f6);
+  background: var(--qr-primary-soft, rgba(59, 130, 246, 0.1));
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+}
+.size-control button:focus { outline: none; }
+.size-control button:focus-visible {
+  box-shadow: var(--qr-focus, 0 0 0 3px rgba(59, 130, 246, 0.22));
 }
 .size-control button:active { transform: scale(0.94); }
 .size-dots { flex: 1; display: flex; gap: 6px; justify-content: center; }
 .dot {
-  width: 10px; height: 10px; border-radius: 3px; background: #e2e8f0;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--qr-border-strong, rgba(143, 105, 62, 0.28)) 70%, transparent);
+  transition:
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1));
 }
 .dot.active {
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  box-shadow: 0 2px 6px rgba(59,130,246,0.35);
-  transform: scale(1.1);
+  background: var(--qr-primary, #3b82f6);
+  box-shadow: 0 0 0 3px var(--qr-primary-soft, rgba(59, 130, 246, 0.18));
+  transform: scale(1.15);
 }
+
+/* 字重选项（设置面板若启用） */
+.weight-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
+  border-radius: 999px;
+  background: var(--qr-surface-solid, #fffaf2);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--qr-text-secondary, #667085);
+  letter-spacing: 0.04em;
+  transition:
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
+}
+.weight-btn:hover {
+  border-color: var(--qr-border-strong, rgba(143, 105, 62, 0.28));
+  color: var(--qr-text-primary, #1f2937);
+}
+.weight-btn.active {
+  border-color: color-mix(in srgb, var(--qr-primary, #3b82f6) 55%, transparent);
+  background: var(--qr-primary-soft, rgba(59, 130, 246, 0.1));
+  color: var(--qr-primary, #3b82f6);
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.12);
+  font-weight: 600;
+}
+.weight-btn:active { transform: scale(0.97); }
 
 /* 设置两列布局 */
 .settings-grid {
@@ -3687,71 +3901,134 @@ onBeforeUnmount(() => {
 }
 .settings-grid .panel-card { margin-top: 0; }
 
-/* 阅读方式切换 */
+/* 阅读方式切换 — 分段控件 */
 .mode-switch {
-  display: flex;
-  gap: 0;
-  background: #f1f5f9;
-  border-radius: 8px;
-  padding: 2px;
+  display: inline-flex;
+  gap: 2px;
+  background: var(--qr-surface-muted, #f3eadc);
+  border: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
+  border-radius: 999px;
+  padding: 3px;
   width: fit-content;
 }
 .mode-btn {
-  padding: 6px 16px;
+  padding: 7px 16px;
   border: none;
-  border-radius: 7px;
+  border-radius: 999px;
   background: transparent;
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  color: #94a3b8;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--qr-text-muted, #98a2b3);
+  transition:
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
   font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
+  letter-spacing: 0.06em;
+  min-height: 32px;
+  -webkit-tap-highlight-color: transparent;
+}
+.mode-btn:focus { outline: none; }
+.mode-btn:focus-visible {
+  box-shadow: var(--qr-focus, 0 0 0 3px rgba(59, 130, 246, 0.22));
 }
 .mode-btn.active {
-  background: #fff;
-  color: #3b82f6;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background: var(--qr-surface-solid, #fffaf2);
+  color: var(--qr-primary, #3b82f6);
+  box-shadow: 0 1px 3px rgba(92, 64, 35, 0.08), 0 1px 0 rgba(255,255,255,0.7) inset;
   font-weight: 600;
 }
-.mode-btn:hover:not(.active) { color: #64748b; }
-
-/* 主题切换 */
-.theme-grid { display: flex; gap: 8px; }
-.theme-btn {
-  flex: 1; height: 34px; border: 2px solid transparent; border-radius: 8px;
-  cursor: pointer; font-size: 12px; font-weight: 500;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
+.mode-btn:hover:not(.active) {
+  color: var(--qr-text-secondary, #667085);
+  background: color-mix(in srgb, var(--qr-surface-solid, #fff) 45%, transparent);
 }
-.theme-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-.theme-btn:active { transform: translateY(0) scale(0.97); }
-.theme-grid .theme-btn:first-child { background: #fff; color: #333; border-color: #e8e8e8; }
-.theme-grid .theme-btn:first-child.active { border-color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.theme-grid .theme-btn:nth-child(2) { background: #2d2d2d; color: #fff; border-color: #444; }
-.theme-grid .theme-btn:nth-child(2).active { border-color: #3b82f6; box-shadow: 0 2px 10px rgba(59,130,246,0.35); }
-.theme-grid .theme-btn:nth-child(3) { background: #e8f0e3; color: #3a5a3a; border-color: #c8dba0; }
-.theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; box-shadow: 0 2px 10px rgba(90,158,66,0.3); }
-.theme-grid .theme-btn:nth-child(4) { background: #ede0c8; color: #3d2a00; border-color: #d4c5a9; }
-.theme-grid .theme-btn:nth-child(4).active { border-color: #8b6914; box-shadow: 0 2px 10px rgba(139,105,20,0.25); }
+.mode-btn:active { transform: scale(0.97); }
 
-/* 字体风格 */
+/* 主题切换 — 预览色块药丸 */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.theme-btn {
+  height: 36px;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1));
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", serif;
+  letter-spacing: 0.04em;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-btn:focus { outline: none; }
+.theme-btn:focus-visible {
+  box-shadow: var(--qr-focus, 0 0 0 3px rgba(59, 130, 246, 0.22));
+}
+.theme-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(92, 64, 35, 0.1); }
+.theme-btn:active { transform: translateY(0) scale(0.97); }
+.theme-grid .theme-btn:first-child { background: #fffaf2; color: #2a2a2a; border-color: rgba(143, 105, 62, 0.18); }
+.theme-grid .theme-btn:first-child.active { border-color: #3a3228; box-shadow: 0 0 0 1px #3a3228, 0 2px 8px rgba(0,0,0,0.08); }
+.theme-grid .theme-btn:nth-child(2) { background: linear-gradient(165deg, #121a32 0%, #070b14 100%); color: #c8daf8; border-color: rgba(100, 140, 220, 0.28); }
+.theme-grid .theme-btn:nth-child(2).active { border-color: #7cb3f5; box-shadow: 0 0 0 1px #7cb3f5, 0 2px 12px rgba(124, 179, 245, 0.35); }
+.theme-grid .theme-btn:nth-child(3) { background: #e8f0e3; color: #3a5a3a; border-color: #c8dba0; }
+.theme-grid .theme-btn:nth-child(3).active { border-color: #5a9e42; box-shadow: 0 0 0 1px #5a9e42, 0 2px 10px rgba(90,158,66,0.28); }
+.theme-grid .theme-btn:nth-child(4) { background: #ede0c8; color: #3d2a00; border-color: #d4c5a9; }
+.theme-grid .theme-btn:nth-child(4).active { border-color: #8b6914; box-shadow: 0 0 0 1px #8b6914, 0 2px 10px rgba(139,105,20,0.25); }
+
+/* 字体风格 — 纸感芯片 */
 .font-family-grid {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .font-btn {
-  flex: 0 0 auto; padding: 5px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-  background: rgba(255,255,255,0.6); cursor: pointer; font-size: 12px; color: #64748b;
-  text-align: center; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
+  border-radius: 999px;
+  background: var(--qr-surface-solid, #fffaf2);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--qr-text-secondary, #667085);
+  text-align: center;
   white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition:
+    border-color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-tap-highlight-color: transparent;
 }
-.font-btn:hover { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.06); }
+.font-btn:hover {
+  border-color: color-mix(in srgb, var(--qr-primary, #3b82f6) 45%, transparent);
+  color: var(--qr-primary, #3b82f6);
+  background: var(--qr-primary-soft, rgba(59, 130, 246, 0.08));
+}
 .font-btn.active {
-  border-color: #3b82f6; background: rgba(59,130,246,0.1);
-  color: #3b82f6; font-weight: 600;
-  box-shadow: 0 1px 4px rgba(59,130,246,0.12);
+  border-color: color-mix(in srgb, var(--qr-primary, #3b82f6) 55%, transparent);
+  background: var(--qr-primary-soft, rgba(59, 130, 246, 0.12));
+  color: var(--qr-primary, #3b82f6);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.12);
 }
+.font-btn:focus { outline: none; }
+.font-btn:focus-visible {
+  box-shadow: var(--qr-focus, 0 0 0 3px rgba(59, 130, 246, 0.22));
+}
+.font-btn:active { transform: scale(0.97); }
 
 /* 危险按钮 */
 .danger-btn {
@@ -3921,25 +4198,44 @@ onBeforeUnmount(() => {
   color: #60a5fa;
 }
 .theme-dark .bot-btn {
-  background: rgba(10, 14, 35, 0.55);
-  border-color: rgba(100, 150, 255, 0.18);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   color: #8ea4c4;
 }
-.theme-dark .bot-han { color: #c8daf8; }
+.theme-dark .bot-han { color: #b6c8e8; }
 .theme-dark .bot-btn:hover {
-  background: rgba(15, 20, 50, 0.7);
-  border-color: rgba(100, 150, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(100,150,255,0.15);
+  background: rgba(100, 140, 220, 0.12);
+  border-color: rgba(100, 150, 255, 0.22);
+  box-shadow: 0 2px 12px rgba(80, 120, 220, 0.12);
   color: #e8d8c0;
 }
 .theme-dark .bot-btn:hover .bot-han { color: #e8d8c0; }
-.theme-dark .bot-btn.active { background: rgba(15, 20, 50, 0.6); border-color: rgba(100, 150, 255, 0.35); color: #c8daf8; }
-.theme-dark .bot-btn.active .bot-han { color: #c8daf8; }
-.theme-dark .bot-btn.tts-playing { color: #d4a040; }
-.theme-dark .bot-btn.tts-playing .bot-han { color: #d4a040; letter-spacing: 0.16em; }
-.theme-dark .bot-btn.tts-paused { color: #d4a040; }
+.theme-dark .bot-btn.active {
+  background: rgba(80, 120, 220, 0.16);
+  border-color: rgba(124, 179, 245, 0.35);
+  box-shadow: 0 1px 0 rgba(160, 190, 255, 0.08) inset, 0 2px 10px rgba(60, 100, 200, 0.15);
+  color: #c8daf8;
+}
+.theme-dark .bot-btn.active .bot-han { color: #dce8ff; }
+.theme-dark .bot-btn.active::after { background: #7cb3f5; }
+.theme-dark .bot-btn.tts-playing {
+  background: rgba(196, 168, 74, 0.12);
+  border-color: rgba(196, 168, 74, 0.4);
+  box-shadow: 0 0 0 1px rgba(196, 168, 74, 0.12), 0 0 16px rgba(196, 168, 74, 0.18);
+  color: #d4a040;
+}
+.theme-dark .bot-btn.tts-playing .bot-han { color: #d4a040; letter-spacing: 0.12em; }
+.theme-dark .bot-btn.tts-playing::after { background: #d4a040; }
+.theme-dark .bot-btn.tts-paused {
+  background: rgba(196, 168, 74, 0.08);
+  border-color: rgba(196, 168, 74, 0.28);
+  color: #d4a040;
+}
 .theme-dark .bot-btn.tts-paused .bot-han { color: #d4a040; }
+.theme-dark .bot-divider {
+  background: linear-gradient(180deg, transparent, rgba(100, 140, 220, 0.35), transparent);
+}
 .theme-dark .tool-btn.active::before { background: #60a5fa; }
 .theme-dark .annotation-item { background: rgba(20,28,50,0.7); border-color: rgba(60,100,200,0.15); }
 .theme-dark .annotation-text { color: #c8daf8; }
@@ -3961,7 +4257,13 @@ onBeforeUnmount(() => {
 .theme-dark .bm-add-btn:hover { border-color: #7ca3f5; color: #7ca3f5; background: rgba(124,163,245,0.1); }
 .theme-dark .bottom-panel, .theme-dark .full-toc { background: rgba(8,12,28,0.4); border-color: rgba(60,100,200,0.08); backdrop-filter: blur(28px) saturate(1.4); }
 .theme-dark .bottom-panel-hd { border-color: rgba(60,100,200,0.06); color: #c8daf8; }
-.theme-dark .bottom-bar { background: rgba(8,12,28,0.25); border-color: rgba(60,100,200,0.06); backdrop-filter: blur(28px) saturate(1.5); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+.theme-dark .bottom-bar {
+  background: rgba(8, 12, 28, 0.55);
+  border-color: rgba(100, 140, 220, 0.14);
+  backdrop-filter: blur(28px) saturate(1.55);
+  -webkit-backdrop-filter: blur(28px) saturate(1.55);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(120, 160, 255, 0.06) inset;
+}
 .theme-dark .close-btn { background: rgba(60,100,200,0.06); color: #8ea4c4; }
 .theme-dark .close-btn:hover { background: rgba(60,100,200,0.12); color: #c8daf8; }
 .theme-dark .panel-card { background: rgba(60,100,200,0.04); border-color: rgba(60,100,200,0.08); }
@@ -4082,8 +4384,22 @@ onBeforeUnmount(() => {
 .theme-dark .shelf-card { background: rgba(60,100,200,0.06); border-color: rgba(60,100,200,0.08); }
 .theme-dark .shelf-card:hover { background: rgba(80,130,230,0.1); border-color: rgba(80,130,230,0.25); }
 .theme-dark .shelf-name { color: #c8daf8; }
-.theme-dark .weight-btn { background: rgba(20,28,50,0.7); border-color: rgba(60,100,200,0.1); color: #8ea4c4; }
-.theme-dark .weight-btn.active { background: #3b6cc8; color: #fff; border-color: #4a80e0; }
+.theme-dark .weight-btn {
+  background: rgba(14, 22, 48, 0.7);
+  border-color: rgba(100, 140, 220, 0.16);
+  color: #8ea4c4;
+}
+.theme-dark .weight-btn:hover {
+  border-color: rgba(124, 179, 245, 0.35);
+  color: #c8daf8;
+  background: rgba(60, 100, 200, 0.12);
+}
+.theme-dark .weight-btn.active {
+  background: rgba(60, 100, 200, 0.2);
+  color: #93c5fd;
+  border-color: rgba(124, 179, 245, 0.45);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.3);
+}
 .theme-dark .theme-grid .theme-btn:first-child { background: rgba(60,100,200,0.15); color: #c8daf8; border-color: rgba(60,100,200,0.25); }
 .theme-dark .theme-grid .theme-btn:first-child.active { border-color: #3b6cc8; }
 .theme-dark .theme-grid .theme-btn:nth-child(2) { background: linear-gradient(180deg, #0a0f20 0%, #050810 100%); color: #8ea4c4; }
@@ -4105,12 +4421,16 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
   box-shadow: 0 2px 6px rgba(24,144,255,0.4);
 }
-.theme-dark .mode-switch { background: rgba(20,28,50,0.5); }
+.theme-dark .mode-switch {
+  background: rgba(14, 22, 48, 0.65);
+  border-color: rgba(100, 140, 220, 0.16);
+}
 .theme-dark .mode-btn { color: #8ea4c4; }
 .theme-dark .mode-btn:hover:not(.active) { background: rgba(255,255,255,0.05); color: #c8daf8; }
 .theme-dark .mode-btn.active {
-  background: rgba(60,100,200,0.15); color: #40a9ff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: rgba(60, 100, 200, 0.22);
+  color: #93c5fd;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.35), 0 0 0 1px rgba(124, 179, 245, 0.18) inset;
 }
 .theme-dark .font-family-grid { background: transparent; }
 .theme-dark .font-btn { color: #8ea4c4; background: rgba(20,28,50,0.5); border-color: rgba(60,100,200,0.15); }
@@ -4183,11 +4503,39 @@ onBeforeUnmount(() => {
 .theme-green .bookmark-title { color: #3a5a3a; }
 .theme-green .bm-add-btn { border-color: #c8dba0; color: #7aa86a; }
 .theme-green .bm-add-btn:hover { border-color: #5a9e42; color: #5a9e42; background: rgba(90,158,66,0.06); }
-.theme-green .bottom-bar { background: rgba(232,240,227,0.12); border-color: rgba(180,210,160,0.5); backdrop-filter: blur(28px) saturate(1.8); box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.theme-green .bottom-bar {
+  background: rgba(232, 240, 227, 0.78);
+  border-color: rgba(90, 158, 66, 0.22);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow: 0 10px 28px rgba(46, 74, 46, 0.1), 0 1px 0 rgba(255,255,255,0.55) inset;
+}
+.theme-green .bot-han { color: #3a5a3a; }
+.theme-green .bot-btn:hover {
+  background: rgba(90, 158, 66, 0.1);
+  border-color: rgba(90, 158, 66, 0.25);
+}
+.theme-green .bot-btn:hover .bot-han { color: #2d4a2d; }
+.theme-green .bot-btn.active {
+  background: rgba(232, 248, 220, 0.95);
+  border-color: rgba(90, 158, 66, 0.4);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(90, 158, 66, 0.12);
+}
+.theme-green .bot-btn.active .bot-han { color: #2e7a38; }
+.theme-green .bot-btn.active::after { background: #5a9e42; }
+.theme-green .bot-divider {
+  background: linear-gradient(180deg, transparent, rgba(90, 158, 66, 0.35), transparent);
+}
 .theme-green .bottom-panel, .theme-green .full-toc { background: rgba(232,240,227,0.45); border-color: #d4e8c8; backdrop-filter: blur(16px); }
 .theme-green .shelf-card { background: #f0f7eb; border-color: #d4e8c8; }
-.theme-green .weight-btn { background: #f0f7eb; border-color: #c8dba0; }
-.theme-green .weight-btn.active { background: #5a9e42; color: #fff; border-color: #5a9e42; }
+.theme-green .weight-btn { background: #f0f7eb; border-color: #c8dba0; color: #3a5a3a; }
+.theme-green .weight-btn:hover { border-color: #5a9e42; color: #2e7a38; }
+.theme-green .weight-btn.active {
+  background: rgba(90, 158, 66, 0.14);
+  color: #2e7a38;
+  border-color: #5a9e42;
+  box-shadow: 0 1px 4px rgba(90, 158, 66, 0.15);
+}
 .theme-green .theme-grid .theme-btn:first-child { background: #f0f7eb; color: #3a5a3a; border-color: #c8dba0; }
 .theme-green .theme-grid .theme-btn:first-child.active { border-color: #3a5a3a; }
 .theme-green .theme-grid .theme-btn:nth-child(2) { background: #3a4a3a; color: #e0f0e0; }
@@ -4302,13 +4650,41 @@ onBeforeUnmount(() => {
 .theme-parchment .bookmark-title { color: #3d2a00; }
 .theme-parchment .bm-add-btn { border-color: #c9b894; color: #7a6a4a; }
 .theme-parchment .bm-add-btn:hover { border-color: #8b6914; color: #8b6914; background: rgba(139,105,20,0.06); }
-.theme-parchment .bottom-bar { background: rgba(245,230,200,0.12); border-color: rgba(200,180,150,0.5); backdrop-filter: blur(28px) saturate(1.8); box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.theme-parchment .bottom-bar {
+  background: rgba(245, 230, 200, 0.82);
+  border-color: rgba(139, 105, 20, 0.22);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  box-shadow: 0 10px 28px rgba(92, 64, 35, 0.12), 0 1px 0 rgba(255,248,230,0.55) inset;
+}
+.theme-parchment .bot-han { color: #3d2a00; }
+.theme-parchment .bot-btn:hover {
+  background: rgba(139, 105, 20, 0.1);
+  border-color: rgba(139, 105, 20, 0.28);
+}
+.theme-parchment .bot-btn:hover .bot-han { color: #2a1a00; }
+.theme-parchment .bot-btn.active {
+  background: rgba(250, 240, 215, 0.95);
+  border-color: rgba(139, 105, 20, 0.4);
+  box-shadow: 0 1px 0 rgba(255,248,230,0.65) inset, 0 2px 8px rgba(139, 105, 20, 0.12);
+}
+.theme-parchment .bot-btn.active .bot-han { color: #8b6914; }
+.theme-parchment .bot-btn.active::after { background: #8b6914; }
+.theme-parchment .bot-divider {
+  background: linear-gradient(180deg, transparent, rgba(139, 105, 20, 0.35), transparent);
+}
 .theme-parchment .bottom-panel, .theme-parchment .full-toc { background: rgba(245,230,200,0.45); border-color: #d4c5a9; backdrop-filter: blur(16px); }
 .theme-parchment .bottom-panel-hd { border-color: #d4c5a9; }
 .theme-parchment .shelf-card { background: #f0e6d0; border-color: #d4c5a9; }
 .theme-parchment .shelf-name { color: #3d2a00; }
 .theme-parchment .weight-btn { background: #f0e6d0; border-color: #c9b894; color: #3d2a00; }
-.theme-parchment .weight-btn.active { background: #8b6914; color: #fff; border-color: #8b6914; }
+.theme-parchment .weight-btn:hover { border-color: #8b6914; color: #2a1a00; }
+.theme-parchment .weight-btn.active {
+  background: rgba(139, 105, 20, 0.12);
+  color: #8b6914;
+  border-color: #8b6914;
+  box-shadow: 0 1px 4px rgba(139, 105, 20, 0.12);
+}
 .theme-parchment .theme-grid .theme-btn:nth-child(1) { background: #f0e6d0; color: #3d2a00; border-color: #c9b894; }
 .theme-parchment .theme-grid .theme-btn:nth-child(1).active { border-color: #3d2a00; }
 .theme-parchment .theme-grid .theme-btn:nth-child(2) { background: #3d3d3d; color: #e8dcc8; }

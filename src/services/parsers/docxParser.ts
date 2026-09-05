@@ -1,9 +1,10 @@
 import mammoth from 'mammoth'
 import type { ParsedBook, Chapter, TOCEntry } from '@/types'
+import { sanitizeBookHtml } from '@/utils/sanitize'
 
 export async function parseDOCX(file: File, arrayBuffer: ArrayBuffer): Promise<ParsedBook> {
   const result = await mammoth.convertToHtml({ arrayBuffer })
-  const html = result.value
+  const html = sanitizeBookHtml(result.value)
 
   const headingRegex = /<h([1-2])[^>]*>(.*?)<\/h\1>/gi
   const headings = html.match(headingRegex) || []

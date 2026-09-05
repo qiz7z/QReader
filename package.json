@@ -25,8 +25,7 @@
     },
     "files": [
       "electron/**/*",
-      "dist/**/*",
-      "node_modules/**/*"
+      "dist/**/*"
     ],
     "extraResources": [
       {
@@ -70,6 +69,7 @@
     "@capacitor/android": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "dexie": "^4.4.2",
+    "dompurify": "^3.4.14",
     "edge-tts-universal": "^1.4.0",
     "element-plus": "^2.14.0",
     "epubjs": "^0.3.93",

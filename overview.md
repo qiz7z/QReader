@@ -1,22 +1,23 @@
-# QReader UI 设计方案概览
+# 阅读器选项卡按钮打磨 — 已完成
 
-## 已完成
+## 状态
+**已完成**（`npm run build` 通过，开发服 http://localhost:5173/ 可访问）
 
-- 为 QReader 创建了一份全新的用户界面设计方案。
-- 方案围绕电子书阅读器的核心场景：找书、阅读、朗读、设置、标注。
-- 输出文件：`QReader_UI_Design_Proposal.md`。
+## 做了什么
+按 **Calm Reading OS** 打磨阅读器底部选项卡与设置/侧栏相关控件，去掉粗糙方块按钮与 Ant 蓝硬选中。
 
-## 关键设计决策
+## 主要改动
 
-- 设计方向采用 **Calm Reading OS / 安静阅读系统**。
-- 视觉风格采用 **Soft Paper + Minimal Control**：低噪音、纸感、沉浸、适合长时间阅读。
-- 信息架构拆分为：首页、书库、阅读器、设置四大模块。
-- 朗读面板按“小型播放器”心智设计，强化状态反馈与段落交互规则。
-- 明确设计 Token：颜色、字体、间距、圆角、阴影、动效。
-- 加入 WCAG AA、触控目标、键盘导航、Reduced Motion 等无障碍要求。
+### `src/views/ReaderView.vue`
+- **底部胶囊栏**：圆形 `.bot-btn`、楷体 `.bot-han`、选中底部墨点 `::after`、TTS 琥珀呼吸
+- **无障碍**：`role="toolbar"`、`aria-label` / `aria-pressed`、`focus-visible`
+- **主题**：light / moonlit dark / green / parchment 底栏与按钮态
+- **设置芯片**：`.mode-btn` 分段药丸、`.theme-btn` 预览色块、`.font-btn` / `.weight-btn` 纸感圆角
 
-## 后续建议
+### `src/components/ReaderSidebar.vue`
+- **tab 行**：纸感分栏、44px 触达、选中浮起卡片
+- **weight / theme**：QR Token 药丸，去掉硬填充蓝
 
-1. 先抽离全局 CSS Token。
-2. 再统一按钮、卡片、底部面板、Toast 等基础组件。
-3. 最后分阶段重构首页、书库、阅读器和设置面板。
+## 如何验收
+打开任意书籍 → 看底部 **歸 / 錄 / 筆 / 簽 / 讀 / 書 / 設 / 全**  
+切换主题、点开设置、试朗读播放态。

@@ -13,7 +13,6 @@
   --border: #e7d8c2;
   --shadow: 0 10px 30px rgba(92, 64, 35, 0.08);
   --radius: 14px;
-}
 
   /* Calm Reading OS tokens */
   --qr-bg: #fbf7ef;
@@ -58,8 +57,10 @@
     radial-gradient(circle at 78% 12%, rgba(200, 216, 240, 0.18) 0%, rgba(200, 216, 240, 0.08) 8%, transparent 22%),
     radial-gradient(circle at 78% 12%, rgba(240, 244, 255, 0.12) 0%, transparent 18%),
     radial-gradient(ellipse at 50% 0%, rgba(30, 50, 100, 0.35) 0%, transparent 55%),
-    linear-gradient(180deg, #070b14 0%, #0c1527 35%, #0f1a30 70%, #121e38 100%);
+    linear-gradient(180deg, #070b14 0%, #0c1527 35%, #0f1a30 70%, #121e38 100%) !important;
+  background-color: #070b14 !important;
   position: relative;
+  z-index: 1;
 }
 
 .qr-starfield::before {
@@ -111,10 +112,9 @@
   --qr-transition: 240ms var(--qr-ease);
 }
 
+/* body 仅作底层底色；星空页由 .qr-starfield 自己铺满，避免盖住首页 */
 .theme-dark body {
-  background:
-    /* Solid dark base + Milky Way on top */
-    linear-gradient(180deg, #050a18 0%, #0a1030 40%, #0f1840 100%);
+  background: #050a18;
   position: relative;
   overflow-x: hidden;
   min-height: 100vh;
@@ -321,6 +321,7 @@ body {
 #app {
   position: fixed;
   inset: 0;
+  z-index: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -382,17 +383,6 @@ input, select, textarea {
   background: rgba(80, 130, 220, 0.6);
 }
 
-.theme-dark html {
-  background: #050a18;
-}
-
-.theme-dark body {
-  background: linear-gradient(180deg, #050a18 0%, #0a1030 40%, #0f1840 100%);
-  position: relative;
-  overflow-x: hidden;
-  min-height: 100vh;
-}
-
 /* 书库页滚动条 — 强制深色 */
 .library-view::-webkit-scrollbar {
   width: 8px;
@@ -423,23 +413,7 @@ input, select, textarea {
   background: rgba(139, 105, 20, 0.22);
 }
 
-/* ── 暗色主题自动跟随系统 ── */
-/* 默认亮色（系统亮色或无法检测时） */
-:root {
-  color-scheme: light dark;
-}
-
-/* 系统处于暗色模式且用户未手动覆盖时自动暗色 */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme-override="light"]) {
-    --qr-bg: #03060c;
-    --qr-bg-soft: #080c1a;
-    --qr-surface: rgba(10, 15, 35, 0.9);
-    --qr-surface-solid: #080c1a;
-    --qr-surface-muted: rgba(15, 22, 50, 0.6);
-    --qr-border: rgba(70, 110, 210, 0.15);
-  }
-}
+/* 主题跟随由 readerStore + AppLayout 的 theme-* class 统一管理，不使用半成品 auto-follow */
 
 @media (max-width: 600px) {
   :root {

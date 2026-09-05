@@ -31,44 +31,58 @@ export class StorageService {
   private static async migrateFromIndexedDB(): Promise<void> {
     try {
       const books = await db.books.toArray()
-      if (books.length === 0) return
+      if (books.length > 0) {
+        for (const book of books) {
+          const bookId = book.id
+          const exists = await opfs.fileExists(['books'], `${bookId}.json`)
+          if (exists) continue
 
-      for (const book of books) {
-        const bookId = book.id
-        const exists = await opfs.fileExists(['books'], `${bookId}.json`)
-        if (exists) continue
+          await this.saveBook(book)
+          const parsedBook = await db.parsedBooks.get(bookId)
+          if (parsedBook) {
+            await this.saveParsedBook(bookId, {
+              id: parsedBook.bookId,
+              title: parsedBook.title,
+              author: parsedBook.author,
+              cover: parsedBook.cover,
+              content: parsedBook.content,
+              toc: parsedBook.toc,
+              metadata: parsedBook.metadata,
+            })
+          }
 
-        await this.saveBook(book)
-        const parsedBook = await db.parsedBooks.get(bookId)
-        if (parsedBook) {
-          await this.saveParsedBook(bookId, {
-            id: parsedBook.bookId,
-            title: parsedBook.title,
-            author: parsedBook.author,
-            cover: parsedBook.cover,
-            content: parsedBook.content,
-            toc: parsedBook.toc,
-            metadata: parsedBook.metadata,
-          })
+          const bookmarks = await db.bookmarks.where('bookId').equals(bookId).toArray()
+          for (const bm of bookmarks) await this.addBookmark(bm)
+
+          const notes = await db.notes.where('bookId').equals(bookId).toArray()
+          for (const note of notes) await this.addNote(note)
+
+          const progress = await db.progress.get(bookId)
+          if (progress) await this.saveProgress(progress)
+
+          if (db.pdfAnnotations) {
+            const annotations = await db.pdfAnnotations.where('bookId').equals(bookId).toArray()
+            for (const ann of annotations) await this.addAnnotation(ann)
+          }
         }
 
-        const bookmarks = await db.bookmarks.where('bookId').equals(bookId).toArray()
-        for (const bm of bookmarks) await this.addBookmark(bm)
+        const settings = await db.settings.get('reader')
+        if (settings) await this.saveSettings(settings as any)
 
-        const notes = await db.notes.where('bookId').equals(bookId).toArray()
-        for (const note of notes) await this.addNote(note)
-
-        const progress = await db.progress.get(bookId)
-        if (progress) await this.saveProgress(progress)
-
-        if (db.pdfAnnotations) {
-          const annotations = await db.pdfAnnotations.where('bookId').equals(bookId).toArray()
-          for (const ann of annotations) await this.addAnnotation(ann)
-        }
+        // 迁移完成后清理 IndexedDB，避免每次启动重复读取全量数据
+        await db.transaction('rw', [db.books, db.parsedBooks, db.bookmarks, db.notes, db.progress, db.settings], async () => {
+          await Promise.all([
+            db.books.clear(),
+            db.parsedBooks.clear(),
+            db.bookmarks.clear(),
+            db.notes.clear(),
+            db.progress.clear(),
+            db.settings.clear(),
+          ])
+        })
+        if (db.pdfAnnotations) await db.pdfAnnotations.clear()
+        console.log('[StorageService] IndexedDB 迁移完成，旧数据已清理')
       }
-
-      const settings = await db.settings.get('reader')
-      if (settings) await this.saveSettings(settings as any)
     } catch (error) {
       console.error('[StorageService] Migration failed:', error)
     }
@@ -145,13 +159,29 @@ export class StorageService {
     return await db.books.get(id)
   }
 
+  /**
+   * 轻量元数据读取：跳过原始文件（几十 MB/本），仅用于书架/列表渲染。
+   * 封面保留（体积小，列表需要展示）。
+   */
+  static async getBookMeta(id: string): Promise<BookRecord | undefined> {
+    await this.initialize()
+    if (this.useOPFS) {
+      const metadata: any = await opfs.readJSON(['books'], `${id}.json`)
+      if (!metadata) return undefined
+      metadata.cover = await opfs.readBinary(['books'], `${id}_cover`) || undefined
+      return metadata as BookRecord
+    }
+    return await db.books.get(id)
+  }
+
   static async getAllBooks(): Promise<BookRecord[]> {
     await this.initialize()
     if (this.useOPFS) {
       const files = await opfs.listDirectory(['books'])
       const books: BookRecord[] = []
       for (const file of files.filter(f => f.endsWith('.json') && !f.endsWith('_parsed.json'))) {
-        const book = await this.getBook(file.replace('.json', ''))
+        // 书架列表只需要元数据 + 封面，绝不能把每本的原始文件读进内存
+        const book = await this.getBookMeta(file.replace('.json', ''))
         if (book) books.push(book)
       }
       return books.sort((a, b) => b.updatedAt - a.updatedAt)

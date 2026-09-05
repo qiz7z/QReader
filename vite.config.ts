@@ -8,6 +8,9 @@ const projectRoot = process.cwd()
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
+  build: {
+    cssMinify: false,
+  },
   plugins: [
     vue(),
     {

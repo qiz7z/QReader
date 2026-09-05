@@ -1,5 +1,6 @@
 import { marked } from 'marked'
 import type { ParsedBook, Chapter, TOCEntry } from '@/types'
+import { sanitizeBookHtml } from '@/utils/sanitize'
 
 export function parseMarkdown(file: File, arrayBuffer: ArrayBuffer): ParsedBook {
   const text = new TextDecoder('utf-8').decode(arrayBuffer)
@@ -40,7 +41,7 @@ export function parseMarkdown(file: File, arrayBuffer: ArrayBuffer): ParsedBook 
         })
         position = 1
       }
-      currentChapter.content += marked.parser([token])
+      currentChapter.content += sanitizeBookHtml(marked.parser([token]))
     }
   }
 
@@ -52,7 +53,7 @@ export function parseMarkdown(file: File, arrayBuffer: ArrayBuffer): ParsedBook 
     chapters.push({
       id: 'chapter-0',
       title: file.name.replace(/\.[^.]+$/, ''),
-      content: marked.parse(text) as string,
+      content: sanitizeBookHtml(marked.parse(text) as string),
     })
     toc.push({
       title: chapters[0].title,

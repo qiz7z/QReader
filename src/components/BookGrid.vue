@@ -155,6 +155,9 @@ watch(
 
 onBeforeUnmount(() => {
   rafIds.forEach(id => cancelAnimationFrame(id))
+  // 释放封面 blob URL，防止内存泄漏
+  for (const url of coverUrls.values()) URL.revokeObjectURL(url)
+  coverUrls.clear()
 })
 
 const coverUrls = new Map<string, string>()

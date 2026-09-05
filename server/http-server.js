@@ -4,6 +4,7 @@ import { EdgeTTS } from 'edge-tts-universal';
 
 const PORT = 3004;
 const REQUEST_TIMEOUT = 15000; // 15s 超时
+const MAX_BODY_SIZE = 1024 * 1024; // 请求体上限 1MB，防止恶意大包耗尽内存
 
 // 代理配置：环境变量 TTS_PROXY > Windows 系统代理 > 无代理
 function detectSystemProxy() {
@@ -62,7 +63,11 @@ const server = http.createServer(async (req, res) => {
   // TTS 批量合成（一次请求合成多句，减少连接开销）
   if (req.url === '/api/tts/batch' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
+    let oversized = false;
+    req.on('data', chunk => {
+      body += chunk.toString();
+      if (body.length > MAX_BODY_SIZE) { oversized = true; req.destroy(); }
+    });
 
     req.on('end', async () => {
       try {
@@ -111,7 +116,11 @@ const server = http.createServer(async (req, res) => {
   // TTS 单句合成（兼容旧版本）
   if (req.url === '/api/tts' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
+    let oversized = false;
+    req.on('data', chunk => {
+      body += chunk.toString();
+      if (body.length > MAX_BODY_SIZE) { oversized = true; req.destroy(); }
+    });
 
     req.on('end', async () => {
       try {
@@ -174,7 +183,8 @@ const server = http.createServer(async (req, res) => {
   res.end(JSON.stringify({ error: 'Not found' }));
 });
 
-server.listen(PORT, () => {
+// 仅监听本机回环地址，避免局域网内其他设备访问 TTS 服务
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`[TTS Server] 运行在 http://localhost:${PORT}`);
   console.log(`[TTS Server] 代理: ${PROXY || '未设置（直连）'}`);
   console.log(`[TTS Server] 提示: 如需代理，请设置环境变量 TTS_PROXY，如 TTS_PROXY=http://127.0.0.1:10809`);

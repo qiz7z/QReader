@@ -3,12 +3,18 @@
     <div v-if="loading" class="loading">正在加载 PDF...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
-      <div class="pdf-pages-wrapper">
-        <div class="pdf-pages" :style="pagesStyle">
-          <div v-for="pageNum in totalPages" :key="pageNum" class="pdf-page-wrapper">
+      <div ref="pagesWrapperRef" class="pdf-pages-wrapper" @scroll.passive="onScroll">
+        <div ref="pagesElRef" class="pdf-pages">
+          <div
+            v-for="pageNum in totalPages"
+            :key="pageNum"
+            class="pdf-page-wrapper"
+            :data-page="pageNum"
+            :style="pageSlotStyle(pageNum)"
+          >
             <canvas :ref="(el) => setCanvasRef(pageNum, el)" class="pdf-page"></canvas>
             <!-- 标注叠加层 -->
-            <canvas 
+            <canvas
               :ref="(el) => setAnnotationCanvasRef(pageNum, el)"
               class="annotation-overlay"
               :class="{ 'annotation-eraser': eraserMode, 'annotation-hidden': !annotationMode }"
@@ -26,13 +32,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { PdfAnnotation, Point } from '@/utils/annotationStorage'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
 const BASE_RENDER_SCALE = 2.0
+/** 视口外预渲染缓冲（页数） */
+const LAZY_BUFFER = 1
 
 const props = defineProps<{
   rawFile: ArrayBuffer | null
@@ -54,10 +62,17 @@ const emit = defineEmits<{
 const loading = ref(true)
 const error = ref('')
 const totalPages = ref(0)
+const pagesWrapperRef = ref<HTMLElement | null>(null)
+const pagesElRef = ref<HTMLElement | null>(null)
 const canvasRefs = new Map<number, HTMLCanvasElement>()
 const annotationCanvasRefs = new Map<number, HTMLCanvasElement>()
 const renderTasks = new Map<number, any>()
+/** 已成功渲染过的页（缓存，滚回时跳过重渲） */
+const renderedPages = new Set<number>()
+/** 每页 CSS 占位高度（BASE_RENDER_SCALE 下，响应式以便模板刷新） */
+const pageHeights = ref<Record<number, number>>({})
 let pdfDoc: any = null
+let scrollRafId = 0
 
 // 标注相关（高频变量用非响应式，避免每点触发依赖追踪）
 const isDrawing = ref(false)
@@ -71,56 +86,139 @@ let eraserPoints: Point[] = []
 const erasedIds = ref<Set<string>>(new Set())
 const eraserPageNum = ref(0)
 
-// zoomRatio 不再使用，保留 BASE_RENDER_SCALE 作为渲染分辨率基准
-
-// scale 变化时同步（用于 +/- 按钮等非拖拽场景）
 watch(() => props.scale, (s) => resizeCanvases(s))
 
-const pagesStyle = computed(() => ({}))
+function pageSlotStyle(pageNum: number) {
+  const h = pageHeights.value[pageNum]
+  return h ? { minHeight: `${h}px` } : undefined
+}
 
 function setCanvasRef(pageNum: number, el: any) {
-  if (!el) return
-  canvasRefs.set(pageNum, el)
-  if (pdfDoc) renderPage(pageNum)
+  if (!el) {
+    canvasRefs.delete(pageNum)
+    return
+  }
+  canvasRefs.set(pageNum, el as HTMLCanvasElement)
 }
 
 function setAnnotationCanvasRef(pageNum: number, el: any) {
-  if (!el) return
-  annotationCanvasRefs.set(pageNum, el)
-  
-  // 设置标注画布大小（与 PDF 画布相同）
+  if (!el) {
+    annotationCanvasRefs.delete(pageNum)
+    return
+  }
+  annotationCanvasRefs.set(pageNum, el as HTMLCanvasElement)
+
   const pdfCanvas = canvasRefs.get(pageNum)
-  if (pdfCanvas) {
+  if (pdfCanvas && pdfCanvas.width) {
     el.width = pdfCanvas.width
     el.height = pdfCanvas.height
     el.style.width = pdfCanvas.style.width
     el.style.height = pdfCanvas.style.height
   }
-  
-  // 渲染已保存的标注
-  if (pdfDoc && props.annotations?.length) {
+
+  if (pdfDoc && renderedPages.has(pageNum) && props.annotations?.length) {
     renderAnnotations(pageNum)
+  }
+}
+
+/** 根据滚动位置算出可见页区间（含缓冲） */
+function getVisibleRange(): [number, number] {
+  const wrapper = pagesWrapperRef.value
+  const pagesEl = pagesElRef.value
+  const n = totalPages.value
+  if (!wrapper || !pagesEl || n === 0) return [1, Math.min(2, n || 1)]
+
+  const wrappers = pagesEl.querySelectorAll('.pdf-page-wrapper')
+  if (!wrappers.length) return [1, Math.min(2, n)]
+
+  const wrapRect = wrapper.getBoundingClientRect()
+  const pad = 80
+  let first = 1
+  let last = n
+  let found = false
+
+  for (let i = 0; i < wrappers.length; i++) {
+    const el = wrappers[i] as HTMLElement
+    const r = el.getBoundingClientRect()
+    const page = i + 1
+    if (r.bottom >= wrapRect.top - pad && r.top <= wrapRect.bottom + pad) {
+      if (!found) {
+        first = page
+        found = true
+      }
+      last = page
+    } else if (found && r.top > wrapRect.bottom + pad) {
+      break
+    }
+  }
+
+  if (!found) {
+    const ratio = wrapper.scrollHeight > 0 ? wrapper.scrollTop / wrapper.scrollHeight : 0
+    first = Math.max(1, Math.floor(ratio * n) + 1)
+    last = first
+  }
+
+  return [
+    Math.max(1, first - LAZY_BUFFER),
+    Math.min(n, last + LAZY_BUFFER),
+  ]
+}
+
+function checkVisiblePages() {
+  if (!pdfDoc || loading.value) return
+  const [from, to] = getVisibleRange()
+  for (let p = from; p <= to; p++) {
+    if (!renderedPages.has(p) && canvasRefs.has(p)) {
+      void renderPage(p)
+    }
+  }
+}
+
+function onScroll() {
+  if (scrollRafId) return
+  scrollRafId = requestAnimationFrame(() => {
+    scrollRafId = 0
+    checkVisiblePages()
+  })
+}
+
+async function ensurePageMetrics() {
+  if (!pdfDoc || totalPages.value === 0) return
+  // 用第 1 页量尺寸，未渲染页用同样占位（多数 PDF 页尺寸一致）
+  try {
+    const page = await pdfDoc.getPage(1)
+    const vp = page.getViewport({ scale: BASE_RENDER_SCALE })
+    const next: Record<number, number> = { ...pageHeights.value }
+    for (let i = 1; i <= totalPages.value; i++) {
+      if (next[i] == null) next[i] = vp.height
+    }
+    pageHeights.value = next
+  } catch {
+    /* ignore */
   }
 }
 
 async function renderPage(pageNum: number) {
   const canvas = canvasRefs.get(pageNum)
   if (!canvas || !pdfDoc) return
+  if (renderedPages.has(pageNum) && canvas.width > 0) return
 
   if (renderTasks.has(pageNum)) {
-    try { renderTasks.get(pageNum).cancel() } catch {}
+    try { renderTasks.get(pageNum).cancel() } catch { /* ignore */ }
     renderTasks.delete(pageNum)
   }
 
   try {
     const page = await pdfDoc.getPage(pageNum)
     const dpr = Number(window.devicePixelRatio || 1)
-    // 渲染分辨率固定为 BASE_RENDER_SCALE（保证高清）
     const renderViewport = page.getViewport({ scale: BASE_RENDER_SCALE })
+
+    if (pageHeights.value[pageNum] !== renderViewport.height) {
+      pageHeights.value = { ...pageHeights.value, [pageNum]: renderViewport.height }
+    }
 
     canvas.width = Math.floor(renderViewport.width * dpr)
     canvas.height = Math.floor(renderViewport.height * dpr)
-    // CSS 尺寸固定为 BASE_RENDER_SCALE 下的尺寸（缩放由 transform 处理）
     canvas.style.width = `${renderViewport.width}px`
     canvas.style.height = `${renderViewport.height}px`
 
@@ -131,8 +229,8 @@ async function renderPage(pageNum: number) {
     renderTasks.set(pageNum, task)
     await task.promise
     renderTasks.delete(pageNum)
-    
-    // PDF 渲染完成后重绘标注并同步标注画布大小
+    renderedPages.add(pageNum)
+
     const annotationCanvas = annotationCanvasRefs.get(pageNum)
     if (annotationCanvas) {
       annotationCanvas.width = canvas.width
@@ -140,47 +238,79 @@ async function renderPage(pageNum: number) {
       annotationCanvas.style.width = canvas.style.width
       annotationCanvas.style.height = canvas.style.height
     }
-    
+
     if (props.annotations?.length) {
       renderAnnotations(pageNum)
     }
+
+    // 首次渲染后刷新缩放高度基线
+    if (basePagesHeight === 0) {
+      resizeCanvases(props.scale)
+    }
   } catch (e: any) {
     if (e?.name !== 'RenderingCancelledException') {
-      console.warn('Render error:', e.message)
+      console.warn('Render error:', e?.message || e)
     }
   }
 }
 
 // 缩放：使用 CSS transform（纯 GPU 合成，不触发 layout/paint）
-let basePagesHeight = 0  // .pdf-pages 未缩放时的原始高度
+let basePagesHeight = 0
 let resizeRafId = 0
 let pendingScale = 0
 
 function resizeCanvases(scale: number) {
   pendingScale = scale
-  if (resizeRafId) return  // 已调度，合并到同一帧（避免 watch + 直接调用双重触发布局）
+  if (resizeRafId) return
   resizeRafId = requestAnimationFrame(() => {
     resizeRafId = 0
     const r = pendingScale / BASE_RENDER_SCALE
-    const pagesEl = document.querySelector('.pdf-pages') as HTMLElement
+    const pagesEl = pagesElRef.value
     if (!pagesEl) return
 
-    // 首次调用时记录原始高度（ratio=1 时）
     if (basePagesHeight === 0) {
       pagesEl.style.transform = ''
       pagesEl.style.height = ''
       basePagesHeight = pagesEl.offsetHeight
     }
 
-    // transform: 纯 GPU 操作，不触发 layout/paint
     pagesEl.style.transform = `scale(${r})`
     pagesEl.style.transformOrigin = 'top center'
 
-    // 高度补偿：transform 不影响布局，手动设置高度让滚动区域正确
     if (basePagesHeight > 0) {
       pagesEl.style.height = `${basePagesHeight * r}px`
     }
+
+    checkVisiblePages()
   })
+}
+
+function cancelAllRenders() {
+  for (const task of renderTasks.values()) {
+    try { task.cancel() } catch { /* ignore */ }
+  }
+  renderTasks.clear()
+  if (resizeRafId) {
+    cancelAnimationFrame(resizeRafId)
+    resizeRafId = 0
+  }
+  if (scrollRafId) {
+    cancelAnimationFrame(scrollRafId)
+    scrollRafId = 0
+  }
+}
+
+function destroyPdf() {
+  cancelAllRenders()
+  if (pdfDoc) {
+    try { pdfDoc.destroy() } catch { /* ignore */ }
+    pdfDoc = null
+  }
+  canvasRefs.clear()
+  annotationCanvasRefs.clear()
+  renderedPages.clear()
+  pageHeights.value = {}
+  basePagesHeight = 0
 }
 
 /**
@@ -484,46 +614,54 @@ async function loadPDF() {
   loading.value = true
   error.value = ''
   totalPages.value = 0
-  canvasRefs.clear()
-  renderTasks.clear()
-  if (pdfDoc) try { pdfDoc.destroy() } catch {}
-  pdfDoc = null
+  destroyPdf()
 
   try {
-    const doc = await pdfjsLib.getDocument({ data: props.rawFile }).promise
+    // 拷贝一份，避免上层 ArrayBuffer 被 transfer 后失效
+    const data = props.rawFile.slice(0)
+    const doc = await pdfjsLib.getDocument({ data }).promise
     pdfDoc = doc
     totalPages.value = doc.numPages
-    basePagesHeight = 0  // 重置高度缓存，下次 resizeCanvases 时重新测量
+    basePagesHeight = 0
     loading.value = false
+
+    await ensurePageMetrics()
+    await nextTick()
+    // 首屏只渲可见区
+    checkVisiblePages()
+    resizeCanvases(props.scale)
   } catch (err: any) {
-    error.value = '加载失败：' + err.message
+    error.value = '加载失败：' + (err?.message || String(err))
     loading.value = false
   }
 }
 
 watch(() => props.rawFile, loadPDF, { immediate: true })
 watch(() => props.annotations, (newAnnots) => {
-  if (!newAnnots || newAnnots.length === 0) return
-  // 标注数据变化时重绘
-  for (let pageNum = 1; pageNum <= totalPages.value; pageNum++) {
+  if (!newAnnots) return
+  // 只重绘已缓存页，避免未渲染页空转
+  for (const pageNum of renderedPages) {
     renderAnnotations(pageNum)
   }
 }, { deep: true })
 
-// 导出滚动到指定页的方法
 function scrollToPage(pageNum: number) {
-  // 使用 pdf-pages 容器而不是 pdf-pages-wrapper
-  const pagesContainer = document.querySelector('.pdf-pages')
+  const pagesContainer = pagesElRef.value
   if (!pagesContainer) return
 
-  // pageNum 是从 1 开始的 PDF 页码
   const pageWrappers = pagesContainer.querySelectorAll('.pdf-page-wrapper')
-  const pageEl = pageWrappers[pageNum - 1]
+  const pageEl = pageWrappers[pageNum - 1] as HTMLElement | undefined
 
   if (pageEl) {
     pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // 跳转后立即补渲目标页附近
+    void nextTick(() => checkVisiblePages())
   }
 }
+
+onBeforeUnmount(() => {
+  destroyPdf()
+})
 
 defineExpose({
   scrollToPage,

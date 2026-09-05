@@ -75,7 +75,7 @@
                 <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M8 4v16M12 4v16M16 4v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
-              <span class="button-text">進入書庫</span>
+              <span class="button-text">进入书库</span>
               <svg class="button-icon-right" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -213,6 +213,13 @@ function particleStyle(_index: number) {
   padding: 60px 24px 40px;
   color: var(--color-text-primary);
   position: relative;
+  /* 固定星空背景，不受主题切换影响 */
+  background:
+    radial-gradient(circle at 78% 12%, rgba(200, 216, 240, 0.18) 0%, rgba(200, 216, 240, 0.08) 8%, transparent 22%),
+    radial-gradient(circle at 78% 12%, rgba(240, 244, 255, 0.12) 0%, transparent 18%),
+    radial-gradient(ellipse at 50% 0%, rgba(30, 50, 100, 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #070b14 0%, #0c1527 35%, #0f1a30 70%, #121e38 100%) !important;
+  background-color: #070b14 !important;
 }
 
 /* ============================================
@@ -746,9 +753,13 @@ function particleStyle(_index: number) {
   .feature-card:hover,
   .cta-button:hover,
   .button-icon-right,
-  .button-loading {
-    animation: none;
-    transition: none;
+  .button-loading,
+  .particle,
+  .brand-title-glow,
+  .brand-title::before,
+  .brand-title::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
 

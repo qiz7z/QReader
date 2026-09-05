@@ -215,43 +215,67 @@ const themeOptions = [
 
 .sidebar-tabs {
   display: flex;
-  border-bottom: 1px solid #eee;
-  background-color: #fafafa;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
+  background: color-mix(in srgb, var(--qr-surface-muted, #f3eadc) 70%, transparent);
 }
 
 .tab-btn {
   flex: 1;
-  padding: 10px 8px;
-  border: none;
-  background: none;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
   cursor: pointer;
-  font-size: 12px;
-  color: #888;
-  border-bottom: 2px solid transparent;
-  transition: color 0.2s, border-color 0.2s, background-color 0.15s;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--qr-text-muted, #98a2b3);
+  transition:
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  gap: 4px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tab-btn .tab-icon {
   color: inherit;
-  transition: color 0.2s;
+  transition: color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .tab-btn .tab-label {
   line-height: 1;
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
+}
+
+.tab-btn:focus { outline: none; }
+.tab-btn:focus-visible {
+  box-shadow: var(--qr-focus, 0 0 0 3px rgba(59, 130, 246, 0.22));
 }
 
 .tab-btn.active {
-  color: #1890ff;
-  border-bottom-color: #1890ff;
+  color: color-mix(in srgb, var(--qr-text-primary, #1f2937) 72%, var(--qr-accent, #b7791f) 28%);
+  background: var(--qr-surface-solid, #fffaf2);
+  border-color: var(--qr-border-strong, rgba(143, 105, 62, 0.28));
+  box-shadow: 0 1px 0 rgba(255,255,255,0.65) inset, 0 2px 8px rgba(92, 64, 35, 0.08);
 }
 
 .tab-btn:hover:not(.active) {
-  background-color: #f0f0f0;
-  color: #555;
+  background: color-mix(in srgb, var(--qr-surface-solid, #fff) 55%, transparent);
+  color: var(--qr-text-secondary, #667085);
+}
+
+.tab-btn:active {
+  transform: scale(0.97);
 }
 
 .sidebar-content {
@@ -440,18 +464,22 @@ const themeOptions = [
 .adjust-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
+  border: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
+  border-radius: 10px;
+  background: var(--qr-surface-solid, #fffaf2);
+  color: var(--qr-text-secondary, #667085);
   cursor: pointer;
   font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .adjust-btn:hover {
-  background-color: #f0f0f0;
+  border-color: var(--qr-primary, #3b82f6);
+  color: var(--qr-primary, #3b82f6);
+  background: var(--qr-primary-soft, rgba(59, 130, 246, 0.1));
 }
 
 .adjust-value {
@@ -469,20 +497,42 @@ const themeOptions = [
 
 .weight-btn,
 .theme-btn {
-  padding: 6px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
+  padding: 7px 12px;
+  border: 1px solid var(--qr-border, rgba(143, 105, 62, 0.16));
+  border-radius: 999px;
+  background: var(--qr-surface-solid, #fffaf2);
   cursor: pointer;
   font-size: 12px;
-  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  font-weight: 500;
+  color: var(--qr-text-secondary, #667085);
+  letter-spacing: 0.04em;
+  transition:
+    background var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    color var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--qr-transition-fast, 160ms cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
+}
+
+.weight-btn:hover,
+.theme-btn:hover {
+  border-color: var(--qr-border-strong, rgba(143, 105, 62, 0.28));
+  color: var(--qr-text-primary, #1f2937);
 }
 
 .weight-btn.active,
 .theme-btn.active {
-  border-color: #1890ff;
-  background-color: #1890ff;
-  color: white;
+  border-color: color-mix(in srgb, var(--qr-primary, #3b82f6) 55%, transparent);
+  background: var(--qr-primary-soft, rgba(59, 130, 246, 0.1));
+  color: var(--qr-primary, #3b82f6);
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.12);
+  font-weight: 600;
+}
+
+.weight-btn:active,
+.theme-btn:active {
+  transform: scale(0.97);
 }
 
 @media (max-width: 600px) {

@@ -82,7 +82,7 @@ export async function parsePDF(file: File, arrayBuffer: ArrayBuffer): Promise<Pa
     })
   }
 
-  return {
+  const result: ParsedBook = {
     id: crypto.randomUUID(),
     title: file.name.replace(/\.[^.]+$/, ''),
     author: '',
@@ -91,4 +91,9 @@ export async function parsePDF(file: File, arrayBuffer: ArrayBuffer): Promise<Pa
     toc,
     metadata: {},
   }
+
+  // 元数据提取完毕后立刻释放 pdf.js 文档，避免导入多本时 worker 堆积
+  try { await pdf.destroy() } catch { /* ignore */ }
+
+  return result
 }

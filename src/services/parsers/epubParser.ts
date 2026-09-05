@@ -1,5 +1,6 @@
 import ePub from 'epubjs'
 import type { ParsedBook, Chapter } from '@/types'
+import { sanitizeBookHtml } from '@/utils/sanitize'
 
 export async function parseEPUB(file: File, arrayBuffer: ArrayBuffer): Promise<ParsedBook> {
   const book = ePub(arrayBuffer)
@@ -166,7 +167,7 @@ export async function parseEPUB(file: File, arrayBuffer: ArrayBuffer): Promise<P
       }
     }
 
-    html = doc.body.innerHTML
+    html = sanitizeBookHtml(doc.body.innerHTML)
 
     const tocEntry = tocEntries[i]
     const chapterTitle = tocEntry?.title || `第 ${i + 1} 章`

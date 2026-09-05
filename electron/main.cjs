@@ -49,13 +49,21 @@ function startStaticServer() {
   log(`[Static] dist 目录: ${distPath}`)
 
   staticServer = http.createServer((req, res) => {
-    let urlPath = decodeURIComponent(req.url.split('?')[0])
+    let urlPath
+    try {
+      urlPath = decodeURIComponent(req.url.split('?')[0])
+    } catch (e) {
+      // 畸形 % 序列：decodeURIComponent 会抛异常，直接拒绝
+      res.writeHead(400)
+      res.end('Bad Request')
+      return
+    }
     if (urlPath === '/') urlPath = '/index.html'
 
-    const filePath = path.join(distPath, urlPath)
+    const filePath = path.normalize(path.join(distPath, urlPath))
 
-    // 安全检查：防止路径穿越
-    if (!filePath.startsWith(distPath)) {
+    // 安全检查：防止路径穿越（比较时带上分隔符，避免 dist-backup 等兄弟目录绕过前缀检查）
+    if (!filePath.startsWith(distPath + path.sep) && filePath !== distPath) {
       res.writeHead(403)
       res.end('Forbidden')
       return
@@ -96,7 +104,8 @@ function startStaticServer() {
     })
   })
 
-  staticServer.listen(STATIC_PORT, () => {
+  // 仅监听本机回环地址，避免局域网访问
+  staticServer.listen(STATIC_PORT, '127.0.0.1', () => {
     log(`[Static] 文件服务器运行在 http://localhost:${STATIC_PORT}`)
   })
 
@@ -248,7 +257,8 @@ function startTTSServer() {
     res.end(JSON.stringify({ error: 'Not found' }))
   })
 
-  ttsServer.listen(TTS_PORT, () => {
+  // 仅监听本机回环地址，避免局域网访问
+  ttsServer.listen(TTS_PORT, '127.0.0.1', () => {
     log(`[TTS Server] 运行在 http://localhost:${TTS_PORT}`)
     log(`[TTS Server] 代理: ${TTS_PROXY || '未设置（直连）'}`)
   })
